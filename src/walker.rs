@@ -6,7 +6,8 @@ pub struct Node<'a> {
     pub name: &'a str,
     pub source_offset: u32,
     pub source_len: u32,
-    pub value: &'a json::JsonValue,
+    pub attributes: &'a json::JsonValue,
+    pub children: Vec<&'a json::JsonValue>,
 }
 
 #[derive(Debug)]
@@ -48,12 +49,17 @@ impl<'a> Walker<'a> {
         let src = src.split(":")
             .map(|x| x.parse::<u32>().unwrap())
             .collect::<Vec<u32>>();
+        let mut children = vec![];
+        for child in value["children"].members() {
+            children.push(child);
+        }
         Node {
             id,
             name,
             source_offset: src[0],
             source_len: src[1],
-            value,
+            attributes: &value["attributes"],
+            children,
         }
     }
 
