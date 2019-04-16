@@ -1,5 +1,4 @@
 use super::walker::{ Walker };
-use super::components::{ StateVariableDeclaration };
 
 pub struct Graph<'a> {
     walker: &'a Walker<'a>,
@@ -13,13 +12,6 @@ impl<'a> Graph<'a> {
 
     pub fn build(&self) {
         self.walker.for_each(|contract| {
-            let mut state = StateVariableDeclaration::new();
-            contract.for_each(|node| {
-                state.visit(node, node.value);
-            });
-            let state_report = state.report(self.source).join("\n");
-            println!("-----state-----");
-            println!("{}", state_report);
         });
     }
 }

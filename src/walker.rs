@@ -4,7 +4,6 @@ use json;
 pub struct Node<'a> {
     pub id: u32,
     pub name: &'a str,
-    pub level: u32,
     pub source_offset: u32,
     pub source_len: u32,
     pub value: &'a json::JsonValue,
@@ -13,7 +12,7 @@ pub struct Node<'a> {
 #[derive(Debug)]
 pub struct Contract<'a> {
     pub name: String,
-    nodes: Vec<Node<'a>>,
+    pub node: Node<'a>,
 }
 
 #[derive(Debug)]
@@ -27,60 +26,40 @@ impl<'a> Walker<'a> {
         for children in value["children"].members() {
             if let Some(name) = children["name"].as_str() {
                 if name == "ContractDefinition" {
-                    let nodes = Walker::parse(children); 
+                    let node = Walker::parse(children);
                     let contract_name = children["attributes"]["name"]
                         .as_str()
                         .unwrap()
                         .to_string();
-                    let contract = Contract::new(contract_name, nodes);
-                    contracts.push(contract);
+                    contracts.push(Contract {
+                        name: contract_name,
+                        node,
+                    });
                 }
             }
         }
         Walker { contracts }
     }
 
-    pub fn parse(value: &json::JsonValue) -> Vec<Node> {
-        let mut queues: Vec<(u32, &json::JsonValue)> = vec![(0, value)];
-        let mut nodes: Vec<Node> = vec![];
-        while queues.len() > 0 {
-            let (level, value) = queues.remove(0);
-            let id = value["id"].as_u32().unwrap();
-            let name = value["name"].as_str().unwrap();
-            let src = value["src"].as_str().unwrap();
-            let src = src.split(":")
-                .map(|x| x.parse::<u32>().unwrap())
-                .collect::<Vec<u32>>();
-            nodes.push(Node {
-                id,
-                name,
-                value,
-                level,
-                source_offset: src[0],
-                source_len: src[1],
-            });
-            for child in value["children"].members() {
-                queues.push((level + 1, child));
-            }
+    pub fn parse(value: &json::JsonValue) -> Node {
+        let id = value["id"].as_u32().unwrap();
+        let name = value["name"].as_str().unwrap();
+        let src = value["src"].as_str().unwrap();
+        let src = src.split(":")
+            .map(|x| x.parse::<u32>().unwrap())
+            .collect::<Vec<u32>>();
+        Node {
+            id,
+            name,
+            source_offset: src[0],
+            source_len: src[1],
+            value,
         }
-        nodes
     }
 
     pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Contract) {
         for contract in &self.contracts {
             cb(contract);
-        }
-    }
-}
-
-impl<'a> Contract<'a> {
-    pub fn new(name: String, nodes: Vec<Node<'a>>) -> Self {
-        Contract { name, nodes }
-    }
-
-    pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Node) {
-        for node in &self.nodes {
-            cb(node);
         }
     }
 }
