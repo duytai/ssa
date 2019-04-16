@@ -11,9 +11,11 @@ impl<'a> Graph<'a> {
     }
 
     pub fn build(&self) {
-        let mut state = StateVariableDeclaration::new();
         self.walker.for_each(|contract| {
-            state.visit(contract)
+            let mut state = StateVariableDeclaration::new();
+            contract.for_each(|node| {
+                state.visit(node, node.value);
+            });
         });
     }
 }

@@ -52,7 +52,7 @@ impl<'a> Walker<'a> {
 
     pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Contract) {
         for contract in &self.contracts {
-            cb(contract)
+            cb(contract);
         }
     }
 }
@@ -62,9 +62,9 @@ impl<'a> Contract<'a> {
         Contract { name, nodes }
     }
 
-    pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Node, &json::JsonValue) {
+    pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Node) {
         for node in &self.nodes {
-            cb(node, node.value)
+            cb(node);
         }
     }
 }

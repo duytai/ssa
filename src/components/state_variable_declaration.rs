@@ -1,4 +1,4 @@
-use crate::walker::{ Contract };
+use crate::walker::{ Node };
 
 pub struct StateVariableDeclaration {
     level: u32,
@@ -9,11 +9,7 @@ impl StateVariableDeclaration {
         StateVariableDeclaration { level: 0 }
     }
 
-    pub fn visit(&mut self, contract: &Contract) {
-        println!("contract: {}", contract.name);
+    pub fn visit(&mut self, node: &Node, value: &json::JsonValue) {
+        println!("name: {}", node.name);
     }
-
-    // pub fn visit(&mut self, node: &Node, value: &json::JsonValue) {
-        // if node.name == "ContractDefinition" { self.level = node.level + 1 }
-    // }
 }
