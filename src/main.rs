@@ -1,5 +1,6 @@
 mod walker;
 mod graph;
+mod components;
 
 use walker::{ Walker };
 use graph::{ Graph };
@@ -21,7 +22,7 @@ fn main() -> io::Result<()> {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
         let walker = Walker::new(ast_one);
-        let g = Graph::new(&walker, &source_content); 
+        let mut g = Graph::new(&walker, &source_content); 
         g.build();
     }
     Ok(())
