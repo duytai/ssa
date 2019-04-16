@@ -10,13 +10,33 @@ pub struct Node<'a> {
 }
 
 #[derive(Debug)]
-pub struct Walker<'a> {
+pub struct Contract<'a> {
+    pub name: String,
     nodes: Vec<Node<'a>>,
+}
+
+#[derive(Debug)]
+pub struct Walker<'a> {
+    contracts: Vec<Contract<'a>>,
 }
 
 impl<'a> Walker<'a> {
     pub fn new(value: &'a json::JsonValue) -> Self {
-        Walker { nodes: Walker::parse(value, 0) }
+        let mut contracts: Vec<Contract> = vec![];
+        for children in value["children"].members() {
+            if let Some(name) = children["name"].as_str() {
+                if name == "ContractDefinition" {
+                    let nodes = Walker::parse(children, 0); 
+                    let contract_name = children["attributes"]["name"]
+                        .as_str()
+                        .unwrap()
+                        .to_string();
+                    let contract = Contract::new(contract_name, nodes);
+                    contracts.push(contract);
+                }
+            }
+        }
+        Walker { contracts }
     }
 
     pub fn parse(value: &json::JsonValue, level: u32) -> Vec<Node> {
@@ -30,7 +50,19 @@ impl<'a> Walker<'a> {
         nodes
     }
 
-    pub fn for_each<F>(&self, cb: F) where F: Fn(&Node, &json::JsonValue) {
+    pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Contract) {
+        for contract in &self.contracts {
+            cb(contract)
+        }
+    }
+}
+
+impl<'a> Contract<'a> {
+    pub fn new(name: String, nodes: Vec<Node<'a>>) -> Self {
+        Contract { name, nodes }
+    }
+
+    pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Node, &json::JsonValue) {
         for node in &self.nodes {
             cb(node, node.value)
         }
