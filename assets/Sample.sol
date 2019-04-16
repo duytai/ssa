@@ -8,8 +8,10 @@ contract Sample {
     address delegate;
     uint vote;
   }
-  constructor() public {
-    x = 1000;
+  constructor(uint val) public {
+    if (val > 0) {
+      x = val;
+    }
   }
 
   function add(uint step) public {

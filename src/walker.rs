@@ -3,8 +3,8 @@ use json;
 #[derive(Debug)]
 pub struct Node<'a> {
     pub id: u32,
-    pub level: u32,
     pub name: &'a str,
+    pub level: u32,
     pub source_offset: u32,
     pub source_len: u32,
     pub value: &'a json::JsonValue,
@@ -27,7 +27,7 @@ impl<'a> Walker<'a> {
         for children in value["children"].members() {
             if let Some(name) = children["name"].as_str() {
                 if name == "ContractDefinition" {
-                    let nodes = Walker::parse(children, 0); 
+                    let nodes = Walker::parse(children); 
                     let contract_name = children["attributes"]["name"]
                         .as_str()
                         .unwrap()
@@ -40,25 +40,28 @@ impl<'a> Walker<'a> {
         Walker { contracts }
     }
 
-    pub fn parse(value: &json::JsonValue, level: u32) -> Vec<Node> {
-        let id = value["id"].as_u32().unwrap();
-        let name = value["name"].as_str().unwrap();
-        let src = value["src"].as_str().unwrap();
-        let src = src.split(":")
-            .map(|x| x.parse::<u32>().unwrap())
-            .collect::<Vec<u32>>();
-        let mut nodes = vec![
-            Node {
+    pub fn parse(value: &json::JsonValue) -> Vec<Node> {
+        let mut queues: Vec<(u32, &json::JsonValue)> = vec![(0, value)];
+        let mut nodes: Vec<Node> = vec![];
+        while queues.len() > 0 {
+            let (level, value) = queues.remove(0);
+            let id = value["id"].as_u32().unwrap();
+            let name = value["name"].as_str().unwrap();
+            let src = value["src"].as_str().unwrap();
+            let src = src.split(":")
+                .map(|x| x.parse::<u32>().unwrap())
+                .collect::<Vec<u32>>();
+            nodes.push(Node {
                 id,
                 name,
                 value,
                 level,
                 source_offset: src[0],
                 source_len: src[1],
+            });
+            for child in value["children"].members() {
+                queues.push((level + 1, child));
             }
-        ];
-        for child in value["children"].members() {
-            nodes.append(&mut Walker::parse(child, level + 1));
         }
         nodes
     }

@@ -17,7 +17,9 @@ impl<'a> Graph<'a> {
             contract.for_each(|node| {
                 state.visit(node, node.value);
             });
-            println!("state: {:?}", state.report(self.source));
+            let state_report = state.report(self.source).join("\n");
+            println!("-----state-----");
+            println!("{}", state_report);
         });
     }
 }
