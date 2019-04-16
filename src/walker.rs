@@ -30,9 +30,9 @@ impl<'a> Walker<'a> {
         nodes
     }
 
-    pub fn for_each<F>(&self, cb: F) where F: Fn(&Node) {
+    pub fn for_each<F>(&self, cb: F) where F: Fn(&Node, &json::JsonValue) {
         for node in &self.nodes {
-            cb(node)
+            cb(node, node.value)
         }
     }
 }

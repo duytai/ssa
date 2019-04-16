@@ -1,4 +1,5 @@
 use crate::walker::{ Node };
+
 pub struct StateVariableDeclaration {
 } 
 
@@ -7,6 +8,8 @@ impl StateVariableDeclaration {
         StateVariableDeclaration {}
     }
 
-    pub fn visit(&self, node: &Node) {
+    pub fn visit(&self, node: &Node, value: &json::JsonValue) {
+        if node.name == "ContractDefinition" {
+        }
     }
 }

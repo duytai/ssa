@@ -12,8 +12,8 @@ impl<'a> Graph<'a> {
 
     pub fn build(&self) {
         let state = StateVariableDeclaration::new();
-        self.walker.for_each(|node| {
-            state.visit(node)
+        self.walker.for_each(|node, value| {
+            state.visit(node, value)
         });
     }
 }
