@@ -38,7 +38,8 @@ pub enum GraphNode {
     DoWhileStatement(DoWhileStatement),
     Return(CodeBlock),
     Throw(CodeBlock),
-    Break,
+    Break(CodeBlock),
+    Continue(CodeBlock),
     None,
 }
 
@@ -63,9 +64,7 @@ pub struct IfStatement {
 
 #[derive(Debug)]
 pub struct ForStatement {
-    first: CodeBlock,
-    second: CodeBlock,
-    third: CodeBlock,
+    steps: Vec<CodeBlock>,
     blocks: Vec<CodeBlock>,
 }
 
@@ -75,6 +74,12 @@ impl<'a> Graph<'a> {
     }
 
     pub fn build_item(&mut self, name: &str, walker: &Walker) -> CodeBlock {
+
+        let from = walker.node.source_offset as usize;
+        let to = from + walker.node.source_len as usize;
+        let source = &self.source[from..to];
+        let block = CodeBlock::Block(source.to_string());
+
         match name {
             "IfStatement" => {
                 let node = self.build_node(NodeKind::IfStatement, walker); 
@@ -93,27 +98,22 @@ impl<'a> Graph<'a> {
                 CodeBlock::Link(Box::new(node))
             },
             "Return" => {
-                let from = walker.node.source_offset as usize;
-                let to = from + walker.node.source_len as usize;
-                let source = &self.source[from..to];
-                let block = CodeBlock::Block(source.to_string());
                 let node = GraphNode::Return(block);
                 CodeBlock::Link(Box::new(node))
             },
             "Throw" => {
-                let from = walker.node.source_offset as usize;
-                let to = from + walker.node.source_len as usize;
-                let source = &self.source[from..to];
-                let block = CodeBlock::Block(source.to_string());
                 let node = GraphNode::Throw(block);
                 CodeBlock::Link(Box::new(node))
             },
-            _ => {
-                let from = walker.node.source_offset as usize;
-                let to = from + walker.node.source_len as usize;
-                let source = &self.source[from..to];
-                CodeBlock::Block(source.to_string())
-            }
+            "Continue" => {
+                let node = GraphNode::Continue(block);
+                CodeBlock::Link(Box::new(node))
+            },
+            "Break" => {
+                let node = GraphNode::Break(block);
+                CodeBlock::Link(Box::new(node))
+            },
+            _ => block,
         }
     }
 
@@ -182,40 +182,25 @@ impl<'a> Graph<'a> {
                 GraphNode::Standard(blocks)
             },
             NodeKind::ForStatement => {
-                let mut first = CodeBlock::None;
-                let mut second = CodeBlock::None;
-                let mut third = CodeBlock::None;
                 let mut blocks = vec![];
+                let mut steps = vec![];
+                let walker_len = walker.len();
                 walker.for_each(|walker, index| {
-                    match index {
-                        0 => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..=to];
-                            first = CodeBlock::Block(source.to_string());
-                        },
-                        1 => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..=to];
-                            second = CodeBlock::Block(source.to_string());
-                        },
-                        2 => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..=to];
-                            third = CodeBlock::Block(source.to_string());
-                        },
-                        _ => {
-                            if walker.node.name == "Block" {
-                                blocks = self.build_block(BlockKind::BlockBody, walker);
-                            } else {
-                                blocks.push(self.build_item(walker.node.name, walker));
-                            } 
-                        },
+                    if index == walker_len - 1 {
+                        if walker.node.name == "Block" {
+                            blocks = self.build_block(BlockKind::BlockBody, walker);
+                        } else {
+                            blocks.push(self.build_item(walker.node.name, walker));
+                        }
+                    } else {
+                        let from = walker.node.source_offset as usize;
+                        let to = from + walker.node.source_len as usize;
+                        let source = &self.source[from..=to];
+                        let block = CodeBlock::Block(source.to_string());
+                        steps.push(block);
                     }
                 });
-                GraphNode::ForStatement(ForStatement { first, second, third, blocks })
+                GraphNode::ForStatement(ForStatement { steps, blocks })
             },
             NodeKind::DoWhileStatement => {
                 let mut condition = CodeBlock::None; 

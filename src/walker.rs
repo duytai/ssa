@@ -38,6 +38,10 @@ impl<'a> Walker<'a> {
         Walker { node }
     }
 
+    pub fn len(&self) -> usize {
+        self.node.children.len()
+    }
+
     pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Walker, usize) {
         for (index, child) in self.node.children.iter().enumerate() {
             cb(&Walker::new(child), index);
