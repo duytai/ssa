@@ -36,6 +36,9 @@ pub enum GraphNode {
     WhileStatement(WhileStatement),
     ForStatement(ForStatement),
     DoWhileStatement(DoWhileStatement),
+    Return(CodeBlock),
+    Throw(CodeBlock),
+    Break,
     None,
 }
 
@@ -73,11 +76,10 @@ impl<'a> Graph<'a> {
 
     pub fn build_block(&mut self, kind: BlockKind, walker: &Walker) -> Vec<CodeBlock> {
         let mut blocks = vec![];
-        let mut is_return = false;
+        let mut is_stop = false;
         match kind {
             BlockKind::BlockBody => {
                 walker.for_each(|walker, _| {
-                    if is_return { return; }
                     match walker.node.name {
                         "IfStatement" => {
                             let node = self.build_node(NodeKind::IfStatement, walker); 
@@ -99,15 +101,30 @@ impl<'a> Graph<'a> {
                             let block = CodeBlock::Link(Box::new(node));
                             blocks.push(block);
                         },
+                        "Return" => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..to];
+                            let block = CodeBlock::Block(source.to_string());
+                            let node = GraphNode::Return(block);
+                            let block = CodeBlock::Link(Box::new(node));
+                            blocks.push(block);
+                        },
+                        "Throw" => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..to];
+                            let block = CodeBlock::Block(source.to_string());
+                            let node = GraphNode::Throw(block);
+                            let block = CodeBlock::Link(Box::new(node));
+                            blocks.push(block);
+                        },
                         _ => {
                             let from = walker.node.source_offset as usize;
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..to];
                             let block = CodeBlock::Block(source.to_string());
                             blocks.push(block);
-                            if walker.node.name == "Return" {
-                                is_return = true;
-                            }
                         }
                     }
                 })
