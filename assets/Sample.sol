@@ -23,10 +23,22 @@ contract Sample {
     x = x * 2;
     while(k > 0) {
       x = x + 3;
+      for (uint i = 0; i < 100; i++) {
+        x += 100;
+      }
+    }
+    do {
+      x += 10;
+    } while(x % 2 != 0);
+
+    if (x > 0) {
+      x-= 1;
+      return;
+      x+= 1;
     }
   }
 
-  function add(uint step) public {
+  function add(uint step) public returns(uint) {
     x += step;
   }
 }

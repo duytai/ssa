@@ -17,6 +17,9 @@ pub enum BlockKind {
 pub enum NodeKind {
     Root,
     IfStatement,
+    WhileStatement,
+    ForStatement,
+    DoWhileStatement,
 }
 
 #[derive(Debug)]
@@ -30,7 +33,22 @@ pub enum CodeBlock {
 pub enum GraphNode {
     Standard(Vec<CodeBlock>),
     IfStatement(IfStatement),
+    WhileStatement(WhileStatement),
+    ForStatement(ForStatement),
+    DoWhileStatement(DoWhileStatement),
     None,
+}
+
+#[derive(Debug)]
+pub struct WhileStatement {
+    condition: CodeBlock,
+    blocks: Vec<CodeBlock>,
+}
+
+#[derive(Debug)]
+pub struct DoWhileStatement {
+    condition: CodeBlock,
+    blocks: Vec<CodeBlock>,
 }
 
 #[derive(Debug)]
@@ -40,6 +58,13 @@ pub struct IfStatement {
     fblocks: Vec<CodeBlock>,
 }
 
+#[derive(Debug)]
+pub struct ForStatement {
+    first: CodeBlock,
+    second: CodeBlock,
+    third: CodeBlock,
+    blocks: Vec<CodeBlock>,
+}
 
 impl<'a> Graph<'a> {
     pub fn new(walker: &'a Walker, source: &'a str) -> Self {
@@ -48,12 +73,29 @@ impl<'a> Graph<'a> {
 
     pub fn build_block(&mut self, kind: BlockKind, walker: &Walker) -> Vec<CodeBlock> {
         let mut blocks = vec![];
+        let mut is_return = false;
         match kind {
             BlockKind::BlockBody => {
-                walker.for_each(|walker, index| {
+                walker.for_each(|walker, _| {
+                    if is_return { return; }
                     match walker.node.name {
                         "IfStatement" => {
                             let node = self.build_node(NodeKind::IfStatement, walker); 
+                            let block = CodeBlock::Link(Box::new(node));
+                            blocks.push(block);
+                        },
+                        "WhileStatement" => {
+                            let node = self.build_node(NodeKind::WhileStatement, walker);
+                            let block = CodeBlock::Link(Box::new(node));
+                            blocks.push(block);
+                        },
+                        "ForStatement" => {
+                            let node = self.build_node(NodeKind::ForStatement, walker);
+                            let block = CodeBlock::Link(Box::new(node));
+                            blocks.push(block);
+                        },
+                        "DoWhileStatement" => {
+                            let node = self.build_node(NodeKind::DoWhileStatement, walker);
                             let block = CodeBlock::Link(Box::new(node));
                             blocks.push(block);
                         },
@@ -63,6 +105,9 @@ impl<'a> Graph<'a> {
                             let source = &self.source[from..to];
                             let block = CodeBlock::Block(source.to_string());
                             blocks.push(block);
+                            if walker.node.name == "Return" {
+                                is_return = true;
+                            }
                         }
                     }
                 })
@@ -121,6 +166,78 @@ impl<'a> Graph<'a> {
                 blocks.append(&mut state_blocks);
                 blocks.append(&mut constructor_blocks);
                 GraphNode::Standard(blocks)
+            },
+            NodeKind::ForStatement => {
+                let mut first = CodeBlock::None;
+                let mut second = CodeBlock::None;
+                let mut third = CodeBlock::None;
+                let mut blocks = vec![];
+                walker.for_each(|walker, index| {
+                    match index {
+                        0 => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..=to];
+                            first = CodeBlock::Block(source.to_string());
+                        },
+                        1 => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..=to];
+                            second = CodeBlock::Block(source.to_string());
+                        },
+                        2 => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..=to];
+                            third = CodeBlock::Block(source.to_string());
+                        },
+                        _ => {
+                            if walker.node.name == "Block" {
+                                blocks = self.build_block(BlockKind::BlockBody, walker);
+                            }
+                        },
+                    }
+                });
+                GraphNode::ForStatement(ForStatement { first, second, third, blocks })
+            },
+            NodeKind::DoWhileStatement => {
+                let mut condition = CodeBlock::None; 
+                let mut blocks = vec![];
+                walker.for_each(|walker, _| {
+                    match walker.node.name {
+                        "BinaryOperation" => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..=to];
+                            condition = CodeBlock::Block(source.to_string());
+                        },
+                        "Block" => {
+                            blocks = self.build_block(BlockKind::BlockBody, walker);
+                        },
+                        _ => {},
+                    }
+                });
+                GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks })
+            },
+            NodeKind::WhileStatement => {
+                let mut condition = CodeBlock::None; 
+                let mut blocks = vec![];
+                walker.for_each(|walker, _| {
+                    match walker.node.name {
+                        "BinaryOperation" => {
+                            let from = walker.node.source_offset as usize;
+                            let to = from + walker.node.source_len as usize;
+                            let source = &self.source[from..=to];
+                            condition = CodeBlock::Block(source.to_string());
+                        },
+                        "Block" => {
+                            blocks = self.build_block(BlockKind::BlockBody, walker);
+                        },
+                        _ => {},
+                    }
+                });
+                GraphNode::WhileStatement(WhileStatement { condition, blocks })
             },
             NodeKind::IfStatement => {
                 let mut condition = CodeBlock::None; 
