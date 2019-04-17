@@ -74,59 +74,56 @@ impl<'a> Graph<'a> {
         Graph { walker, source, root: GraphNode::None }
     }
 
+    pub fn build_item(&mut self, name: &str, walker: &Walker) -> CodeBlock {
+        match name {
+            "IfStatement" => {
+                let node = self.build_node(NodeKind::IfStatement, walker); 
+                CodeBlock::Link(Box::new(node))
+            },
+            "WhileStatement" => {
+                let node = self.build_node(NodeKind::WhileStatement, walker);
+                CodeBlock::Link(Box::new(node))
+            },
+            "ForStatement" => {
+                let node = self.build_node(NodeKind::ForStatement, walker);
+                CodeBlock::Link(Box::new(node))
+            },
+            "DoWhileStatement" => {
+                let node = self.build_node(NodeKind::DoWhileStatement, walker);
+                CodeBlock::Link(Box::new(node))
+            },
+            "Return" => {
+                let from = walker.node.source_offset as usize;
+                let to = from + walker.node.source_len as usize;
+                let source = &self.source[from..to];
+                let block = CodeBlock::Block(source.to_string());
+                let node = GraphNode::Return(block);
+                CodeBlock::Link(Box::new(node))
+            },
+            "Throw" => {
+                let from = walker.node.source_offset as usize;
+                let to = from + walker.node.source_len as usize;
+                let source = &self.source[from..to];
+                let block = CodeBlock::Block(source.to_string());
+                let node = GraphNode::Throw(block);
+                CodeBlock::Link(Box::new(node))
+            },
+            _ => {
+                let from = walker.node.source_offset as usize;
+                let to = from + walker.node.source_len as usize;
+                let source = &self.source[from..to];
+                CodeBlock::Block(source.to_string())
+            }
+        }
+    }
+
     pub fn build_block(&mut self, kind: BlockKind, walker: &Walker) -> Vec<CodeBlock> {
         let mut blocks = vec![];
-        let mut is_stop = false;
         match kind {
             BlockKind::BlockBody => {
                 walker.for_each(|walker, _| {
-                    match walker.node.name {
-                        "IfStatement" => {
-                            let node = self.build_node(NodeKind::IfStatement, walker); 
-                            let block = CodeBlock::Link(Box::new(node));
-                            blocks.push(block);
-                        },
-                        "WhileStatement" => {
-                            let node = self.build_node(NodeKind::WhileStatement, walker);
-                            let block = CodeBlock::Link(Box::new(node));
-                            blocks.push(block);
-                        },
-                        "ForStatement" => {
-                            let node = self.build_node(NodeKind::ForStatement, walker);
-                            let block = CodeBlock::Link(Box::new(node));
-                            blocks.push(block);
-                        },
-                        "DoWhileStatement" => {
-                            let node = self.build_node(NodeKind::DoWhileStatement, walker);
-                            let block = CodeBlock::Link(Box::new(node));
-                            blocks.push(block);
-                        },
-                        "Return" => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..to];
-                            let block = CodeBlock::Block(source.to_string());
-                            let node = GraphNode::Return(block);
-                            let block = CodeBlock::Link(Box::new(node));
-                            blocks.push(block);
-                        },
-                        "Throw" => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..to];
-                            let block = CodeBlock::Block(source.to_string());
-                            let node = GraphNode::Throw(block);
-                            let block = CodeBlock::Link(Box::new(node));
-                            blocks.push(block);
-                        },
-                        _ => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..to];
-                            let block = CodeBlock::Block(source.to_string());
-                            blocks.push(block);
-                        }
-                    }
+                    let block = self.build_item(walker.node.name, walker);
+                    blocks.push(block);
                 })
             },
             BlockKind::Constructor => {
