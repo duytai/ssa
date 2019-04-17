@@ -209,7 +209,9 @@ impl<'a> Graph<'a> {
                         _ => {
                             if walker.node.name == "Block" {
                                 blocks = self.build_block(BlockKind::BlockBody, walker);
-                            }
+                            } else {
+                                blocks.push(self.build_item(walker.node.name, walker));
+                            } 
                         },
                     }
                 });
@@ -229,7 +231,9 @@ impl<'a> Graph<'a> {
                         "Block" => {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
                         },
-                        _ => {},
+                        _ => {
+                            blocks.push(self.build_item(walker.node.name, walker));
+                        },
                     }
                 });
                 GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks })
@@ -248,7 +252,9 @@ impl<'a> Graph<'a> {
                         "Block" => {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
                         },
-                        _ => {},
+                        _ => {
+                            blocks.push(self.build_item(walker.node.name, walker));
+                        },
                     }
                 });
                 GraphNode::WhileStatement(WhileStatement { condition, blocks })
@@ -272,7 +278,9 @@ impl<'a> Graph<'a> {
                                 fblocks = self.build_block(BlockKind::BlockBody, walker);
                             }
                         },
-                        _ => {},
+                        _ => {
+                            tblocks.push(self.build_item(walker.node.name, walker));
+                        }
                     }
                 });
                 GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks })
