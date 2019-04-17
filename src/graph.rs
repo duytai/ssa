@@ -309,12 +309,10 @@ impl<'a> Graph<'a> {
                 });
                 GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks })
             },
-            _ => GraphNode::None,
         } 
     }
 
-    pub fn build(&mut self) {
+    pub fn update(&mut self) {
         self.root = self.build_node(NodeKind::Root, self.walker);
-        println!("{:?}", self.root);
     }
 }

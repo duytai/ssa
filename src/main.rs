@@ -1,8 +1,8 @@
 mod walker;
 mod graph;
+mod flow;
 
-use walker::{ Walker };
-use graph::{ Graph };
+use flow::{ Flow };
 use json;
 use std::{
     fs,
@@ -20,9 +20,7 @@ fn main() -> io::Result<()> {
     for source in ast_json["sourceList"].members() {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
-        let walker = Walker::new(ast_one);
-        let mut g = Graph::new(&walker, &source_content); 
-        g.build();
+        let flow = Flow::new(ast_one, &source_content);
     }
     Ok(())
 }
