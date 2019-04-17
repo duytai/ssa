@@ -20,6 +20,7 @@ contract Sample {
       }
     } else {
       x+= val;
+      revert();
     }
     x = x * 2;
     while(k > 0) {
