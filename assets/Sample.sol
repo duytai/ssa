@@ -9,9 +9,11 @@ contract Sample {
     uint vote;
   }
   constructor(uint val) public {
-    if (val > 0) {
+    uint k = 100;
+    if (val + k > 0) {
       x = val;
     }
+    x = x * 2;
   }
 
   function add(uint step) public {

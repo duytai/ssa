@@ -1,6 +1,5 @@
 mod walker;
 mod graph;
-mod components;
 
 use walker::{ Walker };
 use graph::{ Graph };
