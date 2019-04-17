@@ -37,9 +37,9 @@ pub enum GraphNode {
     ForStatement(ForStatement),
     DoWhileStatement(DoWhileStatement),
     Return(CodeBlock),
-    Throw(CodeBlock),
-    Break(CodeBlock),
-    Continue(CodeBlock),
+    Throw,
+    Break,
+    Continue,
     None,
 }
 
@@ -102,16 +102,13 @@ impl<'a> Graph<'a> {
                 CodeBlock::Link(Box::new(node))
             },
             "Throw" => {
-                let node = GraphNode::Throw(block);
-                CodeBlock::Link(Box::new(node))
+                CodeBlock::Link(Box::new(GraphNode::Throw))
             },
             "Continue" => {
-                let node = GraphNode::Continue(block);
-                CodeBlock::Link(Box::new(node))
+                CodeBlock::Link(Box::new(GraphNode::Continue))
             },
             "Break" => {
-                let node = GraphNode::Break(block);
-                CodeBlock::Link(Box::new(node))
+                CodeBlock::Link(Box::new(GraphNode::Break))
             },
             _ => block,
         }
