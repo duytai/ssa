@@ -22,6 +22,7 @@ contract Sample {
       x+= val;
       revert();
     }
+    require(x > 0);
     x = x * 2;
     while(k > 0) {
       x = x + 3;
@@ -31,6 +32,8 @@ contract Sample {
         x += 100;
       }
     }
+
+    assert(k == 10);
 
     for(;;) x += 2; 
 

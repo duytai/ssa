@@ -37,6 +37,9 @@ pub enum GraphNode {
     ForStatement(ForStatement),
     DoWhileStatement(DoWhileStatement),
     Return(CodeBlock),
+    Require(CodeBlock),
+    Assert(CodeBlock),
+    Revert,
     Throw,
     Break,
     Continue,
@@ -73,14 +76,14 @@ impl<'a> Graph<'a> {
         Graph { walker, source, root: GraphNode::None }
     }
 
-    pub fn build_item(&mut self, name: &str, walker: &Walker) -> CodeBlock {
+    pub fn build_item(&mut self, walker: &Walker) -> CodeBlock {
 
         let from = walker.node.source_offset as usize;
         let to = from + walker.node.source_len as usize;
         let source = &self.source[from..to];
         let block = CodeBlock::Block(source.to_string());
 
-        match name {
+        match walker.node.name {
             "IfStatement" => {
                 let node = self.build_node(NodeKind::IfStatement, walker); 
                 CodeBlock::Link(Box::new(node))
@@ -110,7 +113,46 @@ impl<'a> Graph<'a> {
             "Break" => {
                 CodeBlock::Link(Box::new(GraphNode::Break))
             },
-            _ => block,
+            _ => {
+                match walker.node.name {
+                    "ExpressionStatement" => {
+                        let mut funcs = (false, false, false);
+                        walker.for_each(|walker, _| {
+                            if walker.node.name == "FunctionCall" {
+                                walker.for_each(|walker, _| {
+                                    if walker.node.name == "Identifier" {
+                                        let node_value = walker.node.attributes["value"]
+                                            .as_str()
+                                            .unwrap_or("");
+                                        let node_type = walker.node.attributes["type"] 
+                                            .as_str()
+                                            .unwrap_or("");
+                                        match(node_value, node_type) {
+                                            ("revert", "function () pure") => funcs.0 = true,
+                                            ("assert", "function (bool) pure") => funcs.1 = true,
+                                            ("require", "function (bool) pure") =>  funcs.2 = true,
+                                            _ => {},
+                                        }
+                                    }
+                                })
+                            }
+                        });
+                        match funcs {
+                            (true, _, _) => {
+                                CodeBlock::Link(Box::new(GraphNode::Revert))
+                            },
+                            (_, true, _) => {
+                                CodeBlock::Link(Box::new(GraphNode::Assert(block)))
+                            },
+                            (_, _, true) => {
+                                CodeBlock::Link(Box::new(GraphNode::Require(block)))
+                            },
+                            (_, _, _) => block,
+                        }
+                    },
+                    _ => block,
+                }
+            },
         }
     }
 
@@ -119,7 +161,7 @@ impl<'a> Graph<'a> {
         match kind {
             BlockKind::BlockBody => {
                 walker.for_each(|walker, _| {
-                    let block = self.build_item(walker.node.name, walker);
+                    let block = self.build_item(walker);
                     blocks.push(block);
                 })
             },
@@ -187,7 +229,7 @@ impl<'a> Graph<'a> {
                         if walker.node.name == "Block" {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
                         } else {
-                            blocks.push(self.build_item(walker.node.name, walker));
+                            blocks.push(self.build_item(walker));
                         }
                     } else {
                         let from = walker.node.source_offset as usize;
@@ -214,7 +256,7 @@ impl<'a> Graph<'a> {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
                         },
                         _ => {
-                            blocks.push(self.build_item(walker.node.name, walker));
+                            blocks.push(self.build_item(walker));
                         },
                     }
                 });
@@ -235,7 +277,7 @@ impl<'a> Graph<'a> {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
                         },
                         _ => {
-                            blocks.push(self.build_item(walker.node.name, walker));
+                            blocks.push(self.build_item(walker));
                         },
                     }
                 });
@@ -261,7 +303,7 @@ impl<'a> Graph<'a> {
                             }
                         },
                         _ => {
-                            tblocks.push(self.build_item(walker.node.name, walker));
+                            tblocks.push(self.build_item(walker));
                         }
                     }
                 });
