@@ -179,7 +179,6 @@ impl<'a> Graph<'a> {
                     }
                 })
             },
-            _ => {},
         }
         blocks
     } 
@@ -312,7 +311,13 @@ impl<'a> Graph<'a> {
         } 
     }
 
-    pub fn update(&mut self) {
-        self.root = self.build_node(NodeKind::Root, self.walker);
+    pub fn update(&mut self) -> &GraphNode {
+        match self.root {
+            GraphNode::None => {
+                self.root = self.build_node(NodeKind::Root, self.walker);
+                &self.root
+            },
+            _ => &self.root,
+        }
     }
 }
