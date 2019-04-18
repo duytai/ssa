@@ -1,6 +1,11 @@
 use json;
 use super::{
-    graph::{ Graph, GraphNode, CodeBlock },
+    graph::{
+        Graph,
+        GraphNode,
+        CodeBlock,
+        IfStatement,
+    },
     walker::{ Walker },
 };
 
@@ -10,7 +15,7 @@ pub struct Flow<'a> {
 }
 
 pub struct SubDot {
-    links: Vec<(u32, u32)>,
+    links: Vec<(String, String)>,
     nodes: Vec<String>,
 }
 
@@ -19,18 +24,27 @@ impl<'a> Flow<'a> {
         Flow { value, source }
     }
 
-    pub fn render_dot(&self, prev_id: u32, cur_id: u32, next_id: u32, block: &CodeBlock) -> SubDot {
+    pub fn render_dot(&self, prev_id: &str, cur_id: &str, next_id: &str, block: &CodeBlock) -> SubDot {
         let mut links = vec![];
         let mut nodes = vec![];
         match block {
             CodeBlock::Block(content) => {
-                links.push((prev_id, cur_id));
+                links.push((prev_id.to_string(), cur_id.to_string()));
+                links.push((cur_id.to_string(), next_id.to_string()));
                 nodes.push(format!("  {}[label={:?}, shape=\"box\"];", cur_id, content));
             },
-            CodeBlock::Link(_) => {
+            CodeBlock::Link(link) => {
+                match &**link {
+                    GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
+                        if let CodeBlock::Block(content) = condition {
+                            links.push((prev_id.to_string(), format!("A{}", cur_id)));
+                            nodes.push(format!("  A{}[label={:?}, shape=\"box\"];", cur_id, content));
+                        }
+                    },
+                    _ => {},
+                }
             },
-            CodeBlock::None => {
-            },
+            CodeBlock::None => {},
         }
         SubDot { links, nodes }
     }
@@ -43,9 +57,14 @@ impl<'a> Flow<'a> {
         let mut nodes = vec![];
         if let GraphNode::Root(blocks) = root {
             for (index, block) in blocks.iter().enumerate() {
-                let mut subdot = self.render_dot(index as u32, index as u32 + 1, index as u32 + 2, block);
+                let index = index as u32;
+                let prev_id = index.to_string();
+                let cur_id = (index + 1).to_string();
+                let next_id = (index + 2).to_string();
+                let mut subdot = self.render_dot(&prev_id, &cur_id, &next_id, block);
                 links.append(&mut subdot.links);
                 nodes.append(&mut subdot.nodes);
+                println!("{:?}", block);
             }
         }
         let nodes = nodes.join("\n");

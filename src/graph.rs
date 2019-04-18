@@ -60,9 +60,9 @@ pub struct DoWhileStatement {
 
 #[derive(Debug)]
 pub struct IfStatement {
-    condition: CodeBlock,
-    tblocks: Vec<CodeBlock>,
-    fblocks: Vec<CodeBlock>,
+    pub condition: CodeBlock,
+    pub tblocks: Vec<CodeBlock>,
+    pub fblocks: Vec<CodeBlock>,
 }
 
 #[derive(Debug)]
