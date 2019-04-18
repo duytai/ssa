@@ -31,7 +31,7 @@ pub enum CodeBlock {
 
 #[derive(Debug)]
 pub enum GraphNode {
-    Standard(Vec<CodeBlock>),
+    Root(Vec<CodeBlock>),
     IfStatement(IfStatement),
     WhileStatement(WhileStatement),
     ForStatement(ForStatement),
@@ -217,7 +217,7 @@ impl<'a> Graph<'a> {
                 });
                 blocks.append(&mut state_blocks);
                 blocks.append(&mut constructor_blocks);
-                GraphNode::Standard(blocks)
+                GraphNode::Root(blocks)
             },
             NodeKind::ForStatement => {
                 let mut blocks = vec![];
