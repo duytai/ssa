@@ -23,8 +23,14 @@ pub enum NodeKind {
 }
 
 #[derive(Debug)]
+pub struct BlockContent {
+    source: String,
+    id: u32,
+}
+
+#[derive(Debug)]
 pub enum CodeBlock {
-    Block(String),
+    Block(BlockContent),
     Link(Box<GraphNode>),
     None,
 }
@@ -81,7 +87,10 @@ impl<'a> Graph<'a> {
         let from = walker.node.source_offset as usize;
         let to = from + walker.node.source_len as usize;
         let source = &self.source[from..to];
-        let block = CodeBlock::Block(source.to_string());
+        let block = CodeBlock::Block(BlockContent {
+            source: source.to_string(),
+            id: walker.node.id,
+        });
 
         match walker.node.name {
             "IfStatement" => {
@@ -171,7 +180,10 @@ impl<'a> Graph<'a> {
                         let from = walker.node.source_offset as usize;
                         let to = from + walker.node.source_len as usize;
                         let source = &self.source[from..to];
-                        let block = CodeBlock::Block(source.to_string());
+                        let block = CodeBlock::Block(BlockContent {
+                            source: source.to_string(),
+                            id: walker.node.id,
+                        });
                         blocks.push(block);
                     }
                     if walker.node.name == "Block" {
@@ -208,7 +220,10 @@ impl<'a> Graph<'a> {
                                     let from = walker.node.source_offset as usize;
                                     let to = from + walker.node.source_len as usize; 
                                     let source = &self.source[from..=to];
-                                    let block = CodeBlock::Block(source.to_string());
+                                    let block = CodeBlock::Block(BlockContent {
+                                        source: source.to_string(),
+                                        id: walker.node.id,
+                                    });
                                     state_blocks.push(block);
                                 }
                             }
@@ -234,7 +249,10 @@ impl<'a> Graph<'a> {
                         let from = walker.node.source_offset as usize;
                         let to = from + walker.node.source_len as usize;
                         let source = &self.source[from..=to];
-                        let block = CodeBlock::Block(source.to_string());
+                        let block = CodeBlock::Block(BlockContent {
+                            source: source.to_string(),
+                            id: walker.node.id,
+                        });
                         steps.push(block);
                     }
                 });
@@ -249,7 +267,10 @@ impl<'a> Graph<'a> {
                             let from = walker.node.source_offset as usize;
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..=to];
-                            condition = CodeBlock::Block(source.to_string());
+                            condition = CodeBlock::Block(BlockContent {
+                                source: source.to_string(),
+                                id: walker.node.id,
+                            });
                         },
                         "Block" => {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
@@ -270,7 +291,10 @@ impl<'a> Graph<'a> {
                             let from = walker.node.source_offset as usize;
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..=to];
-                            condition = CodeBlock::Block(source.to_string());
+                            condition = CodeBlock::Block(BlockContent {
+                                source: source.to_string(),
+                                id: walker.node.id,
+                            });
                         },
                         "Block" => {
                             blocks = self.build_block(BlockKind::BlockBody, walker);
@@ -292,7 +316,10 @@ impl<'a> Graph<'a> {
                             let from = walker.node.source_offset as usize;
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..=to];
-                            condition = CodeBlock::Block(source.to_string());
+                            condition = CodeBlock::Block(BlockContent {
+                                source: source.to_string(),
+                                id: walker.node.id,
+                            });
                         },
                         "Block" => {
                             if index == 1 {

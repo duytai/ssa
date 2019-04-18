@@ -23,5 +23,6 @@ impl<'a> Flow<'a> {
         let walker = Walker::new(self.value);
         let mut graph = Graph::new(&walker, self.source);
         let root = graph.update();
+        println!("{:?}", root);
     }
 }
