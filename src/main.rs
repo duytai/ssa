@@ -20,7 +20,7 @@ fn main() -> io::Result<()> {
     for source in ast_json["sourceList"].members() {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
-        let flow = Flow::new(ast_one, &source_content);
+        let mut flow = Flow::new(ast_one, &source_content);
         flow.render();
     }
     Ok(())

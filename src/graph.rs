@@ -24,8 +24,8 @@ pub enum NodeKind {
 
 #[derive(Debug)]
 pub struct BlockContent {
-    source: String,
-    id: u32,
+    pub source: String,
+    pub id: u32,
 }
 
 #[derive(Debug)]
