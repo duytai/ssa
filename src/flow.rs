@@ -19,6 +19,8 @@ pub struct Flow<'a> {
     source: &'a str, 
     edges: HashSet<(u32, u32)>,
     vertices: HashSet<String>,
+    start: u32,
+    stop: u32,
 }
 
 impl<'a> Flow<'a> {
@@ -28,6 +30,8 @@ impl<'a> Flow<'a> {
             source,
             edges: HashSet::new(),
             vertices: HashSet::new(),
+            start: 0,
+            stop: 1000000,
         }
     }
 
@@ -171,18 +175,30 @@ impl<'a> Flow<'a> {
                             }
                             predecessors = cond_predecessors;
                         },
-                        GraphNode::Return(CodeBlock::Block(BlockContent { id, source })) => {
+                        GraphNode::Return(CodeBlock::Block(BlockContent { id, source })) 
+                            | GraphNode::Revert(CodeBlock::Block(BlockContent { id, source }))
+                            | GraphNode::Throw(CodeBlock::Block(BlockContent { id, source })) => {
                             let vertice = Flow::to_vertice(id, source, "box");
                             self.vertices.insert(vertice);
-                            predecessors = predecessors
-                                .iter()
-                                .filter_map(|predecessor| {
-                                    if !self.edges.insert((*predecessor, *id)) { return None; }
-                                    Some(*id)
-                                })
-                            .collect::<Vec<u32>>();
-                            predecessors.dedup();
+                            for predecessor in predecessors.iter() {
+                                self.edges.insert((*predecessor, *id));
+                            }
+                            self.edges.insert((*id, self.stop));
                             return vec![];
+                        },
+                        GraphNode::Require(CodeBlock::Block(BlockContent { id, source }))
+                            | GraphNode::Assert(CodeBlock::Block(BlockContent { id, source })) => {
+                            let vertice = Flow::to_vertice(id, source, "diamond");
+                            self.vertices.insert(vertice);
+                            for predecessor in predecessors.iter() {
+                                self.edges.insert((*predecessor, *id));
+                            }
+                            self.edges.insert((*id, self.stop));
+                            predecessors = vec![*id];
+                        },
+                        GraphNode::Break(CodeBlock::Block(BlockContent { id, source })) => {
+                        },
+                        GraphNode::Continue(CodeBlock::Block(BlockContent { id, source })) => {
                         },
                         _ => {},
                     }
@@ -198,9 +214,9 @@ impl<'a> Flow<'a> {
         let mut graph = Graph::new(&walker, self.source);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
-            let predecessors = vec![0];
-            let vertice = Flow::to_vertice(&predecessors[0], "START", "circle");
-            self.vertices.insert(vertice);
+            self.vertices.insert(Flow::to_vertice(&self.start, "START", "circle"));
+            self.vertices.insert(Flow::to_vertice(&self.stop, "STOP", "circle"));
+            let predecessors = vec![self.start];
             self.traverse(blocks, predecessors);
         }
         println!("{}", self.to_dot());

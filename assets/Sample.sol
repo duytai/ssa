@@ -51,6 +51,7 @@ contract Sample {
       return;
       x+= 1;
     }
+    x += 999;
   }
 
   function add(uint step) public returns(uint) {
