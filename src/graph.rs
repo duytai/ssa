@@ -1,19 +1,19 @@
 use super::walker::{ Walker };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Graph<'a> {
     walker: &'a Walker<'a>,
     source: &'a str,
     root: GraphNode,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BlockKind {
     Constructor,
     BlockBody,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum NodeKind {
     Root,
     IfStatement,
@@ -22,20 +22,20 @@ pub enum NodeKind {
     DoWhileStatement,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlockContent {
     pub source: String,
     pub id: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CodeBlock {
     Block(BlockContent),
     Link(Box<GraphNode>),
     None,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GraphNode {
     Root(Vec<CodeBlock>),
     IfStatement(IfStatement),
@@ -52,26 +52,26 @@ pub enum GraphNode {
     None,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WhileStatement {
     pub condition: CodeBlock,
     pub blocks: Vec<CodeBlock>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DoWhileStatement {
     pub condition: CodeBlock,
     pub blocks: Vec<CodeBlock>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IfStatement {
     pub condition: CodeBlock,
     pub tblocks: Vec<CodeBlock>,
     pub fblocks: Vec<CodeBlock>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ForStatement {
     pub condition: CodeBlock,
     pub init: CodeBlock,
