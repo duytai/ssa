@@ -91,42 +91,45 @@ impl<'a> Flow<'a> {
                         },
                         GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(BlockContent { id, source }) = condition {
-                                predecessors = self.traverse(blocks, predecessors.clone());
-                                let vertice = Flow::to_vertice(id, source, "diamond");
-                                self.vertices.insert(vertice);
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, *id)) { return None; }
-                                        Some(*id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                                self.traverse(blocks, predecessors.clone());
+                                for _ in 0..2 {
+                                    predecessors = self.traverse(blocks, predecessors.clone());
+                                    let vertice = Flow::to_vertice(id, source, "diamond");
+                                    self.vertices.insert(vertice);
+                                    predecessors = predecessors
+                                        .iter()
+                                        .filter_map(|predecessor| {
+                                            if !self.edges.insert((*predecessor, *id)) { return None; }
+                                            Some(*id)
+                                        })
+                                    .collect::<Vec<u32>>();
+                                    predecessors.dedup();
+                                }
                                 predecessors = vec![*id];
                             }
                         },
                         GraphNode::WhileStatement(WhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(BlockContent { id, source }) = condition {
-                                let vertice = Flow::to_vertice(id, source, "diamond");
-                                self.vertices.insert(vertice);
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, *id)) { return None; }
-                                        Some(*id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                                predecessors = self.traverse(blocks, predecessors.clone());
-                                for predecessor in &predecessors {
-                                    self.edges.insert((*predecessor, *id));
+                                let mut cond_predecessors = vec![];
+                                for counter in 0..2 {
+                                    let vertice = Flow::to_vertice(id, source, "diamond");
+                                    self.vertices.insert(vertice);
+                                    predecessors = predecessors
+                                        .iter()
+                                        .filter_map(|predecessor| {
+                                            if !self.edges.insert((*predecessor, *id)) { return None; }
+                                            Some(*id)
+                                        })
+                                    .collect::<Vec<u32>>();
+                                    predecessors.dedup();
+                                    if counter == 0 { cond_predecessors = predecessors.clone(); }
+                                    predecessors = self.traverse(blocks, predecessors.clone());
                                 }
+                                predecessors = cond_predecessors;
                             }
                         },
                         GraphNode::ForStatement(for_statement) => {
-                            let mut next_statement = (*for_statement).clone(); 
                             let ForStatement { init, condition, expression, blocks } = for_statement;
+                            let mut cond_predecessors = vec![];
                             if let CodeBlock::Block(BlockContent { id, source }) = init {
                                 let vertice = Flow::to_vertice(id, source, "box");
                                 self.vertices.insert(vertice);
@@ -138,35 +141,36 @@ impl<'a> Flow<'a> {
                                     })
                                 .collect::<Vec<u32>>();
                                 predecessors.dedup();
-                            } 
-                            let mut condition_predecessors = vec![]; 
-                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
-                                let vertice = Flow::to_vertice(id, source, "diamond");
-                                self.vertices.insert(vertice);
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, *id)) { return None; }
-                                        Some(*id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                                condition_predecessors = predecessors.clone();
-                            } 
-                            predecessors = self.traverse(blocks, predecessors.clone());
-                            if let CodeBlock::Block(BlockContent { id, source }) = expression {
-                                let vertice = Flow::to_vertice(id, source, "box");
-                                self.vertices.insert(vertice);
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, *id)) { return None; }
-                                        Some(*id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                            } 
-                            predecessors = condition_predecessors;
+                            }
+                            for counter in 0..2 {
+                                if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                                    let vertice = Flow::to_vertice(id, source, "diamond");
+                                    self.vertices.insert(vertice);
+                                    predecessors = predecessors
+                                        .iter()
+                                        .filter_map(|predecessor| {
+                                            if !self.edges.insert((*predecessor, *id)) { return None; }
+                                            Some(*id)
+                                        })
+                                    .collect::<Vec<u32>>();
+                                    predecessors.dedup();
+                                    if counter == 0 { cond_predecessors = predecessors.clone(); }
+                                }
+                                predecessors = self.traverse(blocks, predecessors.clone());
+                                if let CodeBlock::Block(BlockContent { id, source }) = expression {
+                                    let vertice = Flow::to_vertice(id, source, "box");
+                                    self.vertices.insert(vertice);
+                                    predecessors = predecessors
+                                        .iter()
+                                        .filter_map(|predecessor| {
+                                            if !self.edges.insert((*predecessor, *id)) { return None; }
+                                            Some(*id)
+                                        })
+                                    .collect::<Vec<u32>>();
+                                    predecessors.dedup();
+                                }
+                            }
+                            predecessors = cond_predecessors;
                         },
                         _ => {},
                     }
