@@ -9,6 +9,7 @@ use super::{
         IfStatement,
         WhileStatement,
         DoWhileStatement,
+        ForStatement,
     },
     walker::{ Walker },
 };
@@ -122,6 +123,8 @@ impl<'a> Flow<'a> {
                                     self.edges.insert((*predecessor, *id));
                                 }
                             }
+                        },
+                        GraphNode::ForStatement(ForStatement { condition, init, expression, blocks }) => {
                         },
                         _ => {},
                     }

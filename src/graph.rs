@@ -73,8 +73,10 @@ pub struct IfStatement {
 
 #[derive(Debug)]
 pub struct ForStatement {
-    steps: Vec<CodeBlock>,
-    blocks: Vec<CodeBlock>,
+    pub condition: CodeBlock,
+    pub init: CodeBlock,
+    pub expression: CodeBlock,  
+    pub blocks: Vec<CodeBlock>,
 }
 
 impl<'a> Graph<'a> {
@@ -236,27 +238,49 @@ impl<'a> Graph<'a> {
             },
             NodeKind::ForStatement => {
                 let mut blocks = vec![];
-                let mut steps = vec![];
-                let walker_len = walker.len();
+                let mut condition = CodeBlock::None;
+                let mut init = CodeBlock::None;
+                let mut expression = CodeBlock::None;
+                let mut props = vec!["initializationExpression", "condition", "loopExpression", "body"];
+                for (key, _) in walker.node.attributes.entries() {
+                    props = props.iter().filter_map(|x| {
+                        if x == &key { return None; }
+                        Some(*x)
+                    }).collect();
+                }
                 walker.for_each(|walker, index| {
-                    if index == walker_len - 1 {
-                        if walker.node.name == "Block" {
-                            blocks = self.build_block(BlockKind::BlockBody, walker);
-                        } else {
-                            blocks.push(self.build_item(walker));
-                        }
-                    } else {
-                        let from = walker.node.source_offset as usize;
-                        let to = from + walker.node.source_len as usize;
-                        let source = &self.source[from..=to];
-                        let block = CodeBlock::Block(BlockContent {
-                            source: source.to_string(),
-                            id: walker.node.id,
-                        });
-                        steps.push(block);
+                    let from = walker.node.source_offset as usize;
+                    let to = from + walker.node.source_len as usize;
+                    let source = &self.source[from..=to];
+                    match props[index] {
+                        "initializationExpression" => {
+                            init = CodeBlock::Block(BlockContent {
+                                source: source.to_string(),
+                                id: walker.node.id,
+                            });
+                        },
+                        "condition" => {
+                            condition = CodeBlock::Block(BlockContent {
+                                source: source.to_string(),
+                                id: walker.node.id,
+                            });
+                        },
+                        "loopExpression" => {
+                            expression = CodeBlock::Block(BlockContent {
+                                source: source.to_string(),
+                                id: walker.node.id,
+                            });
+                        },
+                        _ => {
+                            if walker.node.name == "Block" {
+                                blocks = self.build_block(BlockKind::BlockBody, walker);
+                            } else {
+                                blocks.push(self.build_item(walker));
+                            }
+                        },
                     }
                 });
-                GraphNode::ForStatement(ForStatement { steps, blocks })
+                GraphNode::ForStatement(ForStatement { condition, init, expression, blocks })
             },
             NodeKind::DoWhileStatement => {
                 let mut condition = CodeBlock::None; 
