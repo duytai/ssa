@@ -45,10 +45,10 @@ pub enum GraphNode {
     Return(CodeBlock),
     Require(CodeBlock),
     Assert(CodeBlock),
-    Revert,
-    Throw,
-    Break,
-    Continue,
+    Revert(CodeBlock),
+    Throw(CodeBlock),
+    Break(CodeBlock),
+    Continue(CodeBlock),
     None,
 }
 
@@ -116,13 +116,16 @@ impl<'a> Graph<'a> {
                 CodeBlock::Link(Box::new(node))
             },
             "Throw" => {
-                CodeBlock::Link(Box::new(GraphNode::Throw))
+                let node = GraphNode::Throw(block);
+                CodeBlock::Link(Box::new(node))
             },
             "Continue" => {
-                CodeBlock::Link(Box::new(GraphNode::Continue))
+                let node = GraphNode::Continue(block);
+                CodeBlock::Link(Box::new(node))
             },
             "Break" => {
-                CodeBlock::Link(Box::new(GraphNode::Break))
+                let node = GraphNode::Continue(block);
+                CodeBlock::Link(Box::new(node))
             },
             _ => {
                 match walker.node.name {
@@ -150,7 +153,7 @@ impl<'a> Graph<'a> {
                         });
                         match funcs {
                             (true, _, _) => {
-                                CodeBlock::Link(Box::new(GraphNode::Revert))
+                                CodeBlock::Link(Box::new(GraphNode::Revert(block)))
                             },
                             (_, true, _) => {
                                 CodeBlock::Link(Box::new(GraphNode::Assert(block)))
