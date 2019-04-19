@@ -54,8 +54,8 @@ pub enum GraphNode {
 
 #[derive(Debug)]
 pub struct WhileStatement {
-    condition: CodeBlock,
-    blocks: Vec<CodeBlock>,
+    pub condition: CodeBlock,
+    pub blocks: Vec<CodeBlock>,
 }
 
 #[derive(Debug)]

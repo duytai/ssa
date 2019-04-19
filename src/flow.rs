@@ -7,6 +7,7 @@ use super::{
         CodeBlock,
         BlockContent,
         IfStatement,
+        WhileStatement,
     },
     walker::{ Walker },
 };
@@ -77,12 +78,29 @@ impl<'a> Flow<'a> {
                                         Some(*id)
                                     })
                                 .collect::<Vec<u32>>();
+                                let mut t = self.traverse(tblocks, predecessors.clone());
+                                let mut f = self.traverse(fblocks, predecessors.clone());
+                                predecessors.clear();
+                                predecessors.append(&mut t);
+                                predecessors.append(&mut f);
                             }
-                            let mut t = self.traverse(tblocks, predecessors.clone());
-                            let mut f = self.traverse(fblocks, predecessors.clone());
-                            predecessors.clear();
-                            predecessors.append(&mut t);
-                            predecessors.append(&mut f);
+                        },
+                        GraphNode::WhileStatement(WhileStatement { condition, blocks }) => {
+                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                                let vertice = Flow::to_vertice(id, source, "diamond");
+                                self.vertices.insert(vertice);
+                                predecessors = predecessors
+                                    .iter()
+                                    .filter_map(|predecessor| {
+                                        if !self.edges.insert((*predecessor, *id)) { return None; }
+                                        Some(*id)
+                                    })
+                                .collect::<Vec<u32>>();
+                                predecessors = self.traverse(blocks, predecessors.clone());
+                                for predecessor in &predecessors {
+                                    self.edges.insert((*predecessor, *id));
+                                }
+                            }
                         },
                         _ => {},
                     }
@@ -90,7 +108,7 @@ impl<'a> Flow<'a> {
                 _ => {}, 
             }
         }
-        return vec![];
+        return predecessors;
     }
 
     pub fn render(&mut self) {
