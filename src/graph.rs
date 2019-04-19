@@ -60,8 +60,8 @@ pub struct WhileStatement {
 
 #[derive(Debug)]
 pub struct DoWhileStatement {
-    condition: CodeBlock,
-    blocks: Vec<CodeBlock>,
+    pub condition: CodeBlock,
+    pub blocks: Vec<CodeBlock>,
 }
 
 #[derive(Debug)]

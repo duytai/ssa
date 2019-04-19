@@ -8,6 +8,7 @@ use super::{
         BlockContent,
         IfStatement,
         WhileStatement,
+        DoWhileStatement,
     },
     walker::{ Walker },
 };
@@ -64,6 +65,7 @@ impl<'a> Flow<'a> {
                             Some(*id)
                         })
                         .collect::<Vec<u32>>();
+                    predecessors.dedup();
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
@@ -78,11 +80,29 @@ impl<'a> Flow<'a> {
                                         Some(*id)
                                     })
                                 .collect::<Vec<u32>>();
+                                predecessors.dedup();
                                 let mut t = self.traverse(tblocks, predecessors.clone());
                                 let mut f = self.traverse(fblocks, predecessors.clone());
                                 predecessors.clear();
                                 predecessors.append(&mut t);
                                 predecessors.append(&mut f);
+                            }
+                        },
+                        GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
+                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                                predecessors = self.traverse(blocks, predecessors.clone());
+                                let vertice = Flow::to_vertice(id, source, "diamond");
+                                self.vertices.insert(vertice);
+                                predecessors = predecessors
+                                    .iter()
+                                    .filter_map(|predecessor| {
+                                        if !self.edges.insert((*predecessor, *id)) { return None; }
+                                        Some(*id)
+                                    })
+                                .collect::<Vec<u32>>();
+                                predecessors.dedup();
+                                self.traverse(blocks, predecessors.clone());
+                                predecessors = vec![*id];
                             }
                         },
                         GraphNode::WhileStatement(WhileStatement { condition, blocks }) => {
@@ -96,6 +116,7 @@ impl<'a> Flow<'a> {
                                         Some(*id)
                                     })
                                 .collect::<Vec<u32>>();
+                                predecessors.dedup();
                                 predecessors = self.traverse(blocks, predecessors.clone());
                                 for predecessor in &predecessors {
                                     self.edges.insert((*predecessor, *id));
