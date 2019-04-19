@@ -6,6 +6,7 @@ use super::{
         GraphNode,
         CodeBlock,
         BlockContent,
+        IfStatement,
     },
     walker::{ Walker },
 };
@@ -27,8 +28,8 @@ impl<'a> Flow<'a> {
         }
     }
 
-    pub fn to_vertice(id: &u32, source: &str) -> String {
-        format!("  {}[label={:?}, shape=\"box\"];\n", id, source)
+    pub fn to_vertice(id: &u32, source: &str, shape: &str) -> String {
+        format!("  {}[label={:?}, shape=\"{}\"];\n", id, source, shape)
     }
 
     pub fn to_edge(e: &(u32, u32)) -> String {
@@ -47,19 +48,49 @@ impl<'a> Flow<'a> {
         format!("digraph {{\n{0}{1}}}", vertices, edges)
     }
 
-    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, vertex: u32) {
-        let mut vertex = vertex;
+    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>) -> Vec<u32> {
+        let mut predecessors = predecessors;
         for block in blocks {
+            if predecessors.is_empty() { return vec![]; }
             match block {
                 CodeBlock::Block(BlockContent { id, source }) => {
-                    let vertice = Flow::to_vertice(id, source);
+                    let vertice = Flow::to_vertice(id, source, "box");
                     self.vertices.insert(vertice);
-                    if !self.edges.insert((vertex, *id)) { return; }
-                    vertex = *id;
+                    predecessors = predecessors
+                        .iter()
+                        .filter_map(|predecessor| {
+                            if !self.edges.insert((*predecessor, *id)) { return None; }
+                            Some(*id)
+                        })
+                        .collect::<Vec<u32>>();
                 },
-                _ => {},
+                CodeBlock::Link(link) => {
+                    match &**link {
+                        GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
+                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                                let vertice = Flow::to_vertice(id, source, "diamond");
+                                self.vertices.insert(vertice);
+                                predecessors = predecessors
+                                    .iter()
+                                    .filter_map(|predecessor| {
+                                        if !self.edges.insert((*predecessor, *id)) { return None; }
+                                        Some(*id)
+                                    })
+                                .collect::<Vec<u32>>();
+                            }
+                            let mut t = self.traverse(tblocks, predecessors.clone());
+                            let mut f = self.traverse(fblocks, predecessors.clone());
+                            predecessors.clear();
+                            predecessors.append(&mut t);
+                            predecessors.append(&mut f);
+                        },
+                        _ => {},
+                    }
+                },
+                _ => {}, 
             }
         }
+        return vec![];
     }
 
     pub fn render(&mut self) {
@@ -67,10 +98,10 @@ impl<'a> Flow<'a> {
         let mut graph = Graph::new(&walker, self.source);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
-            let vertex = 0;
-            let vertice = Flow::to_vertice(&0, "START");
+            let predecessors = vec![0];
+            let vertice = Flow::to_vertice(&predecessors[0], "START", "circle");
             self.vertices.insert(vertice);
-            self.traverse(blocks, vertex);
+            self.traverse(blocks, predecessors);
         }
         println!("{}", self.to_dot());
     }
