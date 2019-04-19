@@ -35,10 +35,10 @@ contract Sample {
 
     assert(k == 10);
 
-    for(k = 0;;) x += 2; 
+    for(k = 0; x < 0;) x += 2; 
     for(;k < 0;) x += 2; 
-    for(;;k++) x += 2; 
-    for(;;) k += 7;
+    for(;x > 0;k++) x += 2; 
+    for(;x == 0;) k += 7;
 
     do {
       x += 10;
