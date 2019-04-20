@@ -124,7 +124,7 @@ impl<'a> Graph<'a> {
                 CodeBlock::Link(Box::new(node))
             },
             "Break" => {
-                let node = GraphNode::Continue(block);
+                let node = GraphNode::Break(block);
                 CodeBlock::Link(Box::new(node))
             },
             _ => {

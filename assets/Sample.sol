@@ -26,7 +26,11 @@ contract Sample {
     x = x * 2;
     while(k > 0) {
       x = x + 3;
-      if(k == 10) continue;
+      if(k == 10) {
+        x = x + 100;
+        continue;
+        k = 99;
+      }
       if(k == 90) break;
       for (uint i = 0; i < 100; i++) {
         x += 100;
@@ -42,6 +46,13 @@ contract Sample {
 
     do {
       x += 10;
+      if (x > 10) {
+        k += 10;
+        break;
+      } else {
+        x += 10;
+        continue;
+      }
     } while(x % 2 != 0);
 
     throw;
