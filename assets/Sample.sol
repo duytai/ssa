@@ -77,4 +77,10 @@ contract Sample {
   function add(uint step) public returns(uint) {
     x += step;
   }
+
+  function() {
+    if (x > 0) {
+      x += 1;
+    }
+  }
 }

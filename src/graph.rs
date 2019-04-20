@@ -4,6 +4,7 @@ use super::walker::{ Walker };
 pub struct Graph<'a> {
     walker: &'a Walker<'a>,
     source: &'a str,
+    name: &'a str,
     root: GraphNode,
 }
 
@@ -80,8 +81,8 @@ pub struct ForStatement {
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(walker: &'a Walker, source: &'a str) -> Self {
-        Graph { walker, source, root: GraphNode::None }
+    pub fn new(walker: &'a Walker, source: &'a str, name: &'a str) -> Self {
+        Graph { walker, source, name, root: GraphNode::None }
     }
 
     pub fn build_item(&mut self, walker: &Walker) -> CodeBlock {
@@ -204,39 +205,63 @@ impl<'a> Graph<'a> {
         match kind {
             NodeKind::Root => {
                 let mut state_blocks = vec![];
-                let mut constructor_blocks = vec![];
+                let mut func_blocks = vec![];
                 let mut blocks = vec![]; 
                 walker.for_each(|walker, _| {
                     if walker.node.name == "ContractDefinition" {
                         walker.for_each(|walker, _| {
+                            let func_name = walker.node  
+                                .attributes["name"]
+                                .as_str()
+                                .unwrap_or("");
                             let is_constructor = walker.node
                                 .attributes["isConstructor"]
                                 .as_bool()
                                 .unwrap_or(false);
-                            match walker.node.name {
-                                "FunctionDefinition" => {
-                                    if is_constructor {
-                                        constructor_blocks.append(
+                            match self.name {
+                                "constructor" => {
+                                    match walker.node.name {
+                                        "FunctionDefinition" => {
+                                            if is_constructor {
+                                                func_blocks.append(
+                                                    &mut self.build_block(BlockKind::Constructor, walker)
+                                                );
+                                            }
+                                        },
+                                        _ => {
+                                            let from = walker.node.source_offset as usize;
+                                            let to = from + walker.node.source_len as usize; 
+                                            let source = &self.source[from..=to];
+                                            let block = CodeBlock::Block(BlockContent {
+                                                source: source.to_string(),
+                                                id: walker.node.id,
+                                            });
+                                            state_blocks.push(block);
+                                        }
+                                    }
+                                },
+                                "fallback" => {
+                                    if walker.node.name == "FunctionDefinition" {
+                                        if !is_constructor && func_name == "" {
+                                            func_blocks.append(
+                                                &mut self.build_block(BlockKind::Constructor, walker)
+                                            );
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    if walker.node.name == "FunctionDefinition" && func_name == self.name {
+                                        func_blocks.append(
                                             &mut self.build_block(BlockKind::Constructor, walker)
                                         );
                                     }
                                 },
-                                _ => {
-                                    let from = walker.node.source_offset as usize;
-                                    let to = from + walker.node.source_len as usize; 
-                                    let source = &self.source[from..=to];
-                                    let block = CodeBlock::Block(BlockContent {
-                                        source: source.to_string(),
-                                        id: walker.node.id,
-                                    });
-                                    state_blocks.push(block);
-                                }
                             }
                         });
                     }
                 });
                 blocks.append(&mut state_blocks);
-                blocks.append(&mut constructor_blocks);
+                blocks.append(&mut func_blocks);
                 GraphNode::Root(blocks)
             },
             NodeKind::ForStatement => {
