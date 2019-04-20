@@ -1,9 +1,5 @@
 use std::{
     collections::HashSet,
-    path::Path,
-    fs::File,
-    io::prelude::*,
-    process::Command,
 };
 use json;
 use super::{
@@ -300,7 +296,7 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn render(&mut self, flow_type: FlowType, out_file: &Path) {
+    pub fn render(&mut self) {
         let walker = Walker::new(self.value);
         let mut graph = Graph::new(&walker, self.source);
         let root = graph.update();
@@ -312,8 +308,7 @@ impl<'a> Flow<'a> {
             for predecessor in predecessors {
                 self.edges.insert((predecessor, self.stop));
             }
-            let mut f = File::create(out_file).unwrap();
-            f.write_all(self.to_dot().as_bytes()).unwrap();
+            println!("{}", self.to_dot());
         }
     }
 }
