@@ -110,8 +110,15 @@ impl<'a> Flow<'a> {
                         GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(BlockContent { id, source }) = condition {
                                 let mut cond_predecessors = vec![];
+                                let mut our_breakers = vec![];
                                 for counter in 0..2 {
-                                    predecessors = self.traverse(blocks, predecessors.clone(), breakers);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                    our_breakers
+                                        .iter()
+                                        .filter(|breaker| breaker.kind == BreakerType::Continue)
+                                        .for_each(|LoopBreaker { id, .. }| {
+                                            predecessors.push(*id);
+                                        });
                                     predecessors = predecessors
                                         .iter()
                                         .filter_map(|predecessor| {
@@ -127,6 +134,12 @@ impl<'a> Flow<'a> {
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
                                 }
                                 predecessors = cond_predecessors;
+                                our_breakers
+                                    .iter()
+                                    .filter(|breaker| breaker.kind == BreakerType::Break)
+                                    .for_each(|LoopBreaker { id, ..}| {
+                                        predecessors.push(*id);
+                                    });
                             }
                         },
                         GraphNode::WhileStatement(WhileStatement { condition, blocks }) => {
@@ -166,6 +179,7 @@ impl<'a> Flow<'a> {
                         },
                         GraphNode::ForStatement(ForStatement { init, condition, expression, blocks }) => {
                             let mut cond_predecessors = vec![];
+                            let mut our_breakers =  vec![];
                             if let CodeBlock::Block(BlockContent { id, source }) = init {
                                 predecessors = predecessors
                                     .iter()
@@ -196,7 +210,13 @@ impl<'a> Flow<'a> {
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
                                 }
-                                predecessors = self.traverse(blocks, predecessors.clone(), breakers);
+                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                our_breakers
+                                    .iter()
+                                    .filter(|breaker| breaker.kind == BreakerType::Continue)
+                                    .for_each(|LoopBreaker { id, .. }| {
+                                        predecessors.push(*id);
+                                    });
                                 if let CodeBlock::Block(BlockContent { id, source }) = expression {
                                     predecessors = predecessors
                                         .iter()
@@ -213,6 +233,12 @@ impl<'a> Flow<'a> {
                                 }
                             }
                             predecessors = cond_predecessors;
+                            our_breakers
+                                .iter()
+                                .filter(|breaker| breaker.kind == BreakerType::Break)
+                                .for_each(|LoopBreaker { id, ..}| {
+                                    predecessors.push(*id);
+                                });
                         },
                         GraphNode::Return(CodeBlock::Block(BlockContent { id, source })) 
                             | GraphNode::Revert(CodeBlock::Block(BlockContent { id, source }))

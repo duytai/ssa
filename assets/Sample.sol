@@ -34,6 +34,15 @@ contract Sample {
       if(k == 90) break;
       for (uint i = 0; i < 100; i++) {
         x += 100;
+        if (x == 10) {
+          break;
+        } else {
+          if (x == 2) {
+            continue;
+          }
+          x += 100;
+        }
+        x -= 100;
       }
     }
 
