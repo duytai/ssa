@@ -298,7 +298,7 @@ impl<'a> Flow<'a> {
 
     pub fn render(&mut self) {
         let walker = Walker::new(self.value);
-        let mut graph = Graph::new(&walker, self.source, "add");
+        let mut graph = Graph::new(&walker, self.source);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
             self.vertices.insert(Flow::to_vertice(&self.start, "START", "circle"));
