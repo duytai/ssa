@@ -38,13 +38,20 @@ impl<'a> Walker<'a> {
         Walker { node }
     }
 
-    pub fn len(&self) -> usize {
-        self.node.children.len()
-    }
-
-    pub fn for_each<F>(&self, mut cb: F) where F: FnMut(&Walker, usize) {
+    pub fn for_each<Callback>(&self, mut cb: Callback) where Callback: FnMut(&Walker, usize) {
         for (index, child) in self.node.children.iter().enumerate() {
             cb(&Walker::new(child), index);
         }
+    }
+
+    pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback) where Callback: FnMut(Vec<Walker>), Filter: FnMut(&Walker) -> bool {
+        let mut walkers = vec![];
+        for child in self.node.children.iter() {
+            let walker = Walker::new(child);
+            if fi(&walker) {
+                walkers.push(walker);
+            }
+        }
+        cb(walkers);
     }
 }

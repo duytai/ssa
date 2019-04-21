@@ -16,6 +16,8 @@ use super::{
     walker::{ Walker },
 };
 
+pub use super::graph::{ GraphKind };
+
 pub struct Flow<'a> {
     value: &'a json::JsonValue,
     source: &'a str, 
@@ -296,9 +298,9 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn render(&mut self) {
-        let walker = Walker::new(self.value);
-        let mut graph = Graph::new(&walker, self.source);
+    pub fn render(&mut self, kind: GraphKind) {
+        let mut walker = Walker::new(self.value);
+        let mut graph = Graph::new(kind, &walker, self.source);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
             self.vertices.insert(Flow::to_vertice(&self.start, "START", "circle"));

@@ -1,10 +1,20 @@
-use super::walker::{ Walker };
+use super::{
+    walker::{ Walker },
+};
 
 #[derive(Debug, Clone)]
 pub struct Graph<'a> {
+    kind: GraphKind,
     walker: &'a Walker<'a>,
     source: &'a str,
     root: GraphNode,
+}
+
+#[derive(Debug, Clone)]
+pub enum GraphKind {
+    Constructor,
+    Fallback,
+    Function(String),
 }
 
 #[derive(Debug, Clone)]
@@ -80,8 +90,8 @@ pub struct ForStatement {
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(walker: &'a Walker, source: &'a str) -> Self {
-        Graph { walker, source, root: GraphNode::None }
+    pub fn new(kind: GraphKind, walker: &'a Walker, source: &'a str) -> Self {
+        Graph { kind, walker, source, root: GraphNode::None }
     }
 
     pub fn build_item(&mut self, walker: &Walker) -> CodeBlock {
@@ -218,7 +228,7 @@ impl<'a> Graph<'a> {
                                     if is_constructor {
                                         func_blocks.append(
                                             &mut self.build_block(BlockKind::Constructor, walker)
-                                            );
+                                        );
                                     }
                                 },
                                 _ => {
