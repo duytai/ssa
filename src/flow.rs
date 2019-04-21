@@ -294,7 +294,7 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn render(&mut self, kind: GraphKind) -> String {
+    pub fn render(&mut self, kind: &GraphKind) -> String {
         let walker = Walker::new(self.value);
         let mut graph = Graph::new(kind, &walker, self.source);
         let root = graph.update();

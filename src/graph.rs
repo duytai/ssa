@@ -4,17 +4,17 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct Graph<'a> {
-    kind: GraphKind,
+    kind: &'a GraphKind<'a>,
     walker: &'a Walker<'a>,
     source: &'a str,
     root: GraphNode,
 }
 
 #[derive(Debug, Clone)]
-pub enum GraphKind {
+pub enum GraphKind<'a> {
     Constructor,
     Fallback,
-    Function(String),
+    Function(&'a str),
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +90,7 @@ pub struct ForStatement {
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(kind: GraphKind, walker: &'a Walker, source: &'a str) -> Self {
+    pub fn new(kind: &'a GraphKind, walker: &'a Walker, source: &'a str) -> Self {
         Graph { kind, walker, source, root: GraphNode::None }
     }
 

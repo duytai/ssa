@@ -1,7 +1,20 @@
 pragma solidity ^0.4.24;
 
-contract Sample {
+library SafeMath {
+  function add(uint x, uint y) returns(uint) {
+    return x + y;
+  } 
+}
+
+contract Base {
+  function mul(uint x, uint y) returns(uint) {
+    return x * y;
+  }
+}
+
+contract Sample is Base {
   uint x = 100;
+  using SafeMath for uint;
   struct Voter { // Struct
     uint weight;
     bool voted;
@@ -10,6 +23,8 @@ contract Sample {
   }
   constructor(uint val) public {
     uint k = 100;
+    k = k.add(200);
+    k = this.mul(k, k);
     uint kanzo = k % 10 == 0 ? 10 : 20;
     if (val + k > 0) {
       x = val;
@@ -45,6 +60,8 @@ contract Sample {
         x -= 100;
       }
     }
+
+    this.add(100);
 
     assert(k == 10);
 
