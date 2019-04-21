@@ -39,12 +39,6 @@ pub struct LoopBreaker {
     id: u32,
 }
 
-#[derive(Debug)]
-pub enum FlowType {
-    Constructor,
-    Function,
-}
-
 impl<'a> Flow<'a> {
     pub fn new(value: &'a json::JsonValue, source: &'a str) -> Self {
         Flow {

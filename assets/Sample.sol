@@ -75,6 +75,9 @@ contract Sample {
   }
 
   function add(uint step) public returns(uint) {
+    while (step > 0) {
+      step += 1;
+    }
     x += step;
   }
 

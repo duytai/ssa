@@ -19,8 +19,8 @@ pub enum GraphKind {
 
 #[derive(Debug, Clone)]
 pub enum BlockKind {
-    Constructor,
-    BlockBody,
+    Param,
+    Body,
 }
 
 #[derive(Debug, Clone)]
@@ -183,13 +183,13 @@ impl<'a> Graph<'a> {
     pub fn build_block(&mut self, kind: BlockKind, walker: &Walker) -> Vec<CodeBlock> {
         let mut blocks = vec![];
         match kind {
-            BlockKind::BlockBody => {
+            BlockKind::Body => {
                 walker.for_each(|walker, _| {
                     let block = self.build_item(walker);
                     blocks.push(block);
                 })
             },
-            BlockKind::Constructor => {
+            BlockKind::Param => {
                 walker.for_each(|walker, index| {
                     if walker.node.name == "ParameterList" && index == 0 {
                         let from = walker.node.source_offset as usize;
@@ -202,7 +202,7 @@ impl<'a> Graph<'a> {
                         blocks.push(block);
                     }
                     if walker.node.name == "Block" {
-                        blocks.append(&mut self.build_block(BlockKind::BlockBody, walker));
+                        blocks.append(&mut self.build_block(BlockKind::Body, walker));
                     }
                 })
             },
@@ -213,40 +213,61 @@ impl<'a> Graph<'a> {
     pub fn build_node(&mut self, kind: NodeKind, walker: &Walker) -> GraphNode {
         match kind {
             NodeKind::Root => {
-                let mut state_blocks = vec![];
-                let mut func_blocks = vec![];
                 let mut blocks = vec![]; 
                 walker.for_each(|walker, _| {
                     if walker.node.name == "ContractDefinition" {
-                        walker.for_each(|walker, _| {
-                            let is_constructor = walker.node
-                                .attributes["isConstructor"]
-                                .as_bool()
-                                .unwrap_or(false);
-                            match walker.node.name {
-                                "FunctionDefinition" => {
-                                    if is_constructor {
-                                        func_blocks.append(
-                                            &mut self.build_block(BlockKind::Constructor, walker)
+                        match self.kind.clone() {
+                            GraphKind::Constructor => {
+                                walker.for_all(|walker| {
+                                    walker.node.name != "FunctionDefinition"
+                                }, |walkers| {
+                                    for walker in walkers {
+                                        let from = walker.node.source_offset as usize;
+                                        let to = from + walker.node.source_len as usize;
+                                        let source = &self.source[from..=to];
+                                        let block = CodeBlock::Block(BlockContent {
+                                            source: source.to_string(),
+                                            id: walker.node.id,
+                                        });
+                                        blocks.push(block);
+                                    }
+                                });
+                                walker.for_all(|walker| {
+                                    walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
+                                }, |walkers| {
+                                    for walker in walkers.iter() {
+                                        blocks.append(
+                                            &mut self.build_block(BlockKind::Param, walker)
                                         );
                                     }
-                                },
-                                _ => {
-                                    let from = walker.node.source_offset as usize;
-                                    let to = from + walker.node.source_len as usize; 
-                                    let source = &self.source[from..=to];
-                                    let block = CodeBlock::Block(BlockContent {
-                                        source: source.to_string(),
-                                        id: walker.node.id,
-                                    });
-                                    state_blocks.push(block);
-                                }
-                            }
-                        });
+                                });
+                            },
+                            GraphKind::Fallback => {
+                                walker.for_all(|walker| {
+                                    !walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
+                                        && walker.node.attributes["name"].as_str().unwrap_or("") == ""
+                                }, |walkers| {
+                                    for walker in walkers.iter() {
+                                        blocks.append(
+                                            &mut self.build_block(BlockKind::Param, walker)
+                                        );
+                                    }
+                                });
+                            },
+                            GraphKind::Function(name) => {
+                                walker.for_all(|walker| {
+                                    walker.node.attributes["name"].as_str().unwrap_or("") == name
+                                }, |walkers| {
+                                    for walker in walkers.iter() {
+                                        blocks.append(
+                                            &mut self.build_block(BlockKind::Param, walker)
+                                        );
+                                    }
+                                });
+                            },
+                        }
                     }
                 });
-                blocks.append(&mut state_blocks);
-                blocks.append(&mut func_blocks);
                 GraphNode::Root(blocks)
             },
             NodeKind::ForStatement => {
@@ -286,7 +307,7 @@ impl<'a> Graph<'a> {
                         },
                         _ => {
                             if walker.node.name == "Block" {
-                                blocks = self.build_block(BlockKind::BlockBody, walker);
+                                blocks = self.build_block(BlockKind::Body, walker);
                             } else {
                                 blocks.push(self.build_item(walker));
                             }
@@ -310,7 +331,7 @@ impl<'a> Graph<'a> {
                             });
                         },
                         "Block" => {
-                            blocks = self.build_block(BlockKind::BlockBody, walker);
+                            blocks = self.build_block(BlockKind::Body, walker);
                         },
                         _ => {
                             blocks.push(self.build_item(walker));
@@ -334,7 +355,7 @@ impl<'a> Graph<'a> {
                             });
                         },
                         "Block" => {
-                            blocks = self.build_block(BlockKind::BlockBody, walker);
+                            blocks = self.build_block(BlockKind::Body, walker);
                         },
                         _ => {
                             blocks.push(self.build_item(walker));
@@ -360,9 +381,9 @@ impl<'a> Graph<'a> {
                         },
                         "Block" => {
                             if index == 1 {
-                                tblocks = self.build_block(BlockKind::BlockBody, walker);
+                                tblocks = self.build_block(BlockKind::Body, walker);
                             } else {
-                                fblocks = self.build_block(BlockKind::BlockBody, walker);
+                                fblocks = self.build_block(BlockKind::Body, walker);
                             }
                         },
                         _ => {

@@ -21,7 +21,7 @@ fn main() -> io::Result<()> {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut flow = Flow::new(ast_one, &source_content);
-        flow.render(GraphKind::Constructor);
+        flow.render(GraphKind::Function("add".into()));
     }
     Ok(())
 }
