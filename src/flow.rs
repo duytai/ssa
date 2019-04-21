@@ -294,8 +294,8 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn render(&mut self, kind: GraphKind) {
-        let mut walker = Walker::new(self.value);
+    pub fn render(&mut self, kind: GraphKind) -> String {
+        let walker = Walker::new(self.value);
         let mut graph = Graph::new(kind, &walker, self.source);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
@@ -306,7 +306,7 @@ impl<'a> Flow<'a> {
             for predecessor in predecessors {
                 self.edges.insert((predecessor, self.stop));
             }
-            println!("{}", self.to_dot());
         }
+        self.to_dot()
     }
 }
