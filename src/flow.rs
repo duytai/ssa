@@ -77,8 +77,6 @@ impl<'a> Flow<'a> {
             if predecessors.is_empty() { return vec![]; }
             match block {
                 CodeBlock::Block(BlockContent { id, source }) => {
-                    let vertice = Flow::to_vertice(id, source, "box");
-                    self.vertices.insert(vertice);
                     predecessors = predecessors
                         .iter()
                         .filter_map(|predecessor| {
@@ -86,6 +84,10 @@ impl<'a> Flow<'a> {
                             Some(*id)
                         })
                         .collect::<Vec<u32>>();
+                    if !predecessors.is_empty() {
+                        let vertice = Flow::to_vertice(id, source, "box");
+                        self.vertices.insert(vertice);
+                    }
                     predecessors.dedup();
                 },
                 CodeBlock::Link(link) => {
