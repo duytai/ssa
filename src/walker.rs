@@ -1,6 +1,6 @@
 use json;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node<'a> {
     pub id: u32,
     pub name: &'a str,
@@ -44,12 +44,40 @@ impl<'a> Walker<'a> {
         }
     }
 
-    pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback) where Callback: FnMut(Vec<Walker>), Filter: FnMut(&Walker) -> bool {
+    pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
+        where
+            Callback: FnMut(Vec<Walker>),
+            Filter: FnMut(&Walker) -> bool 
+    {
         let mut walkers = vec![];
         for child in self.node.children.iter() {
             let walker = Walker::new(child);
             if fi(&walker) {
                 walkers.push(walker);
+            }
+        }
+        cb(walkers);
+    }
+
+    pub fn all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
+        where
+            Callback: FnMut(Vec<Walker>),
+            Filter: FnMut(&Walker) -> bool
+    {
+        let mut stacks = vec![];
+        let mut walkers = vec![];
+        for child in self.node.children.iter() {
+            let walker = Walker::new(child);
+            stacks.push(walker);
+        }
+        while !stacks.is_empty() {
+            let item = stacks.pop().unwrap();
+            for child in item.node.children.iter() {
+                let walker = Walker::new(child);
+                stacks.push(walker);
+            }
+            if fi(&item) {
+                walkers.insert(0, item);
             }
         }
         cb(walkers);

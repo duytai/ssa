@@ -146,6 +146,9 @@ impl<'a> Graph<'a> {
                 let node = GraphNode::Break(block);
                 CodeBlock::Link(Box::new(node))
             },
+            "VariableDeclarationStatement" => {
+                unimplemented!()
+            },
             "ExpressionStatement" => {
                 let mut funcs = (false, false, false, false, false);
                 walker.for_each(|walker, _| {
