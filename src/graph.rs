@@ -147,7 +147,7 @@ impl<'a> Graph<'a> {
                 let node = GraphNode::Break(block);
                 vec![CodeBlock::Link(Box::new(node))]
             },
-            "VariableDeclarationStatement" => {
+            "VariableDeclarationStatement" | "EmitStatement" => {
                 let mut blocks = vec![];
                 walker.all(|walker| {
                     walker.node.name == "FunctionCall"
@@ -223,7 +223,6 @@ impl<'a> Graph<'a> {
             },
             "InlineAssemblyStatement" => unimplemented!(),
             "PlaceholderStatement" => unimplemented!(), 
-            "EmitStatement" => unimplemented!(),
             _ => vec![block],
         }
     }
