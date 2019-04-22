@@ -248,6 +248,9 @@ impl<'a> Graph<'a> {
                         });
                         blocks.push(block);
                     }
+                    if walker.node.name == "ModifierInvocation" {
+                        unimplemented!();
+                    }
                     if walker.node.name == "Block" {
                         blocks.append(&mut self.build_block(BlockKind::Body, walker));
                     }
