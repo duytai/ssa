@@ -66,6 +66,8 @@ pub enum GraphNode {
     Throw(CodeBlock),
     Break(CodeBlock),
     Continue(CodeBlock),
+    Suicide(CodeBlock),
+    Selfdestruct(CodeBlock),
     None,
 }
 
@@ -144,46 +146,53 @@ impl<'a> Graph<'a> {
                 let node = GraphNode::Break(block);
                 CodeBlock::Link(Box::new(node))
             },
-            _ => {
-                match walker.node.name {
-                    "ExpressionStatement" => {
-                        let mut funcs = (false, false, false);
+            "ExpressionStatement" => {
+                let mut funcs = (false, false, false, false, false);
+                walker.for_each(|walker, _| {
+                    if walker.node.name == "FunctionCall" {
                         walker.for_each(|walker, _| {
-                            if walker.node.name == "FunctionCall" {
-                                walker.for_each(|walker, _| {
-                                    if walker.node.name == "Identifier" {
-                                        let node_value = walker.node.attributes["value"]
-                                            .as_str()
-                                            .unwrap_or("");
-                                        let node_type = walker.node.attributes["type"] 
-                                            .as_str()
-                                            .unwrap_or("");
-                                        match(node_value, node_type) {
-                                            ("revert", "function () pure") => funcs.0 = true,
-                                            ("assert", "function (bool) pure") => funcs.1 = true,
-                                            ("require", "function (bool) pure") =>  funcs.2 = true,
-                                            _ => {},
-                                        }
-                                    }
-                                })
+                            if walker.node.name == "Identifier" {
+                                let node_value = walker.node.attributes["value"]
+                                    .as_str()
+                                    .unwrap_or("");
+                                let node_type = walker.node.attributes["type"] 
+                                    .as_str()
+                                    .unwrap_or("");
+                                match(node_value, node_type) {
+                                    ("revert", "function () pure") => funcs.0 = true,
+                                    ("assert", "function (bool) pure") => funcs.1 = true,
+                                    ("require", "function (bool) pure") =>  funcs.2 = true,
+                                    ("suicide", "function (address)") => funcs.3 = true,
+                                    ("selfdestruct", "function (address)") => funcs.4 = true,
+                                    _ => {},
+                                }
                             }
-                        });
-                        match funcs {
-                            (true, _, _) => {
-                                CodeBlock::Link(Box::new(GraphNode::Revert(block)))
-                            },
-                            (_, true, _) => {
-                                CodeBlock::Link(Box::new(GraphNode::Assert(block)))
-                            },
-                            (_, _, true) => {
-                                CodeBlock::Link(Box::new(GraphNode::Require(block)))
-                            },
-                            (_, _, _) => block,
-                        }
+                        })
+                    }
+                });
+                match funcs {
+                    (true, _, _, _, _) => {
+                        CodeBlock::Link(Box::new(GraphNode::Revert(block)))
                     },
-                    _ => block,
+                    (_, true, _, _, _) => {
+                        CodeBlock::Link(Box::new(GraphNode::Assert(block)))
+                    },
+                    (_, _, true, _, _) => {
+                        CodeBlock::Link(Box::new(GraphNode::Require(block)))
+                    },
+                    (_, _, _, true, _) => {
+                        CodeBlock::Link(Box::new(GraphNode::Suicide(block)))
+                    },
+                    (_, _, _, _, true) => {
+                        CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block)))
+                    },
+                    (_, _, _, _, _) => block,
                 }
             },
+            "InlineAssemblyStatement" => unimplemented!(),
+            "PlaceholderStatement" => unimplemented!(), 
+            "EmitStatement" => unimplemented!(),
+            _ => block,
         }
     }
 

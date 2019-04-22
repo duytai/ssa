@@ -6,6 +6,7 @@ contract Sample {
     address delegate;
     uint vote;
   }
+  address owner;
   constructor(uint val) public {
     uint k = 100;
     uint kanzo = k % 10 == 0 ? 10 : 20;
@@ -72,6 +73,26 @@ contract Sample {
       x+= 1;
     }
     x += 999;
+  }
+
+  function mul(uint x, uint y) returns(uint) {
+    return x * y;
+  }
+
+  function nested() {
+    x = this.mul(x + 100, this.mul(10, this.mul(2, 3))) - this.mul(0, 100);
+  }
+
+  function kill() {
+    if(x > 0) {
+      selfdestruct(owner);
+      x + 100;
+    } else {
+      while ( x< 0) {
+        suicide(owner);
+        x -= 100;
+      }
+    }
   }
 
   function add(uint step) public returns(uint) {

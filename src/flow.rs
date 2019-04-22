@@ -248,7 +248,9 @@ impl<'a> Flow<'a> {
                         },
                         GraphNode::Return(CodeBlock::Block(BlockContent { id, source })) 
                             | GraphNode::Revert(CodeBlock::Block(BlockContent { id, source }))
-                            | GraphNode::Throw(CodeBlock::Block(BlockContent { id, source })) => {
+                            | GraphNode::Throw(CodeBlock::Block(BlockContent { id, source })) 
+                            | GraphNode::Suicide(CodeBlock::Block(BlockContent { id, source })) 
+                            | GraphNode::Selfdestruct(CodeBlock::Block(BlockContent{ id, source })) => {
                             let vertice = Flow::to_vertice(id, source, "box");
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
