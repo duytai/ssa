@@ -2,7 +2,7 @@ mod walker;
 mod graph;
 mod flow;
 
-use flow::{ Flow, GraphKind };
+use flow::{ Flow, GraphKind, GraphConfig };
 use json;
 use std::{
     fs,
@@ -21,7 +21,12 @@ fn main() -> io::Result<()> {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut flow = Flow::new(ast_one, &source_content);
-        let dot = flow.render(&GraphKind::Constructor);
+        let config = GraphConfig { 
+            kind: GraphKind::Constructor,
+            contract_name: "Sample",
+            include_state: false,
+        };
+        let dot = flow.render(&config);
         println!("{}", dot);
     }
     Ok(())

@@ -4,10 +4,17 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub struct Graph<'a> {
-    kind: &'a GraphKind<'a>,
+    config: &'a GraphConfig<'a>,
     walker: &'a Walker<'a>,
     source: &'a str,
     root: GraphNode,
+}
+
+#[derive(Debug, Clone)]
+pub struct GraphConfig<'a> {
+    pub contract_name: &'a str,
+    pub kind: GraphKind<'a>,
+    pub include_state: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -90,8 +97,8 @@ pub struct ForStatement {
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(kind: &'a GraphKind, walker: &'a Walker, source: &'a str) -> Self {
-        Graph { kind, walker, source, root: GraphNode::None }
+    pub fn new(config: &'a GraphConfig, walker: &'a Walker, source: &'a str) -> Self {
+        Graph { config, walker, source, root: GraphNode::None }
     }
 
     pub fn build_item(&mut self, walker: &Walker) -> CodeBlock {
@@ -214,24 +221,31 @@ impl<'a> Graph<'a> {
         match kind {
             NodeKind::Root => {
                 let mut blocks = vec![]; 
-                walker.for_each(|walker, _| {
-                    if walker.node.name == "ContractDefinition" {
-                        match self.kind.clone() {
+                let contract_name = self.config.contract_name;
+                let config_kind = &self.config.kind;
+                walker.for_all(|walker| {
+                    walker.node.name == "ContractDefinition"
+                    && walker.node.attributes["name"].as_str().unwrap_or("") == contract_name
+                }, |walkers| {
+                    for walker in walkers.iter() {
+                        if self.config.include_state {
+                            walker.for_all(|walker| {
+                                walker.node.name != "FunctionDefinition"
+                            }, |walkers| {
+                                for walker in walkers {
+                                    let from = walker.node.source_offset as usize;
+                                    let to = from + walker.node.source_len as usize;
+                                    let source = &self.source[from..=to];
+                                    let block = CodeBlock::Block(BlockContent {
+                                        source: source.to_string(),
+                                        id: walker.node.id,
+                                    });
+                                    blocks.push(block);
+                                }
+                            });
+                        }
+                        match config_kind {
                             GraphKind::Constructor => {
-                                walker.for_all(|walker| {
-                                    walker.node.name != "FunctionDefinition"
-                                }, |walkers| {
-                                    for walker in walkers {
-                                        let from = walker.node.source_offset as usize;
-                                        let to = from + walker.node.source_len as usize;
-                                        let source = &self.source[from..=to];
-                                        let block = CodeBlock::Block(BlockContent {
-                                            source: source.to_string(),
-                                            id: walker.node.id,
-                                        });
-                                        blocks.push(block);
-                                    }
-                                });
                                 walker.for_all(|walker| {
                                     walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
                                 }, |walkers| {
@@ -245,7 +259,7 @@ impl<'a> Graph<'a> {
                             GraphKind::Fallback => {
                                 walker.for_all(|walker| {
                                     !walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
-                                        && walker.node.attributes["name"].as_str().unwrap_or("") == ""
+                                    && walker.node.attributes["name"].as_str().unwrap_or("") == ""
                                 }, |walkers| {
                                     for walker in walkers.iter() {
                                         blocks.append(
@@ -256,7 +270,7 @@ impl<'a> Graph<'a> {
                             },
                             GraphKind::Function(name) => {
                                 walker.for_all(|walker| {
-                                    walker.node.attributes["name"].as_str().unwrap_or("") == name
+                                    walker.node.attributes["name"].as_str().unwrap_or("") == *name
                                 }, |walkers| {
                                     for walker in walkers.iter() {
                                         blocks.append(
