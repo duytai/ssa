@@ -287,6 +287,20 @@ impl<'a> Flow<'a> {
                             breakers.push(LoopBreaker { kind: BreakerType::Continue, id: *id });
                             predecessors = vec![];
                         },
+                        GraphNode::FunctionCall(CodeBlock::Block(BlockContent { id, source })) => {
+                            predecessors = predecessors
+                                .iter()
+                                .filter_map(|predecessor| {
+                                    if !self.edges.insert((*predecessor, *id)) { return None; }
+                                    Some(*id)
+                                })
+                            .collect::<Vec<u32>>();
+                            if !predecessors.is_empty() {
+                                let vertice = Flow::to_vertice(id, source, "doublecircle");
+                                self.vertices.insert(vertice);
+                            }
+                            predecessors.dedup();
+                        },
                         _ => {},
                     }
                 },
@@ -301,8 +315,8 @@ impl<'a> Flow<'a> {
         let mut graph = Graph::new(config, &walker, self.source);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
-            self.vertices.insert(Flow::to_vertice(&self.start, "START", "circle"));
-            self.vertices.insert(Flow::to_vertice(&self.stop, "STOP", "circle"));
+            self.vertices.insert(Flow::to_vertice(&self.start, "START", "point"));
+            self.vertices.insert(Flow::to_vertice(&self.stop, "STOP", "point"));
             let mut predecessors = vec![self.start];
             predecessors = self.traverse(blocks, predecessors, &mut vec![]);
             for predecessor in predecessors {

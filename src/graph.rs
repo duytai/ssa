@@ -68,6 +68,7 @@ pub enum GraphNode {
     Continue(CodeBlock),
     Suicide(CodeBlock),
     Selfdestruct(CodeBlock),
+    FunctionCall(CodeBlock),
     None,
 }
 
@@ -146,55 +147,79 @@ impl<'a> Graph<'a> {
                 let node = GraphNode::Break(block);
                 vec![CodeBlock::Link(Box::new(node))]
             },
-            // "VariableDeclarationStatement" => {
-                // walker.all(|walker| {
-                    // walker.node.name == "FunctionCall"
-                // }, |walkers| {
-                // });
-                // unimplemented!()
-            // },
-            "ExpressionStatement" => {
-                let mut funcs = (false, false, false, false, false);
-                walker.for_each(|walker, _| {
-                    if walker.node.name == "FunctionCall" {
-                        walker.for_each(|walker, _| {
-                            if walker.node.name == "Identifier" {
-                                let node_value = walker.node.attributes["value"]
-                                    .as_str()
-                                    .unwrap_or("");
-                                let node_type = walker.node.attributes["type"] 
-                                    .as_str()
-                                    .unwrap_or("");
-                                match(node_value, node_type) {
-                                    ("revert", "function () pure") => funcs.0 = true,
-                                    ("assert", "function (bool) pure") => funcs.1 = true,
-                                    ("require", "function (bool) pure") =>  funcs.2 = true,
-                                    ("suicide", "function (address)") => funcs.3 = true,
-                                    ("selfdestruct", "function (address)") => funcs.4 = true,
-                                    _ => {},
-                                }
-                            }
-                        })
+            "VariableDeclarationStatement" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers.iter() {
+                        let from = walker.node.source_offset as usize;
+                        let to = from + walker.node.source_len as usize;
+                        let source = &self.source[from..to];
+                        let block = CodeBlock::Block(BlockContent {
+                            source: source.to_string(),
+                            id: walker.node.id,
+                        });
+                        let node = GraphNode::FunctionCall(block);
+                        blocks.push(CodeBlock::Link(Box::new(node)));
                     }
                 });
-                match funcs {
-                    (true, _, _, _, _) => {
-                        vec![CodeBlock::Link(Box::new(GraphNode::Revert(block)))]
-                    },
-                    (_, true, _, _, _) => {
-                        vec![CodeBlock::Link(Box::new(GraphNode::Assert(block)))]
-                    },
-                    (_, _, true, _, _) => {
-                        vec![CodeBlock::Link(Box::new(GraphNode::Require(block)))]
-                    },
-                    (_, _, _, true, _) => {
-                        vec![CodeBlock::Link(Box::new(GraphNode::Suicide(block)))]
-                    },
-                    (_, _, _, _, true) => {
-                        vec![CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block)))]
-                    },
-                    (_, _, _, _, _) => vec![block],
-                }
+                blocks.push(block);
+                blocks
+            },
+            "ExpressionStatement" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers.iter() {
+                        let from = walker.node.source_offset as usize;
+                        let to = from + walker.node.source_len as usize;
+                        let source = &self.source[from..to];
+                        let block = CodeBlock::Block(BlockContent {
+                            source: source.to_string(),
+                            id: walker.node.id,
+                        });
+                        let mut funcs = (false, false, false, false, false);
+                        let node_value = walker.node.attributes["value"]
+                            .as_str()
+                            .unwrap_or("");
+                        let node_type = walker.node.attributes["type"]
+                            .as_str()
+                            .unwrap_or("");
+                        match(node_value, node_type) {
+                            ("revert", "function () pure") => funcs.0 = true,
+                            ("assert", "function (bool) pure") => funcs.1 = true,
+                            ("require", "function (bool) pure") =>  funcs.2 = true,
+                            ("suicide", "function (address)") => funcs.3 = true,
+                            ("selfdestruct", "function (address)") => funcs.4 = true,
+                            _ => {},
+                        };
+                        match funcs {
+                            (true, _, _, _, _) => {
+                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Revert(block))));
+                            },
+                            (_, true, _, _, _) => {
+                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Assert(block))));
+                            },
+                            (_, _, true, _, _) => {
+                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Require(block))));
+                            },
+                            (_, _, _, true, _) => {
+                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Suicide(block))));
+                            },
+                            (_, _, _, _, true) => {
+                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block))));
+                            },
+                            (_, _, _, _, _) => {
+                                let node = GraphNode::FunctionCall(block);
+                                blocks.push(CodeBlock::Link(Box::new(node)));
+                            },
+                        };
+                    }
+                });
+                blocks.push(block);
+                blocks
             },
             "InlineAssemblyStatement" => unimplemented!(),
             "PlaceholderStatement" => unimplemented!(), 
