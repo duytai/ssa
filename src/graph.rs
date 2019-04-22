@@ -103,7 +103,7 @@ impl<'a> Graph<'a> {
         Graph { config, walker, source, root: GraphNode::None }
     }
 
-    pub fn build_item(&mut self, walker: &Walker) -> CodeBlock {
+    pub fn build_items(&mut self, walker: &Walker) -> Vec<CodeBlock> {
 
         let from = walker.node.source_offset as usize;
         let to = from + walker.node.source_len as usize;
@@ -116,39 +116,43 @@ impl<'a> Graph<'a> {
         match walker.node.name {
             "IfStatement" => {
                 let node = self.build_node(NodeKind::IfStatement, walker); 
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "WhileStatement" => {
                 let node = self.build_node(NodeKind::WhileStatement, walker);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "ForStatement" => {
                 let node = self.build_node(NodeKind::ForStatement, walker);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "DoWhileStatement" => {
                 let node = self.build_node(NodeKind::DoWhileStatement, walker);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "Return" => {
                 let node = GraphNode::Return(block);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "Throw" => {
                 let node = GraphNode::Throw(block);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "Continue" => {
                 let node = GraphNode::Continue(block);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "Break" => {
                 let node = GraphNode::Break(block);
-                CodeBlock::Link(Box::new(node))
+                vec![CodeBlock::Link(Box::new(node))]
             },
-            "VariableDeclarationStatement" => {
-                unimplemented!()
-            },
+            // "VariableDeclarationStatement" => {
+                // walker.all(|walker| {
+                    // walker.node.name == "FunctionCall"
+                // }, |walkers| {
+                // });
+                // unimplemented!()
+            // },
             "ExpressionStatement" => {
                 let mut funcs = (false, false, false, false, false);
                 walker.for_each(|walker, _| {
@@ -175,27 +179,27 @@ impl<'a> Graph<'a> {
                 });
                 match funcs {
                     (true, _, _, _, _) => {
-                        CodeBlock::Link(Box::new(GraphNode::Revert(block)))
+                        vec![CodeBlock::Link(Box::new(GraphNode::Revert(block)))]
                     },
                     (_, true, _, _, _) => {
-                        CodeBlock::Link(Box::new(GraphNode::Assert(block)))
+                        vec![CodeBlock::Link(Box::new(GraphNode::Assert(block)))]
                     },
                     (_, _, true, _, _) => {
-                        CodeBlock::Link(Box::new(GraphNode::Require(block)))
+                        vec![CodeBlock::Link(Box::new(GraphNode::Require(block)))]
                     },
                     (_, _, _, true, _) => {
-                        CodeBlock::Link(Box::new(GraphNode::Suicide(block)))
+                        vec![CodeBlock::Link(Box::new(GraphNode::Suicide(block)))]
                     },
                     (_, _, _, _, true) => {
-                        CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block)))
+                        vec![CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block)))]
                     },
-                    (_, _, _, _, _) => block,
+                    (_, _, _, _, _) => vec![block],
                 }
             },
             "InlineAssemblyStatement" => unimplemented!(),
             "PlaceholderStatement" => unimplemented!(), 
             "EmitStatement" => unimplemented!(),
-            _ => block,
+            _ => vec![block],
         }
     }
 
@@ -204,8 +208,7 @@ impl<'a> Graph<'a> {
         match kind {
             BlockKind::Body => {
                 walker.for_each(|walker, _| {
-                    let block = self.build_item(walker);
-                    blocks.push(block);
+                    blocks.append(&mut self.build_items(walker));
                 })
             },
             BlockKind::Param => {
@@ -335,7 +338,7 @@ impl<'a> Graph<'a> {
                             if walker.node.name == "Block" {
                                 blocks = self.build_block(BlockKind::Body, walker);
                             } else {
-                                blocks.push(self.build_item(walker));
+                                blocks.append(&mut self.build_items(walker));
                             }
                         },
                     }
@@ -360,7 +363,7 @@ impl<'a> Graph<'a> {
                             blocks = self.build_block(BlockKind::Body, walker);
                         },
                         _ => {
-                            blocks.push(self.build_item(walker));
+                            blocks.append(&mut self.build_items(walker));
                         },
                     }
                 });
@@ -384,7 +387,7 @@ impl<'a> Graph<'a> {
                             blocks = self.build_block(BlockKind::Body, walker);
                         },
                         _ => {
-                            blocks.push(self.build_item(walker));
+                            blocks.append(&mut self.build_items(walker));
                         },
                     }
                 });
@@ -413,7 +416,7 @@ impl<'a> Graph<'a> {
                             }
                         },
                         _ => {
-                            tblocks.push(self.build_item(walker));
+                            tblocks.append(&mut self.build_items(walker));
                         }
                     }
                 });
