@@ -1,11 +1,14 @@
 contract D {
+  struct Voter {
+    string name;
+    uint age;
+  }
   uint x = 0;
-  constructor() {}
-  function t() {
+  Voter voter;
+  constructor() {
     if (x > 0) {
-      if (x < 1000) {
-        msg.sender.send(1);
-      }
+      uint x = 100;
+      x += block.number;
     }
   }
 }

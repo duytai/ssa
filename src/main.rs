@@ -1,6 +1,7 @@
 mod walker;
 mod graph;
 mod flow;
+mod symbol;
 
 use flow::{ Flow, GraphKind, GraphConfig };
 use json;
@@ -22,7 +23,7 @@ fn main() -> io::Result<()> {
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut flow = Flow::new(ast_one, &source_content);
         let config = GraphConfig { 
-            kind: GraphKind::Function("t"),
+            kind: GraphKind::Constructor,
             contract_name: "D",
             include_state: false,
         };
