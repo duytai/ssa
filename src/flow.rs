@@ -301,10 +301,10 @@ impl<'a> Flow<'a> {
                             }
                             predecessors.dedup();
                         },
-                        _ => {},
+                        _ => unimplemented!(),
                     }
                 },
-                _ => {}, 
+                CodeBlock::None => unimplemented!(), 
             }
         }
         return predecessors;
