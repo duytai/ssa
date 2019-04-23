@@ -2,7 +2,7 @@ use super::{
     walker::{ Walker },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Graph<'a> {
     config: &'a GraphConfig<'a>,
     walker: &'a Walker<'a>,
@@ -10,27 +10,27 @@ pub struct Graph<'a> {
     root: GraphNode,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GraphConfig<'a> {
     pub contract_name: &'a str,
     pub kind: GraphKind<'a>,
     pub include_state: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum GraphKind<'a> {
     Constructor,
     Fallback,
     Function(&'a str),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum BlockKind {
     Param,
     Body,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum NodeKind {
     Root,
     IfStatement,
@@ -39,20 +39,20 @@ pub enum NodeKind {
     DoWhileStatement,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct BlockContent {
     pub source: String,
     pub id: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum CodeBlock {
     Block(BlockContent),
     Link(Box<GraphNode>),
     None,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum GraphNode {
     Root(Vec<CodeBlock>),
     IfStatement(IfStatement),
@@ -72,26 +72,26 @@ pub enum GraphNode {
     None,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WhileStatement {
     pub condition: CodeBlock,
     pub blocks: Vec<CodeBlock>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DoWhileStatement {
     pub condition: CodeBlock,
     pub blocks: Vec<CodeBlock>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct IfStatement {
     pub condition: CodeBlock,
     pub tblocks: Vec<CodeBlock>,
     pub fblocks: Vec<CodeBlock>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ForStatement {
     pub condition: CodeBlock,
     pub init: CodeBlock,
