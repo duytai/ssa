@@ -74,8 +74,12 @@ impl<'a> Flow<'a> {
 
     pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>, symbol_table: &mut SymbolTable) -> Vec<u32> {
         let mut predecessors = predecessors;
+        symbol_table.enter_scope();
         for block in blocks {
-            if predecessors.is_empty() { return vec![]; }
+            if predecessors.is_empty() {
+                symbol_table.exit_scope();
+                return vec![];
+            }
             match block {
                 CodeBlock::Block(BlockContent { id, source }) => {
                     predecessors = predecessors
@@ -308,6 +312,7 @@ impl<'a> Flow<'a> {
                 CodeBlock::None => unimplemented!(), 
             }
         }
+        symbol_table.exit_scope();
         return predecessors;
     }
 
