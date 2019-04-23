@@ -13,6 +13,7 @@ use super::{
         DoWhileStatement,
         ForStatement,
     },
+    symbol::{ SymbolTable },
     walker::{ Walker },
 };
 
@@ -71,7 +72,7 @@ impl<'a> Flow<'a> {
         format!("digraph {{\n{0}{1}}}", vertices, edges)
     }
 
-    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
+    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>, symbol_table: &mut SymbolTable) -> Vec<u32> {
         let mut predecessors = predecessors;
         for block in blocks {
             if predecessors.is_empty() { return vec![]; }
@@ -106,8 +107,8 @@ impl<'a> Flow<'a> {
                                     let vertice = Flow::to_vertice(id, source, "diamond");
                                     self.vertices.insert(vertice);
                                 }
-                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
-                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
+                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers, symbol_table);
+                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers, symbol_table);
                                 predecessors.clear();
                                 predecessors.append(&mut t);
                                 predecessors.append(&mut f);
@@ -118,7 +119,7 @@ impl<'a> Flow<'a> {
                                 let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
                                 for counter in 0..2 {
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, symbol_table);
                                     our_breakers
                                         .iter()
                                         .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -166,7 +167,7 @@ impl<'a> Flow<'a> {
                                         self.vertices.insert(vertice);
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, symbol_table);
                                     our_breakers
                                         .iter()
                                         .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -216,7 +217,7 @@ impl<'a> Flow<'a> {
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
                                 }
-                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, symbol_table);
                                 our_breakers
                                     .iter()
                                     .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -314,11 +315,12 @@ impl<'a> Flow<'a> {
         let walker = Walker::new(self.value);
         let mut graph = Graph::new(config, &walker, self.source);
         let root = graph.update();
+        let mut symbol_table = SymbolTable::new();
         if let GraphNode::Root(blocks) = root {
             self.vertices.insert(Flow::to_vertice(&self.start, "START", "point"));
             self.vertices.insert(Flow::to_vertice(&self.stop, "STOP", "point"));
             let mut predecessors = vec![self.start];
-            predecessors = self.traverse(blocks, predecessors, &mut vec![]);
+            predecessors = self.traverse(blocks, predecessors, &mut vec![], &mut symbol_table);
             for predecessor in predecessors {
                 self.edges.insert((predecessor, self.stop));
             }
