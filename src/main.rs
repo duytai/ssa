@@ -2,7 +2,6 @@ mod walker;
 mod graph;
 mod flow;
 mod symbol;
-mod flat;
 
 use flow::{ Flow, GraphKind, GraphConfig };
 use json;
