@@ -1,6 +1,15 @@
 use json;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
+pub struct BlockContent {
+    pub id: u32,
+    pub name: String,
+    pub source: String,
+    pub attributes: json::JsonValue,
+    pub children: Vec<json::JsonValue>,
+}
+
+#[derive(Debug)]
 pub struct Node<'a> {
     pub id: u32,
     pub name: &'a str,
@@ -81,5 +90,22 @@ impl<'a> Walker<'a> {
             }
         }
         cb(walkers);
+    }
+
+    pub fn to_block_content(&self, source: &str) -> BlockContent {
+        let from = self.node.source_offset as usize;
+        let to = from + self.node.source_len as usize;
+        let mut children = vec![];
+        for child in self.node.children.iter() {
+            let child = (*child).clone();
+            children.push(child);
+        }
+        BlockContent {
+            id: self.node.id,
+            name: self.node.name.to_string(),
+            source: source[from..to].to_string(),
+            attributes: self.node.attributes.clone(),
+            children,
+        }
     }
 }

@@ -7,14 +7,13 @@ use super::{
         Graph,
         GraphNode,
         CodeBlock,
-        BlockContent,
         IfStatement,
         WhileStatement,
         DoWhileStatement,
         ForStatement,
     },
     symbol::{ SymbolTable, SymbolAction },
-    walker::{ Walker },
+    walker::{ Walker, BlockContent },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -83,7 +82,7 @@ impl<'a> Flow<'a> {
                 return vec![];
             }
             match block {
-                CodeBlock::Block(BlockContent { id, source, name, attributes }) => {
+                CodeBlock::Block(BlockContent { id, source, name, attributes, .. }) => {
                     predecessors = predecessors
                         .iter()
                         .filter_map(|predecessor| {
@@ -99,6 +98,8 @@ impl<'a> Flow<'a> {
                                 let var_name = attributes["name"].as_str().unwrap().to_string();
                                 let var_type = attributes["type"].as_str().unwrap().to_string();
                                 self.symbol_table.insert(var_name, var_type, SymbolAction::Declare);
+                            },
+                            "ParameterList" => {
                             },
                             _ => {},
                         }

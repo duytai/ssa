@@ -1,5 +1,5 @@
 use super::{
-    walker::{ Walker },
+    walker::{ Walker, BlockContent },
 };
 
 #[derive(Debug)]
@@ -37,14 +37,6 @@ pub enum NodeKind {
     WhileStatement,
     ForStatement,
     DoWhileStatement,
-}
-
-#[derive(Debug)]
-pub struct BlockContent {
-    pub id: u32,
-    pub name: String,
-    pub source: String,
-    pub attributes: json::JsonValue,
 }
 
 #[derive(Debug)]
@@ -107,17 +99,7 @@ impl<'a> Graph<'a> {
     }
 
     pub fn build_items(&mut self, walker: &Walker) -> Vec<CodeBlock> {
-
-        let from = walker.node.source_offset as usize;
-        let to = from + walker.node.source_len as usize;
-        let source = &self.source[from..to];
-        let block = CodeBlock::Block(BlockContent {
-            id: walker.node.id,
-            name: walker.node.name.to_string(),
-            source: source.to_string(),
-            attributes: walker.node.attributes.clone(), 
-        });
-
+        let block = CodeBlock::Block(walker.to_block_content(self.source));
         match walker.node.name {
             "IfStatement" => {
                 let node = self.build_node(NodeKind::IfStatement, walker); 
@@ -157,15 +139,7 @@ impl<'a> Graph<'a> {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
                     for walker in walkers.iter() {
-                        let from = walker.node.source_offset as usize;
-                        let to = from + walker.node.source_len as usize;
-                        let source = &self.source[from..to];
-                        let block = CodeBlock::Block(BlockContent {
-                            id: walker.node.id,
-                            name: walker.node.name.to_string(),
-                            source: source.to_string(),
-                            attributes: walker.node.attributes.clone(),
-                        });
+                        let block = CodeBlock::Block(walker.to_block_content(self.source));
                         let node = GraphNode::FunctionCall(block);
                         blocks.push(CodeBlock::Link(Box::new(node)));
                     }
@@ -179,15 +153,7 @@ impl<'a> Graph<'a> {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
                     for walker in walkers.iter() {
-                        let from = walker.node.source_offset as usize;
-                        let to = from + walker.node.source_len as usize;
-                        let source = &self.source[from..to];
-                        let block = CodeBlock::Block(BlockContent {
-                            id: walker.node.id,
-                            name: walker.node.name.to_string(),
-                            source: source.to_string(),
-                            attributes: walker.node.attributes.clone(),
-                        });
+                        let block = CodeBlock::Block(walker.to_block_content(self.source));
                         let mut funcs = (false, false, false, false, false);
                         let node_value = walker.node.attributes["value"]
                             .as_str()
@@ -246,15 +212,7 @@ impl<'a> Graph<'a> {
             BlockKind::Param => {
                 walker.for_each(|walker, index| {
                     if walker.node.name == "ParameterList" && index == 0 {
-                        let from = walker.node.source_offset as usize;
-                        let to = from + walker.node.source_len as usize;
-                        let source = &self.source[from..to];
-                        let block = CodeBlock::Block(BlockContent {
-                            id: walker.node.id,
-                            name: walker.node.name.to_string(),
-                            source: source.to_string(),
-                            attributes: walker.node.attributes.clone(),
-                        });
+                        let block = CodeBlock::Block(walker.to_block_content(self.source));
                         blocks.push(block);
                     }
                     if walker.node.name == "ModifierInvocation" {
@@ -285,15 +243,7 @@ impl<'a> Graph<'a> {
                                 walker.node.name != "FunctionDefinition"
                             }, |walkers| {
                                 for walker in walkers {
-                                    let from = walker.node.source_offset as usize;
-                                    let to = from + walker.node.source_len as usize;
-                                    let source = &self.source[from..=to];
-                                    let block = CodeBlock::Block(BlockContent {
-                                        id: walker.node.id,
-                                        name: walker.node.name.to_string(),
-                                        source: source.to_string(),
-                                        attributes: walker.node.attributes.clone(),
-                                    });
+                                    let block = CodeBlock::Block(walker.to_block_content(self.source));
                                     blocks.push(block);
                                 }
                             });
@@ -356,28 +306,13 @@ impl<'a> Graph<'a> {
                     let source = &self.source[from..=to];
                     match props[index] {
                         "initializationExpression" => {
-                            init = CodeBlock::Block(BlockContent {
-                                id: walker.node.id,
-                                name: walker.node.name.to_string(),
-                                source: source.to_string(),
-                                attributes: walker.node.attributes.clone(),
-                            });
+                            init = CodeBlock::Block(walker.to_block_content(self.source));
                         },
                         "condition" => {
-                            condition = CodeBlock::Block(BlockContent {
-                                id: walker.node.id,
-                                name: walker.node.name.to_string(),
-                                source: source.to_string(),
-                                attributes: walker.node.attributes.clone(),
-                            });
+                            condition = CodeBlock::Block(walker.to_block_content(self.source));
                         },
                         "loopExpression" => {
-                            expression = CodeBlock::Block(BlockContent {
-                                id: walker.node.id,
-                                name: walker.node.name.to_string(),
-                                source: source.to_string(),
-                                attributes: walker.node.attributes.clone(),
-                            });
+                            expression = CodeBlock::Block(walker.to_block_content(self.source));
                         },
                         _ => {
                             if walker.node.name == "Block" {
@@ -396,15 +331,7 @@ impl<'a> Graph<'a> {
                 walker.for_each(|walker, _| {
                     match walker.node.name {
                         "BinaryOperation" => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..=to];
-                            condition = CodeBlock::Block(BlockContent {
-                                id: walker.node.id,
-                                name: walker.node.name.to_string(),
-                                source: source.to_string(),
-                                attributes: walker.node.attributes.clone(),
-                            });
+                            condition = CodeBlock::Block(walker.to_block_content(self.source));
                         },
                         "Block" => {
                             blocks = self.build_block(BlockKind::Body, walker);
@@ -422,15 +349,7 @@ impl<'a> Graph<'a> {
                 walker.for_each(|walker, _| {
                     match walker.node.name {
                         "BinaryOperation" => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..=to];
-                            condition = CodeBlock::Block(BlockContent {
-                                id: walker.node.id,
-                                name: walker.node.name.to_string(),
-                                source: source.to_string(),
-                                attributes: walker.node.attributes.clone(),
-                            });
+                            condition = CodeBlock::Block(walker.to_block_content(self.source));
                         },
                         "Block" => {
                             blocks = self.build_block(BlockKind::Body, walker);
@@ -449,15 +368,7 @@ impl<'a> Graph<'a> {
                 walker.for_each(|walker, index | {
                     match walker.node.name {
                         "BinaryOperation" => {
-                            let from = walker.node.source_offset as usize;
-                            let to = from + walker.node.source_len as usize;
-                            let source = &self.source[from..=to];
-                            condition = CodeBlock::Block(BlockContent {
-                                id: walker.node.id,
-                                name: walker.node.name.to_string(),
-                                source: source.to_string(),
-                                attributes: walker.node.attributes.clone(),
-                            });
+                            condition = CodeBlock::Block(walker.to_block_content(self.source));
                         },
                         "Block" => {
                             if index == 1 {

@@ -3,7 +3,7 @@ contract D {
   uint balance = 0 ;
   Voter voter;
   uint[] balances;
-  function pay(uint x) {
+  function pay(uint x, uint y) {
     if (balance > x) {
       balance -= x; 
     }
