@@ -1,18 +1,30 @@
+#[derive(Debug)]
+pub enum SymbolAction {
+    Declare,
+    Read,
+    Write,
+}
+
+#[derive(Debug)]
 pub struct Symbol {
     name: String,
     kind: String,
+    action: SymbolAction,
 }
 
+#[derive(Debug)]
 pub enum Link {
     Item(Symbol),
     More(usize),
 }
 
+#[derive(Debug)]
 pub struct Table {
     symbols: Vec<Link>,
     parent: Option<usize>,
 }
 
+#[derive(Debug)]
 pub struct SymbolTable {
     tables: Vec<Table>,
     head: Option<usize>, 
@@ -23,7 +35,11 @@ impl SymbolTable {
         SymbolTable { tables: vec![], head: None }
     }
 
-    pub fn insert(&mut self, name: String, kind: String) {
+    pub fn insert(&mut self, name: String, kind: String, action: SymbolAction) {
+        let symbol = Symbol { name, kind, action };
+        if let Some(head) = self.head {
+            self.tables[head].symbols.push(Link::Item(symbol));
+        }
     }
 
     pub fn lookup(&self, name: String) -> Option<&Symbol> {

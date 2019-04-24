@@ -13,7 +13,7 @@ use super::{
         DoWhileStatement,
         ForStatement,
     },
-    symbol::{ SymbolTable },
+    symbol::{ SymbolTable, SymbolAction },
     walker::{ Walker },
 };
 
@@ -24,6 +24,7 @@ pub struct Flow<'a> {
     source: &'a str, 
     edges: HashSet<(u32, u32)>,
     vertices: HashSet<String>,
+    symbol_table: SymbolTable, 
     start: u32,
     stop: u32,
 }
@@ -47,6 +48,7 @@ impl<'a> Flow<'a> {
             source,
             edges: HashSet::new(),
             vertices: HashSet::new(),
+            symbol_table: SymbolTable::new(),
             start: 0,
             stop: 1000000,
         }
@@ -72,16 +74,16 @@ impl<'a> Flow<'a> {
         format!("digraph {{\n{0}{1}}}", vertices, edges)
     }
 
-    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>, symbol_table: &mut SymbolTable) -> Vec<u32> {
+    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
         let mut predecessors = predecessors;
-        symbol_table.enter_scope();
+        self.symbol_table.enter_scope();
         for block in blocks {
             if predecessors.is_empty() {
-                symbol_table.exit_scope();
+                self.symbol_table.exit_scope();
                 return vec![];
             }
             match block {
-                CodeBlock::Block(BlockContent { id, source, .. }) => {
+                CodeBlock::Block(BlockContent { id, source, name, attributes }) => {
                     predecessors = predecessors
                         .iter()
                         .filter_map(|predecessor| {
@@ -92,6 +94,19 @@ impl<'a> Flow<'a> {
                     if !predecessors.is_empty() {
                         let vertice = Flow::to_vertice(id, source, "box");
                         self.vertices.insert(vertice);
+                        match &name[..] {
+                            "VariableDeclaration" => {
+                                match (attributes["name"].as_str(), attributes["type"].as_str()) {
+                                    (Some(var_name), Some(var_type)) => {
+                                        let var_name = var_name.to_string();
+                                        let var_type = var_type.to_string();
+                                        self.symbol_table.insert(var_name, var_type, SymbolAction::Declare);
+                                    },
+                                    (_, _) => {},
+                                }
+                            },
+                            _ => {},
+                        }
                     }
                     predecessors.dedup();
                 },
@@ -111,8 +126,8 @@ impl<'a> Flow<'a> {
                                     let vertice = Flow::to_vertice(id, source, "diamond");
                                     self.vertices.insert(vertice);
                                 }
-                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers, symbol_table);
-                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers, symbol_table);
+                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
+                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
                                 predecessors.clear();
                                 predecessors.append(&mut t);
                                 predecessors.append(&mut f);
@@ -123,7 +138,7 @@ impl<'a> Flow<'a> {
                                 let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
                                 for counter in 0..2 {
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, symbol_table);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
                                     our_breakers
                                         .iter()
                                         .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -171,7 +186,7 @@ impl<'a> Flow<'a> {
                                         self.vertices.insert(vertice);
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, symbol_table);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
                                     our_breakers
                                         .iter()
                                         .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -221,7 +236,7 @@ impl<'a> Flow<'a> {
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
                                 }
-                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, symbol_table);
+                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
                                 our_breakers
                                     .iter()
                                     .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -312,7 +327,7 @@ impl<'a> Flow<'a> {
                 CodeBlock::None => unimplemented!(), 
             }
         }
-        symbol_table.exit_scope();
+        self.symbol_table.exit_scope();
         return predecessors;
     }
 
@@ -320,12 +335,11 @@ impl<'a> Flow<'a> {
         let walker = Walker::new(self.value);
         let mut graph = Graph::new(config, &walker, self.source);
         let root = graph.update();
-        let mut symbol_table = SymbolTable::new();
         if let GraphNode::Root(blocks) = root {
             self.vertices.insert(Flow::to_vertice(&self.start, "START", "point"));
             self.vertices.insert(Flow::to_vertice(&self.stop, "STOP", "point"));
             let mut predecessors = vec![self.start];
-            predecessors = self.traverse(blocks, predecessors, &mut vec![], &mut symbol_table);
+            predecessors = self.traverse(blocks, predecessors, &mut vec![]);
             for predecessor in predecessors {
                 self.edges.insert((predecessor, self.stop));
             }
