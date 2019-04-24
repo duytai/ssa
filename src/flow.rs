@@ -96,14 +96,9 @@ impl<'a> Flow<'a> {
                         self.vertices.insert(vertice);
                         match &name[..] {
                             "VariableDeclaration" => {
-                                match (attributes["name"].as_str(), attributes["type"].as_str()) {
-                                    (Some(var_name), Some(var_type)) => {
-                                        let var_name = var_name.to_string();
-                                        let var_type = var_type.to_string();
-                                        self.symbol_table.insert(var_name, var_type, SymbolAction::Declare);
-                                    },
-                                    (_, _) => {},
-                                }
+                                let var_name = attributes["name"].as_str().unwrap().to_string();
+                                let var_type = attributes["type"].as_str().unwrap().to_string();
+                                self.symbol_table.insert(var_name, var_type, SymbolAction::Declare);
                             },
                             _ => {},
                         }
