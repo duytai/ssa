@@ -15,6 +15,7 @@ use super::{
     },
     symbol::{ SymbolTable },
     walker::{ Walker },
+    flat::{ Flat },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -24,6 +25,7 @@ pub struct Flow<'a> {
     source: &'a str, 
     edges: HashSet<(u32, u32)>,
     vertices: HashSet<String>,
+    flat: Flat<'a>,
     start: u32,
     stop: u32,
 }
@@ -47,6 +49,7 @@ impl<'a> Flow<'a> {
             source,
             edges: HashSet::new(),
             vertices: HashSet::new(),
+            flat: Flat::new(value),
             start: 0,
             stop: 1000000,
         }

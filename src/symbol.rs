@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 pub struct Symbol {
     name: String,
     kind: String,
