@@ -23,9 +23,9 @@ fn main() -> io::Result<()> {
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut flow = Flow::new(ast_one, &source_content);
         let config = GraphConfig { 
-            kind: GraphKind::Constructor,
+            kind: GraphKind::Function("pay"),
             contract_name: "D",
-            include_state: false,
+            include_state: true,
         };
         let dot = flow.render(&config);
         println!("{}", dot);
