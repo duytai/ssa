@@ -41,8 +41,10 @@ pub enum NodeKind {
 
 #[derive(Debug)]
 pub struct BlockContent {
-    pub source: String,
     pub id: u32,
+    pub name: String,
+    pub source: String,
+    pub attributes: json::JsonValue,
 }
 
 #[derive(Debug)]
@@ -110,8 +112,10 @@ impl<'a> Graph<'a> {
         let to = from + walker.node.source_len as usize;
         let source = &self.source[from..to];
         let block = CodeBlock::Block(BlockContent {
-            source: source.to_string(),
             id: walker.node.id,
+            name: walker.node.name.to_string(),
+            source: source.to_string(),
+            attributes: walker.node.attributes.clone(), 
         });
 
         match walker.node.name {
@@ -157,8 +161,10 @@ impl<'a> Graph<'a> {
                         let to = from + walker.node.source_len as usize;
                         let source = &self.source[from..to];
                         let block = CodeBlock::Block(BlockContent {
-                            source: source.to_string(),
                             id: walker.node.id,
+                            name: walker.node.name.to_string(),
+                            source: source.to_string(),
+                            attributes: walker.node.attributes.clone(),
                         });
                         let node = GraphNode::FunctionCall(block);
                         blocks.push(CodeBlock::Link(Box::new(node)));
@@ -177,8 +183,10 @@ impl<'a> Graph<'a> {
                         let to = from + walker.node.source_len as usize;
                         let source = &self.source[from..to];
                         let block = CodeBlock::Block(BlockContent {
-                            source: source.to_string(),
                             id: walker.node.id,
+                            name: walker.node.name.to_string(),
+                            source: source.to_string(),
+                            attributes: walker.node.attributes.clone(),
                         });
                         let mut funcs = (false, false, false, false, false);
                         let node_value = walker.node.attributes["value"]
@@ -242,8 +250,10 @@ impl<'a> Graph<'a> {
                         let to = from + walker.node.source_len as usize;
                         let source = &self.source[from..to];
                         let block = CodeBlock::Block(BlockContent {
-                            source: source.to_string(),
                             id: walker.node.id,
+                            name: walker.node.name.to_string(),
+                            source: source.to_string(),
+                            attributes: walker.node.attributes.clone(),
                         });
                         blocks.push(block);
                     }
@@ -279,8 +289,10 @@ impl<'a> Graph<'a> {
                                     let to = from + walker.node.source_len as usize;
                                     let source = &self.source[from..=to];
                                     let block = CodeBlock::Block(BlockContent {
-                                        source: source.to_string(),
                                         id: walker.node.id,
+                                        name: walker.node.name.to_string(),
+                                        source: source.to_string(),
+                                        attributes: walker.node.attributes.clone(),
                                     });
                                     blocks.push(block);
                                 }
@@ -345,20 +357,26 @@ impl<'a> Graph<'a> {
                     match props[index] {
                         "initializationExpression" => {
                             init = CodeBlock::Block(BlockContent {
-                                source: source.to_string(),
                                 id: walker.node.id,
+                                name: walker.node.name.to_string(),
+                                source: source.to_string(),
+                                attributes: walker.node.attributes.clone(),
                             });
                         },
                         "condition" => {
                             condition = CodeBlock::Block(BlockContent {
-                                source: source.to_string(),
                                 id: walker.node.id,
+                                name: walker.node.name.to_string(),
+                                source: source.to_string(),
+                                attributes: walker.node.attributes.clone(),
                             });
                         },
                         "loopExpression" => {
                             expression = CodeBlock::Block(BlockContent {
-                                source: source.to_string(),
                                 id: walker.node.id,
+                                name: walker.node.name.to_string(),
+                                source: source.to_string(),
+                                attributes: walker.node.attributes.clone(),
                             });
                         },
                         _ => {
@@ -382,8 +400,10 @@ impl<'a> Graph<'a> {
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..=to];
                             condition = CodeBlock::Block(BlockContent {
-                                source: source.to_string(),
                                 id: walker.node.id,
+                                name: walker.node.name.to_string(),
+                                source: source.to_string(),
+                                attributes: walker.node.attributes.clone(),
                             });
                         },
                         "Block" => {
@@ -406,8 +426,10 @@ impl<'a> Graph<'a> {
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..=to];
                             condition = CodeBlock::Block(BlockContent {
-                                source: source.to_string(),
                                 id: walker.node.id,
+                                name: walker.node.name.to_string(),
+                                source: source.to_string(),
+                                attributes: walker.node.attributes.clone(),
                             });
                         },
                         "Block" => {
@@ -431,8 +453,10 @@ impl<'a> Graph<'a> {
                             let to = from + walker.node.source_len as usize;
                             let source = &self.source[from..=to];
                             condition = CodeBlock::Block(BlockContent {
-                                source: source.to_string(),
                                 id: walker.node.id,
+                                name: walker.node.name.to_string(),
+                                source: source.to_string(),
+                                attributes: walker.node.attributes.clone(),
                             });
                         },
                         "Block" => {

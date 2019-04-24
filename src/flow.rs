@@ -81,7 +81,7 @@ impl<'a> Flow<'a> {
                 return vec![];
             }
             match block {
-                CodeBlock::Block(BlockContent { id, source }) => {
+                CodeBlock::Block(BlockContent { id, source, .. }) => {
                     predecessors = predecessors
                         .iter()
                         .filter_map(|predecessor| {
@@ -98,7 +98,7 @@ impl<'a> Flow<'a> {
                 CodeBlock::Link(link) => {
                     match &**link {
                         GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
-                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                            if let CodeBlock::Block(BlockContent { id, source, .. }) = condition {
                                 predecessors = predecessors
                                     .iter()
                                     .filter_map(|predecessor| {
@@ -119,7 +119,7 @@ impl<'a> Flow<'a> {
                             }
                         },
                         GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
-                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                            if let CodeBlock::Block(BlockContent { id, source, .. }) = condition {
                                 let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
                                 for counter in 0..2 {
@@ -154,7 +154,7 @@ impl<'a> Flow<'a> {
                             }
                         },
                         GraphNode::WhileStatement(WhileStatement { condition, blocks }) => {
-                            if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                            if let CodeBlock::Block(BlockContent { id, source, .. }) = condition {
                                 let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
                                 for counter in 0..2 {
@@ -191,7 +191,7 @@ impl<'a> Flow<'a> {
                         GraphNode::ForStatement(ForStatement { init, condition, expression, blocks }) => {
                             let mut cond_predecessors = vec![];
                             let mut our_breakers =  vec![];
-                            if let CodeBlock::Block(BlockContent { id, source }) = init {
+                            if let CodeBlock::Block(BlockContent { id, source, .. }) = init {
                                 predecessors = predecessors
                                     .iter()
                                     .filter_map(|predecessor| {
@@ -206,7 +206,7 @@ impl<'a> Flow<'a> {
                                 }
                             }
                             for counter in 0..2 {
-                                if let CodeBlock::Block(BlockContent { id, source }) = condition {
+                                if let CodeBlock::Block(BlockContent { id, source, .. }) = condition {
                                     predecessors = predecessors
                                         .iter()
                                         .filter_map(|predecessor| {
@@ -228,7 +228,7 @@ impl<'a> Flow<'a> {
                                     .for_each(|LoopBreaker { id, .. }| {
                                         predecessors.push(*id);
                                     });
-                                if let CodeBlock::Block(BlockContent { id, source }) = expression {
+                                if let CodeBlock::Block(BlockContent { id, source, .. }) = expression {
                                     predecessors = predecessors
                                         .iter()
                                         .filter_map(|predecessor| {
@@ -251,11 +251,11 @@ impl<'a> Flow<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        GraphNode::Return(CodeBlock::Block(BlockContent { id, source })) 
-                            | GraphNode::Revert(CodeBlock::Block(BlockContent { id, source }))
-                            | GraphNode::Throw(CodeBlock::Block(BlockContent { id, source })) 
-                            | GraphNode::Suicide(CodeBlock::Block(BlockContent { id, source })) 
-                            | GraphNode::Selfdestruct(CodeBlock::Block(BlockContent{ id, source })) => {
+                        GraphNode::Return(CodeBlock::Block(BlockContent { id, source, .. })) 
+                            | GraphNode::Revert(CodeBlock::Block(BlockContent { id, source, .. }))
+                            | GraphNode::Throw(CodeBlock::Block(BlockContent { id, source, .. })) 
+                            | GraphNode::Suicide(CodeBlock::Block(BlockContent { id, source, .. })) 
+                            | GraphNode::Selfdestruct(CodeBlock::Block(BlockContent{ id, source, .. })) => {
                             let vertice = Flow::to_vertice(id, source, "box");
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
@@ -264,8 +264,8 @@ impl<'a> Flow<'a> {
                             self.edges.insert((*id, self.stop));
                             predecessors = vec![];
                         },
-                        GraphNode::Require(CodeBlock::Block(BlockContent { id, source }))
-                            | GraphNode::Assert(CodeBlock::Block(BlockContent { id, source })) => {
+                        GraphNode::Require(CodeBlock::Block(BlockContent { id, source, .. }))
+                            | GraphNode::Assert(CodeBlock::Block(BlockContent { id, source, .. })) => {
                             let vertice = Flow::to_vertice(id, source, "diamond");
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
@@ -274,7 +274,7 @@ impl<'a> Flow<'a> {
                             self.edges.insert((*id, self.stop));
                             predecessors = vec![*id];
                         },
-                        GraphNode::Break(CodeBlock::Block(BlockContent { id, source })) => {
+                        GraphNode::Break(CodeBlock::Block(BlockContent { id, source, .. })) => {
                             let vertice = Flow::to_vertice(id, source, "box");
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
@@ -283,7 +283,7 @@ impl<'a> Flow<'a> {
                             breakers.push(LoopBreaker { kind: BreakerType::Break, id: *id });
                             predecessors = vec![];
                         },
-                        GraphNode::Continue(CodeBlock::Block(BlockContent { id, source })) => {
+                        GraphNode::Continue(CodeBlock::Block(BlockContent { id, source, .. })) => {
                             let vertice = Flow::to_vertice(id, source, "box");
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
@@ -292,7 +292,7 @@ impl<'a> Flow<'a> {
                             breakers.push(LoopBreaker { kind: BreakerType::Continue, id: *id });
                             predecessors = vec![];
                         },
-                        GraphNode::FunctionCall(CodeBlock::Block(BlockContent { id, source })) => {
+                        GraphNode::FunctionCall(CodeBlock::Block(BlockContent { id, source, .. })) => {
                             predecessors = predecessors
                                 .iter()
                                 .filter_map(|predecessor| {
