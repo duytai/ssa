@@ -97,8 +97,7 @@ impl<'a> Graph<'a> {
         Graph { config, walker, root: GraphNode::None }
     }
 
-    pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock> {
-        let block = CodeBlock::Block(walker.clone());
+    pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
         match walker.node.name {
             "IfStatement" => {
                 let node = self.build_node(NodeKind::IfStatement, walker); 
@@ -117,19 +116,19 @@ impl<'a> Graph<'a> {
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Return" => {
-                let node = GraphNode::Return(block);
+                let node = GraphNode::Return(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Throw" => {
-                let node = GraphNode::Throw(block);
+                let node = GraphNode::Throw(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Continue" => {
-                let node = GraphNode::Continue(block);
+                let node = GraphNode::Continue(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Break" => {
-                let node = GraphNode::Break(block);
+                let node = GraphNode::Break(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "VariableDeclarationStatement" | "EmitStatement" => {
@@ -143,7 +142,7 @@ impl<'a> Graph<'a> {
                         blocks.push(CodeBlock::Link(Box::new(node)));
                     }
                 });
-                blocks.push(block);
+                blocks.push(CodeBlock::Block(walker));
                 blocks
             },
             "ExpressionStatement" => {
@@ -191,16 +190,16 @@ impl<'a> Graph<'a> {
                         };
                     }
                 });
-                blocks.push(block);
+                blocks.push(CodeBlock::Block(walker));
                 blocks
             },
             "InlineAssemblyStatement" => unimplemented!(),
             "PlaceholderStatement" => unimplemented!(), 
-            _ => vec![block],
+            _ => vec![CodeBlock::Block(walker)],
         }
     }
 
-    pub fn build_block(&mut self, kind: BlockKind, walker: Walker<'a>) -> Vec<CodeBlock> {
+    pub fn build_block(&mut self, kind: BlockKind, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
         let mut blocks = vec![];
         match kind {
             BlockKind::Body => {
@@ -226,7 +225,7 @@ impl<'a> Graph<'a> {
         blocks
     } 
 
-    pub fn build_node(&mut self, kind: NodeKind, walker: Walker) -> GraphNode {
+    pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> GraphNode<'a> {
         match kind {
             NodeKind::Root => {
                 let mut blocks = vec![]; 
