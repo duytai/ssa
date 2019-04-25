@@ -94,16 +94,7 @@ impl<'a> Flow<'a> {
                     if !predecessors.is_empty() {
                         let vertice = Flow::to_vertice(id, source, "box");
                         self.vertices.insert(vertice);
-                        // match &name[..] {
-                            // "VariableDeclaration" => {
-                                // let var_name = attributes["name"].as_str().unwrap().to_string();
-                                // let var_type = attributes["type"].as_str().unwrap().to_string();
-                                // self.symbol_table.insert(var_name, var_type, SymbolAction::Declare);
-                            // },
-                            // "ParameterList" => {
-                            // },
-                            // _ => {},
-                        // }
+                        self.symbol_table.digest(walker);
                     }
                     predecessors.dedup();
                 },
@@ -352,6 +343,7 @@ impl<'a> Flow<'a> {
                 self.edges.insert((predecessor, self.stop));
             }
         }
+        println!("{:?}", self.symbol_table);
         self.to_dot()
     }
 }

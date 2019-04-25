@@ -1,3 +1,7 @@
+use super::{
+    walker:: { Walker, Node }
+};
+
 #[derive(Debug)]
 pub enum SymbolAction {
     Declare,
@@ -8,8 +12,8 @@ pub enum SymbolAction {
 #[derive(Debug)]
 pub struct Symbol {
     name: String,
-    kind: String,
     action: SymbolAction,
+    depends: Vec<Symbol>,
 }
 
 #[derive(Debug)]
@@ -35,8 +39,7 @@ impl SymbolTable {
         SymbolTable { tables: vec![], head: None }
     }
 
-    pub fn insert(&mut self, name: String, kind: String, action: SymbolAction) {
-        let symbol = Symbol { name, kind, action };
+    pub fn insert(&mut self, symbol: Symbol) {
         if let Some(head) = self.head {
             self.tables[head].symbols.push(Link::Item(symbol));
         }
@@ -68,4 +71,67 @@ impl SymbolTable {
             self.head = self.tables[head].parent;
         }
     }
+
+    pub fn digest(&mut self, walker: &Walker) {
+        let Node { name, attributes, .. } = walker.node;
+        match name {
+            "VariableDeclaration" => {
+                let var_name = attributes["name"]
+                    .as_str()
+                    .unwrap()
+                    .to_string();
+                let symbol = Symbol {
+                    name: var_name,
+                    action: SymbolAction::Declare,
+                    depends: vec![],
+                };
+                self.insert(symbol);
+            },
+            "ParameterList" => {
+                walker.for_each(|walker, _| {
+                    let Node { attributes, .. } = walker.node;
+                    let var_name = attributes["name"]
+                        .as_str()
+                        .unwrap()
+                        .to_string();
+                    let symbol = Symbol {
+                        name: var_name,
+                        action: SymbolAction::Declare,
+                        depends: vec![],
+                    };
+                    self.insert(symbol);
+                });
+            },
+            "ExpressionStatement" => {
+                walker.all(|walker| {
+                    walker.node.name == "Assignment"
+                }, |walkers| {
+                    for walker in walkers {
+                        walker.for_each(|walker, index| {
+                            let Node { attributes, name, .. } = walker.node;
+                            if index == 0 {
+                                match name {
+                                    "Identifier" => {
+                                        let var_name = attributes["value"]
+                                            .as_str()
+                                            .unwrap()
+                                            .to_string();
+                                        let symbol = Symbol {
+                                            name: var_name,
+                                            action: SymbolAction::Write,
+                                            depends: vec![],
+                                        };
+                                        self.insert(symbol);
+                                    },
+                                    "MemberAccess" | "IndexAccess" => unimplemented!(),
+                                    _ => unimplemented!(),
+                                } 
+                            }
+                        });
+                    }
+                });
+            },
+            _ => {},
+        }
+    } 
 }

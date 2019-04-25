@@ -1,12 +1,11 @@
 contract D {
-  struct Voter { string name; }
   uint balance = 0 ;
-  Voter voter;
-  uint[] balances;
   function pay(uint x, uint y) {
     if (balance > x) {
       balance -= x; 
+    } else {
+      balance -= 10 + y;
     }
-    msg.sender.send(x);
+    msg.sender.send(balance);
   }
 }
