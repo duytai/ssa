@@ -1,13 +1,12 @@
 use super::{
-    walker::{ Walker, BlockContent },
+    walker::{ Walker },
 };
 
 #[derive(Debug)]
 pub struct Graph<'a> {
     config: &'a GraphConfig<'a>,
-    walker: &'a Walker<'a>,
-    source: &'a str,
-    root: GraphNode,
+    walker: Walker<'a>,
+    root: GraphNode<'a>,
 }
 
 #[derive(Debug)]
@@ -40,66 +39,66 @@ pub enum NodeKind {
 }
 
 #[derive(Debug)]
-pub enum CodeBlock {
-    Block(BlockContent),
-    Link(Box<GraphNode>),
+pub enum CodeBlock<'a> {
+    Block(Walker<'a>),
+    Link(Box<GraphNode<'a>>),
     None,
 }
 
 #[derive(Debug)]
-pub enum GraphNode {
-    Root(Vec<CodeBlock>),
-    IfStatement(IfStatement),
-    WhileStatement(WhileStatement),
-    ForStatement(ForStatement),
-    DoWhileStatement(DoWhileStatement),
-    Return(CodeBlock),
-    Require(CodeBlock),
-    Assert(CodeBlock),
-    Revert(CodeBlock),
-    Throw(CodeBlock),
-    Break(CodeBlock),
-    Continue(CodeBlock),
-    Suicide(CodeBlock),
-    Selfdestruct(CodeBlock),
-    FunctionCall(CodeBlock),
+pub enum GraphNode<'a> {
+    Root(Vec<CodeBlock<'a>>),
+    IfStatement(IfStatement<'a>),
+    WhileStatement(WhileStatement<'a>),
+    ForStatement(ForStatement<'a>),
+    DoWhileStatement(DoWhileStatement<'a>),
+    Return(CodeBlock<'a>),
+    Require(CodeBlock<'a>),
+    Assert(CodeBlock<'a>),
+    Revert(CodeBlock<'a>),
+    Throw(CodeBlock<'a>),
+    Break(CodeBlock<'a>),
+    Continue(CodeBlock<'a>),
+    Suicide(CodeBlock<'a>),
+    Selfdestruct(CodeBlock<'a>),
+    FunctionCall(CodeBlock<'a>),
     None,
 }
 
 #[derive(Debug)]
-pub struct WhileStatement {
-    pub condition: CodeBlock,
-    pub blocks: Vec<CodeBlock>,
+pub struct WhileStatement<'a> {
+    pub condition: CodeBlock<'a>,
+    pub blocks: Vec<CodeBlock<'a>>,
 }
 
 #[derive(Debug)]
-pub struct DoWhileStatement {
-    pub condition: CodeBlock,
-    pub blocks: Vec<CodeBlock>,
+pub struct DoWhileStatement<'a> {
+    pub condition: CodeBlock<'a>,
+    pub blocks: Vec<CodeBlock<'a>>,
 }
 
 #[derive(Debug)]
-pub struct IfStatement {
-    pub condition: CodeBlock,
-    pub tblocks: Vec<CodeBlock>,
-    pub fblocks: Vec<CodeBlock>,
+pub struct IfStatement<'a> {
+    pub condition: CodeBlock<'a>,
+    pub tblocks: Vec<CodeBlock<'a>>,
+    pub fblocks: Vec<CodeBlock<'a>>,
 }
 
 #[derive(Debug)]
-pub struct ForStatement {
-    pub condition: CodeBlock,
-    pub init: CodeBlock,
-    pub expression: CodeBlock,  
-    pub blocks: Vec<CodeBlock>,
+pub struct ForStatement<'a> {
+    pub condition: CodeBlock<'a>,
+    pub init: CodeBlock<'a>,
+    pub expression: CodeBlock<'a>,  
+    pub blocks: Vec<CodeBlock<'a>>,
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(config: &'a GraphConfig, walker: &'a Walker, source: &'a str) -> Self {
-        Graph { config, walker, source, root: GraphNode::None }
+    pub fn new(config: &'a GraphConfig, walker: Walker<'a>) -> Self {
+        Graph { config, walker, root: GraphNode::None }
     }
 
-    pub fn build_items(&mut self, walker: &Walker) -> Vec<CodeBlock> {
-        let block = CodeBlock::Block(walker.to_block_content(self.source));
+    pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock> {
+        let block = CodeBlock::Block(walker.clone());
         match walker.node.name {
             "IfStatement" => {
                 let node = self.build_node(NodeKind::IfStatement, walker); 
@@ -138,8 +137,8 @@ impl<'a> Graph<'a> {
                 walker.all(|walker| {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
-                    for walker in walkers.iter() {
-                        let block = CodeBlock::Block(walker.to_block_content(self.source));
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
                         let node = GraphNode::FunctionCall(block);
                         blocks.push(CodeBlock::Link(Box::new(node)));
                     }
@@ -152,8 +151,8 @@ impl<'a> Graph<'a> {
                 walker.all(|walker| {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
-                    for walker in walkers.iter() {
-                        let block = CodeBlock::Block(walker.to_block_content(self.source));
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
                         let mut funcs = (false, false, false, false, false);
                         let node_value = walker.node.attributes["value"]
                             .as_str()
@@ -201,7 +200,7 @@ impl<'a> Graph<'a> {
         }
     }
 
-    pub fn build_block(&mut self, kind: BlockKind, walker: &Walker) -> Vec<CodeBlock> {
+    pub fn build_block(&mut self, kind: BlockKind, walker: Walker<'a>) -> Vec<CodeBlock> {
         let mut blocks = vec![];
         match kind {
             BlockKind::Body => {
@@ -212,7 +211,7 @@ impl<'a> Graph<'a> {
             BlockKind::Param => {
                 walker.for_each(|walker, index| {
                     if walker.node.name == "ParameterList" && index == 0 {
-                        let block = CodeBlock::Block(walker.to_block_content(self.source));
+                        let block = CodeBlock::Block(walker);
                         blocks.push(block);
                     }
                     if walker.node.name == "ModifierInvocation" {
@@ -227,7 +226,7 @@ impl<'a> Graph<'a> {
         blocks
     } 
 
-    pub fn build_node(&mut self, kind: NodeKind, walker: &Walker) -> GraphNode {
+    pub fn build_node(&mut self, kind: NodeKind, walker: Walker) -> GraphNode {
         match kind {
             NodeKind::Root => {
                 let mut blocks = vec![]; 
@@ -237,13 +236,13 @@ impl<'a> Graph<'a> {
                     walker.node.name == "ContractDefinition"
                     && walker.node.attributes["name"].as_str().unwrap_or("") == contract_name
                 }, |walkers| {
-                    for walker in walkers.iter() {
+                    for walker in walkers {
                         if self.config.include_state {
                             walker.for_all(|walker| {
                                 walker.node.name != "FunctionDefinition"
                             }, |walkers| {
                                 for walker in walkers {
-                                    let block = CodeBlock::Block(walker.to_block_content(self.source));
+                                    let block = CodeBlock::Block(walker);
                                     blocks.push(block);
                                 }
                             });
@@ -253,7 +252,7 @@ impl<'a> Graph<'a> {
                                 walker.for_all(|walker| {
                                     walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
                                 }, |walkers| {
-                                    for walker in walkers.iter() {
+                                    for walker in walkers {
                                         blocks.append(
                                             &mut self.build_block(BlockKind::Param, walker)
                                         );
@@ -265,7 +264,7 @@ impl<'a> Graph<'a> {
                                     !walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
                                     && walker.node.attributes["name"].as_str().unwrap_or("") == ""
                                 }, |walkers| {
-                                    for walker in walkers.iter() {
+                                    for walker in walkers {
                                         blocks.append(
                                             &mut self.build_block(BlockKind::Param, walker)
                                         );
@@ -276,7 +275,7 @@ impl<'a> Graph<'a> {
                                 walker.for_all(|walker| {
                                     walker.node.attributes["name"].as_str().unwrap_or("") == *name
                                 }, |walkers| {
-                                    for walker in walkers.iter() {
+                                    for walker in walkers {
                                         blocks.append(
                                             &mut self.build_block(BlockKind::Param, walker)
                                         );
@@ -301,18 +300,15 @@ impl<'a> Graph<'a> {
                     }).collect();
                 }
                 walker.for_each(|walker, index| {
-                    let from = walker.node.source_offset as usize;
-                    let to = from + walker.node.source_len as usize;
-                    let source = &self.source[from..=to];
                     match props[index] {
                         "initializationExpression" => {
-                            init = CodeBlock::Block(walker.to_block_content(self.source));
+                            init = CodeBlock::Block(walker);
                         },
                         "condition" => {
-                            condition = CodeBlock::Block(walker.to_block_content(self.source));
+                            condition = CodeBlock::Block(walker);
                         },
                         "loopExpression" => {
-                            expression = CodeBlock::Block(walker.to_block_content(self.source));
+                            expression = CodeBlock::Block(walker);
                         },
                         _ => {
                             if walker.node.name == "Block" {
@@ -331,7 +327,7 @@ impl<'a> Graph<'a> {
                 walker.for_each(|walker, _| {
                     match walker.node.name {
                         "BinaryOperation" => {
-                            condition = CodeBlock::Block(walker.to_block_content(self.source));
+                            condition = CodeBlock::Block(walker);
                         },
                         "Block" => {
                             blocks = self.build_block(BlockKind::Body, walker);
@@ -349,7 +345,7 @@ impl<'a> Graph<'a> {
                 walker.for_each(|walker, _| {
                     match walker.node.name {
                         "BinaryOperation" => {
-                            condition = CodeBlock::Block(walker.to_block_content(self.source));
+                            condition = CodeBlock::Block(walker);
                         },
                         "Block" => {
                             blocks = self.build_block(BlockKind::Body, walker);
@@ -368,7 +364,7 @@ impl<'a> Graph<'a> {
                 walker.for_each(|walker, index | {
                     match walker.node.name {
                         "BinaryOperation" => {
-                            condition = CodeBlock::Block(walker.to_block_content(self.source));
+                            condition = CodeBlock::Block(walker);
                         },
                         "Block" => {
                             if index == 1 {

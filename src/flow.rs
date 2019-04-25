@@ -13,7 +13,7 @@ use super::{
         ForStatement,
     },
     symbol::{ SymbolTable, SymbolAction },
-    walker::{ Walker, BlockContent },
+    walker::{ Walker },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -328,8 +328,8 @@ impl<'a> Flow<'a> {
     }
 
     pub fn render(&mut self, config: &GraphConfig) -> String {
-        let walker = Walker::new(self.value);
-        let mut graph = Graph::new(config, &walker, self.source);
+        let walker = Walker::new(self.value, self.source);
+        let mut graph = Graph::new(config, walker);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
             self.vertices.insert(Flow::to_vertice(&self.start, "START", "point"));
