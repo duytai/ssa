@@ -151,7 +151,6 @@ impl<'a> Graph<'a> {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
                     for walker in walkers {
-                        let block = CodeBlock::Block(walker);
                         let mut funcs = (false, false, false, false, false);
                         let node_value = walker.node.attributes["value"]
                             .as_str()
@@ -167,6 +166,7 @@ impl<'a> Graph<'a> {
                             ("selfdestruct", "function (address)") => funcs.4 = true,
                             _ => {},
                         };
+                        let block = CodeBlock::Block(walker);
                         match funcs {
                             (true, _, _, _, _) => {
                                 blocks.push(CodeBlock::Link(Box::new(GraphNode::Revert(block))));
@@ -209,15 +209,20 @@ impl<'a> Graph<'a> {
             },
             BlockKind::Param => {
                 walker.for_each(|walker, index| {
-                    if walker.node.name == "ParameterList" && index == 0 {
-                        let block = CodeBlock::Block(walker);
-                        blocks.push(block);
-                    }
-                    if walker.node.name == "ModifierInvocation" {
-                        unimplemented!();
-                    }
-                    if walker.node.name == "Block" {
-                        blocks.append(&mut self.build_block(BlockKind::Body, walker));
+                    match walker.node.name {
+                        "ParameterList" => {
+                            if index == 0 {
+                                let block = CodeBlock::Block(walker);
+                                blocks.push(block);
+                            }
+                        },
+                        "ModifierInvocation" => {
+                            unimplemented!();
+                        },
+                        "Block" => {
+                            blocks.append(&mut self.build_block(BlockKind::Body, walker));
+                        },
+                        _ => {},
                     }
                 })
             },
@@ -385,7 +390,7 @@ impl<'a> Graph<'a> {
     pub fn update(&mut self) -> &GraphNode {
         match self.root {
             GraphNode::None => {
-                self.root = self.build_node(NodeKind::Root, self.walker);
+                self.root = self.build_node(NodeKind::Root, self.walker.clone());
                 &self.root
             },
             _ => &self.root,

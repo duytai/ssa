@@ -12,6 +12,7 @@ pub struct Node<'a> {
 #[derive(Debug, Clone)]
 pub struct Walker<'a> {
     pub node: Node<'a>,
+    pub source: &'a str,
 }
 
 impl<'a> Walker<'a> {
@@ -35,12 +36,12 @@ impl<'a> Walker<'a> {
             attributes: &value["attributes"],
             children,
         };
-        Walker { node }
+        Walker { node, source }
     }
 
     pub fn for_each<Callback>(&self, mut cb: Callback) where Callback: FnMut(Walker<'a>, usize) {
         for (index, child) in self.node.children.iter().enumerate() {
-            cb(Walker::new(child, self.node.source), index);
+            cb(Walker::new(child, self.source), index);
         }
     }
 
@@ -51,7 +52,7 @@ impl<'a> Walker<'a> {
     {
         let mut walkers = vec![];
         for child in self.node.children.iter() {
-            let walker = Walker::new(child, self.node.source);
+            let walker = Walker::new(child, self.source);
             if fi(&walker) {
                 walkers.push(walker);
             }
@@ -67,13 +68,13 @@ impl<'a> Walker<'a> {
         let mut stacks = vec![];
         let mut walkers = vec![];
         for child in self.node.children.iter() {
-            let walker = Walker::new(child, self.node.source);
+            let walker = Walker::new(child, self.source);
             stacks.push(walker);
         }
         while !stacks.is_empty() {
             let item = stacks.pop().unwrap();
             for child in item.node.children.iter() {
-                let walker = Walker::new(child, item.node.source);
+                let walker = Walker::new(child, item.source);
                 stacks.push(walker);
             }
             if fi(&item) {
