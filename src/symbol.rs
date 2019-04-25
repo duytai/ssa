@@ -107,27 +107,13 @@ impl SymbolTable {
                     walker.node.name == "Assignment"
                 }, |walkers| {
                     for walker in walkers {
-                        // walker.for_each(|walker, index| {
-                            // let Node { attributes, name, .. } = walker.node;
-                            // if index == 0 {
-                                // match name {
-                                    // "Identifier" => {
-                                        // let var_name = attributes["value"]
-                                            // .as_str()
-                                            // .unwrap()
-                                            // .to_string();
-                                        // let symbol = Symbol {
-                                            // name: var_name,
-                                            // action: SymbolAction::Write,
-                                            // depends: vec![],
-                                        // };
-                                        // self.insert(symbol);
-                                    // },
-                                    // "MemberAccess" | "IndexAccess" => unimplemented!(),
-                                    // _ => unimplemented!(),
-                                // }
-                            // }
-                        // });
+                        walker.all(|walker| {
+                            walker.node.name == "Identifier"
+                        }, |walkers| {
+                            for walker in walkers {
+                                println!("{}", walker.node.attributes["value"]);
+                            }
+                        });
                     }
                 });
             },

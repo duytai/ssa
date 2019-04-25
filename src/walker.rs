@@ -39,12 +39,14 @@ impl<'a> Walker<'a> {
         Walker { node, source }
     }
 
+    /* List all direct children */
     pub fn for_each<Callback>(&self, mut cb: Callback) where Callback: FnMut(Walker<'a>, usize) {
         for (index, child) in self.node.children.iter().enumerate() {
             cb(Walker::new(child, self.source), index);
         }
     }
 
+    /* List all direct children by apply specific filter */
     pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
         where
             Callback: FnMut(Vec<Walker<'a>>),
@@ -60,6 +62,7 @@ impl<'a> Walker<'a> {
         cb(walkers);
     }
 
+    /* List all children by apply specific filter */
     pub fn all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
         where
             Callback: FnMut(Vec<Walker<'a>>),
