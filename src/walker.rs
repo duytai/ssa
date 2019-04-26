@@ -61,6 +61,31 @@ impl<'a> Walker<'a> {
         }
         cb(walkers);
     }
+    /* List all children and break when fiter meets */
+    pub fn all_break<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
+        where 
+            Callback: FnMut(Vec<Walker<'a>>),
+            Filter: FnMut(&Walker) -> bool
+    {
+        let mut stacks = vec![];
+        let mut walkers = vec![];
+        for child in self.node.children.iter() {
+            let walker = Walker::new(child, self.source);
+            stacks.push(walker);
+        }
+        while !stacks.is_empty() {
+            let item = stacks.pop().unwrap();
+            if fi(&item) {
+                walkers.insert(0, item);
+            } else {
+                for child in item.node.children.iter() {
+                    let walker = Walker::new(child, item.source);
+                    stacks.push(walker);
+                }
+            }
+        }
+        cb(walkers);
+    }
 
     /* List all children by apply specific filter */
     pub fn all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)

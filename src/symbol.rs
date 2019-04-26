@@ -103,19 +103,19 @@ impl SymbolTable {
                 });
             },
             "ExpressionStatement" => {
-                walker.all(|walker| {
-                    walker.node.name == "Assignment"
-                }, |walkers| {
-                    for walker in walkers {
-                        walker.all(|walker| {
-                            walker.node.name == "Identifier"
-                        }, |walkers| {
-                            for walker in walkers {
-                                println!("{}", walker.node.attributes["value"]);
+                walker.for_each(|walker, _| {
+                    if walker.node.name == "Assignment" {
+                        walker.for_each(|walker, index| {
+                            match index {
+                                // LHS
+                                0 => {},
+                                // RHS
+                                1 => {}
+                                _ => {},
                             }
                         });
                     }
-                });
+                })
             },
             _ => {},
         }
