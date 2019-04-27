@@ -1,16 +1,23 @@
-contract D {
-  struct Voter { uint counter; }
-  uint balance = 0 ;
-  uint[] balances;
-  Voter voter;
+library Math {
+  function div(uint x, uint y) returns (uint) {
+    return x / y;
+  }
+}
+
+contract A {
+  function add(uint x, uint y) returns (uint) {
+    return x + y;
+  }
+}
+
+contract B {
+  function mul(uint x, uint y) returns (uint) {
+    return x * y;
+  }
+}
+
+contract D is A, B {
+  using Math for uint;
   function pay(uint x, uint y) {
-    if (balance > x) {
-      voter.counter = 100;
-      balance -= x + y * 10; 
-    } else {
-      voter.counter = 200;
-      balance -= 10 + y;
-    }
-    msg.sender.send(balance);
   }
 }
