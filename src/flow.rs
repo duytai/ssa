@@ -12,7 +12,6 @@ use super::{
         DoWhileStatement,
         ForStatement,
     },
-    symbol::{ LocalTable },
     walker::{ Walker, Node },
 };
 
@@ -23,7 +22,6 @@ pub struct Flow<'a> {
     source: &'a str, 
     edges: HashSet<(u32, u32)>,
     vertices: HashSet<String>,
-    local_table: LocalTable, 
     start: u32,
     stop: u32,
 }
@@ -47,7 +45,6 @@ impl<'a> Flow<'a> {
             source,
             edges: HashSet::new(),
             vertices: HashSet::new(),
-            local_table: LocalTable::new(),
             start: 0,
             stop: 1000000,
         }
@@ -75,10 +72,8 @@ impl<'a> Flow<'a> {
 
     pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
         let mut predecessors = predecessors;
-        self.local_table.enter_scope();
         for block in blocks {
             if predecessors.is_empty() {
-                self.local_table.exit_scope();
                 return vec![];
             }
             match block {
@@ -94,7 +89,6 @@ impl<'a> Flow<'a> {
                     if !predecessors.is_empty() {
                         let vertice = Flow::to_vertice(id, source, "box");
                         self.vertices.insert(vertice);
-                        self.local_table.digest(walker);
                     }
                     predecessors.dedup();
                 },
@@ -326,7 +320,6 @@ impl<'a> Flow<'a> {
                 CodeBlock::None => unimplemented!(), 
             }
         }
-        self.local_table.exit_scope();
         return predecessors;
     }
 
@@ -343,7 +336,6 @@ impl<'a> Flow<'a> {
                 self.edges.insert((predecessor, self.stop));
             }
         }
-        println!("{:?}", self.local_table);
         self.to_dot()
     }
 }

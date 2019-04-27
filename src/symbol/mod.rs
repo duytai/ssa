@@ -1,3 +1,3 @@
-mod local;
+mod global;
 
-pub use local::*;
+pub use global::*;
