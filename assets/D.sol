@@ -4,6 +4,12 @@ library Math {
   }
 }
 
+library Math1 {
+  function div(uint x, uint y) returns (uint) {
+    return x / y;
+  }
+}
+
 contract T {
 }
 
@@ -14,6 +20,7 @@ contract A {
 }
 
 contract B {
+  using Math for uint;
   enum Bool { TRUE, FALSE }
   struct Voter { string name; Bool val; } // struct definition
   function mul(uint x, uint y) returns (uint) {
@@ -24,7 +31,7 @@ contract B {
 }
 
 contract D is A, B {
-  using Math for uint; // using definition
+  using Math for uint;
   enum State { Created, Locked, Inactive } // enum definition
   event Deposit(uint value, State t); // event definition
   uint k = 10; // state variable
