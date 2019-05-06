@@ -40,7 +40,9 @@ contract D is A, B {
   T t = new T();
   function pay(uint x, uint y) {
     k = this.mul(100, 200);
-    x.div(y);
+    x.div(y) + block.timestamp;
+    block.blockhash(12);
     this.lol();
+    msg.sender.send(100);
   }
 }

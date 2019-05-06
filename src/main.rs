@@ -4,7 +4,6 @@ mod flow;
 mod symbol;
 
 use flow::{ Flow, GraphKind, GraphConfig };
-use symbol::{ GlobalTable };
 use json;
 use std::{
     fs,
@@ -23,8 +22,6 @@ fn main() -> io::Result<()> {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut flow = Flow::new(ast_one, &source_content);
-        let mut global_table = GlobalTable::new(ast_one, &source_content);
-        println!("{:?}", global_table);
         let config = GraphConfig { 
             kind: GraphKind::Function("pay"),
             contract_name: "D",

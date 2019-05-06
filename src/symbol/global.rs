@@ -27,6 +27,19 @@ impl GlobalTable {
         r
     }
 
+    pub fn builtin(&mut self) {
+        let block = String::from("block");
+        let blockhash = String::from("blockhash");
+        let uint256 = String::from("uint256");
+        let bytes32 = String::from("bytes32");
+        let mut props: Vec<(String, Signature)> = vec![];
+        props.push((
+            blockhash.clone(),
+            Signature::Function((vec![uint256.clone()], vec![bytes32.clone()]))
+        ));
+        self.definitions.insert(block, Definition::Plain(props));
+    }
+
     pub fn traverse(&mut self, walker: &Walker) {
         walker.all_break(|walker| {
             walker.node.name == "ContractDefinition"
@@ -99,7 +112,7 @@ impl GlobalTable {
                                                 returns.push(var_type);
                                             });
                                         },
-                                        _ => {},
+                                        _ => unimplemented!(),
                                     }
                                 }
                             });
@@ -143,5 +156,6 @@ impl GlobalTable {
                 }
             }
         });
+        self.builtin();
     }
 }
