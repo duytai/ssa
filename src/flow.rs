@@ -13,6 +13,7 @@ use super::{
         ForStatement,
     },
     walker::{ Walker, Node },
+    vertex::{ Vertex, Shape },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -21,7 +22,7 @@ pub struct Flow<'a> {
     value: &'a json::JsonValue,
     source: &'a str, 
     edges: HashSet<(u32, u32)>,
-    vertices: HashSet<String>,
+    vertices: HashSet<Vertex>,
     start: u32,
     stop: u32,
 }
@@ -65,7 +66,7 @@ impl<'a> Flow<'a> {
             edges.push_str(&Flow::to_edge(edge));
         }
         for vertice in &self.vertices {
-            vertices.push_str(vertice);
+            vertices.push_str(&vertice.to_string());
         }
         format!("digraph {{\n{0}{1}}}", vertices, edges)
     }
@@ -87,7 +88,7 @@ impl<'a> Flow<'a> {
                         })
                         .collect::<Vec<u32>>();
                     if !predecessors.is_empty() {
-                        let vertice = Flow::to_vertice(id, source, "box");
+                        let vertice = Vertex::new(id, source, Shape::Box);
                         self.vertices.insert(vertice);
                     }
                     predecessors.dedup();
@@ -106,7 +107,7 @@ impl<'a> Flow<'a> {
                                 .collect::<Vec<u32>>();
                                 predecessors.dedup();
                                 if !predecessors.is_empty() {
-                                    let vertice = Flow::to_vertice(id, source, "diamond");
+                                    let vertice = Vertex::new(id, source, Shape::Diamond);
                                     self.vertices.insert(vertice);
                                 }
                                 let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
@@ -138,7 +139,7 @@ impl<'a> Flow<'a> {
                                     .collect::<Vec<u32>>();
                                     predecessors.dedup();
                                     if !predecessors.is_empty() {
-                                        let vertice = Flow::to_vertice(id, source, "diamond");
+                                        let vertice = Vertex::new(id, source, Shape::Diamond);
                                         self.vertices.insert(vertice);
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
@@ -167,7 +168,7 @@ impl<'a> Flow<'a> {
                                     .collect::<Vec<u32>>();
                                     predecessors.dedup();
                                     if !predecessors.is_empty() {
-                                        let vertice = Flow::to_vertice(id, source, "diamond");
+                                        let vertice = Vertex::new(id, source, Shape::Diamond);
                                         self.vertices.insert(vertice);
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
@@ -202,7 +203,7 @@ impl<'a> Flow<'a> {
                                 .collect::<Vec<u32>>();
                                 predecessors.dedup();
                                 if !predecessors.is_empty() {
-                                    let vertice = Flow::to_vertice(id, source, "box");
+                                    let vertice = Vertex::new(id, source, Shape::Box);
                                     self.vertices.insert(vertice);
                                 }
                             }
@@ -218,7 +219,7 @@ impl<'a> Flow<'a> {
                                     .collect::<Vec<u32>>();
                                     predecessors.dedup();
                                     if !predecessors.is_empty() {
-                                        let vertice = Flow::to_vertice(id, source, "diamond");
+                                        let vertice = Vertex::new(id, source, Shape::Diamond) ;
                                         self.vertices.insert(vertice);
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
@@ -241,7 +242,7 @@ impl<'a> Flow<'a> {
                                     .collect::<Vec<u32>>();
                                     predecessors.dedup();
                                     if !predecessors.is_empty() {
-                                        let vertice = Flow::to_vertice(id, source, "box");
+                                        let vertice = Vertex::new(id, source, Shape::Box);
                                         self.vertices.insert(vertice);
                                     }
                                 }
@@ -260,7 +261,7 @@ impl<'a> Flow<'a> {
                             | GraphNode::Suicide(CodeBlock::Block(walker)) 
                             | GraphNode::Selfdestruct(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
-                            let vertice = Flow::to_vertice(id, source, "box");
+                            let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
                                 self.edges.insert((*predecessor, id));
@@ -271,7 +272,7 @@ impl<'a> Flow<'a> {
                         GraphNode::Require(CodeBlock::Block(walker))
                             | GraphNode::Assert(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
-                            let vertice = Flow::to_vertice(id, source, "diamond");
+                            let vertice = Vertex::new(id, source, Shape::Diamond);
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
                                 self.edges.insert((*predecessor, id));
@@ -281,7 +282,7 @@ impl<'a> Flow<'a> {
                         },
                         GraphNode::Break(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
-                            let vertice = Flow::to_vertice(id, source, "box");
+                            let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
                                 self.edges.insert((*predecessor, id));
@@ -291,7 +292,7 @@ impl<'a> Flow<'a> {
                         },
                         GraphNode::Continue(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
-                            let vertice = Flow::to_vertice(id, source, "box");
+                            let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
                                 self.edges.insert((*predecessor, id));
@@ -309,7 +310,7 @@ impl<'a> Flow<'a> {
                                 })
                             .collect::<Vec<u32>>();
                             if !predecessors.is_empty() {
-                                let vertice = Flow::to_vertice(id, source, "doublecircle");
+                                let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                                 self.vertices.insert(vertice);
                             }
                             predecessors.dedup();
@@ -328,8 +329,10 @@ impl<'a> Flow<'a> {
         let mut graph = Graph::new(config, walker);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
-            self.vertices.insert(Flow::to_vertice(self.start, "START", "point"));
-            self.vertices.insert(Flow::to_vertice(self.stop, "STOP", "point"));
+            let vertice = Vertex::new(self.start, "START", Shape::Point);
+            self.vertices.insert(vertice);
+            let vertice = Vertex::new(self.stop, "STOP", Shape::Point);
+            self.vertices.insert(vertice);
             let mut predecessors = vec![self.start];
             predecessors = self.traverse(blocks, predecessors, &mut vec![]);
             for predecessor in predecessors {

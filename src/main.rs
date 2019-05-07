@@ -2,6 +2,7 @@ mod walker;
 mod graph;
 mod flow;
 mod dict;
+mod vertex;
 
 use flow::{ Flow, GraphKind, GraphConfig };
 use json;
