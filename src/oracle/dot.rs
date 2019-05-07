@@ -1,13 +1,20 @@
 use std::collections::HashSet;
 use crate::{
     vertex::Vertex,
-    dict::Dictionary
+    dict::Dictionary,
+    oracle::Oracle,
 };
 
 pub struct Dot {}
 
 impl Dot {
-    pub fn new(edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>, _dict: &Dictionary) {
+    pub fn new() -> Self {
+        Dot {}
+    }
+}
+
+impl Oracle for Dot {
+    fn analyze(&mut self, edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>, _dict: &Dictionary) {
         let mut vertices_str = String::from("");
         let mut edges_str = String::from("");
         for edge in edges.iter() {

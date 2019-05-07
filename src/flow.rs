@@ -15,6 +15,7 @@ use super::{
     walker::{ Walker, Node },
     vertex::{ Vertex, Shape },
     dict::{ Dictionary },
+    oracle::{ Oracle },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -305,8 +306,7 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn analyze<F>(&mut self, config: &GraphConfig, handlers: Vec<F>)
-        where F: Fn(&HashSet<(u32, u32)>, &HashSet<Vertex>, &Dictionary) 
+    pub fn analyze(&mut self, config: &GraphConfig, mut handlers: Vec<impl Oracle>)
     {
         let walker = Walker::new(self.value, self.source);
         let mut graph = Graph::new(config, walker);
@@ -323,8 +323,8 @@ impl<'a> Flow<'a> {
             }
         }
         let dict = Dictionary::new(self.value, self.source);
-        for handler in handlers.iter() {
-            handler(&self.edges, &self.vertices, &dict);
+        for handler in handlers.iter_mut() {
+            handler.analyze(&self.edges, &self.vertices, &dict);
         }
     }
 }

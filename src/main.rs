@@ -30,7 +30,8 @@ fn main() -> io::Result<()> {
             contract_name: "E",
             include_state: false,
         };
-        flow.analyze(&config, vec![Dot::new]);
+        let mut handlers = vec![Dot::new()];
+        flow.analyze(&config, handlers);
     }
     Ok(())
 }
