@@ -3,10 +3,11 @@ mod graph;
 mod flow;
 mod dict;
 mod vertex;
+mod oracle;
 
 use flow::{ Flow, GraphKind, GraphConfig };
+use oracle::{ Dot };
 use json;
-use dict::{ Dictionary };
 use std::{
     fs,
     io,
@@ -24,14 +25,12 @@ fn main() -> io::Result<()> {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut flow = Flow::new(ast_one, &source_content);
-        let mut dictionary = Dictionary::new(ast_one, &source_content);
         let config = GraphConfig { 
             kind: GraphKind::Function("pay"),
             contract_name: "E",
             include_state: false,
         };
-        let dot = flow.render(&config);
-        println!("{}", dot);
+        flow.analyze(&config, vec![Dot::new]);
     }
     Ok(())
 }

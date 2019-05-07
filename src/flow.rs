@@ -14,6 +14,7 @@ use super::{
     },
     walker::{ Walker, Node },
     vertex::{ Vertex, Shape },
+    dict::{ Dictionary },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -49,26 +50,6 @@ impl<'a> Flow<'a> {
             start: 0,
             stop: 1000000,
         }
-    }
-
-    pub fn to_vertice(id: u32, source: &str, shape: &str) -> String {
-        format!("  {}[label={:?}, shape=\"{}\"];\n", id, source, shape)
-    }
-
-    pub fn to_edge(e: &(u32, u32)) -> String {
-        format!("  {} -> {};\n", e.0, e.1)
-    }
-
-    pub fn to_dot(&self) -> String {
-        let mut vertices = String::from("");
-        let mut edges = String::from("");
-        for edge in &self.edges {
-            edges.push_str(&Flow::to_edge(edge));
-        }
-        for vertice in &self.vertices {
-            vertices.push_str(&vertice.to_string());
-        }
-        format!("digraph {{\n{0}{1}}}", vertices, edges)
     }
 
     pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
@@ -324,7 +305,9 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn render(&mut self, config: &GraphConfig) -> String {
+    pub fn analyze<F>(&mut self, config: &GraphConfig, handlers: Vec<F>)
+        where F: Fn(&HashSet<(u32, u32)>, &HashSet<Vertex>, &Dictionary) 
+    {
         let walker = Walker::new(self.value, self.source);
         let mut graph = Graph::new(config, walker);
         let root = graph.update();
@@ -339,6 +322,9 @@ impl<'a> Flow<'a> {
                 self.edges.insert((predecessor, self.stop));
             }
         }
-        self.to_dot()
+        let dict = Dictionary::new(self.value, self.source);
+        for handler in handlers.iter() {
+            handler(&self.edges, &self.vertices, &dict);
+        }
     }
 }
