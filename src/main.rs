@@ -6,7 +6,7 @@ mod vertex;
 mod oracle;
 
 use flow::{ Flow, GraphKind, GraphConfig };
-use oracle::{ Dot };
+use oracle::{ Dot, Block, Oracle };
 use json;
 use std::{
     fs,
@@ -30,7 +30,12 @@ fn main() -> io::Result<()> {
             contract_name: "E",
             include_state: false,
         };
-        let mut handlers = vec![Dot::new()];
+        let dot = Dot::new();
+        let block = Block::new();
+        let mut handlers: Vec<Box<Oracle>> = vec![
+            Box::new(dot),
+            Box::new(block)
+        ];
         flow.analyze(&config, handlers);
     }
     Ok(())

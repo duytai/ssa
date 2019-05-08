@@ -1,4 +1,4 @@
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub enum Shape {
     Point,
     Box,
@@ -6,11 +6,11 @@ pub enum Shape {
     DoubleCircle,
 }
 
-#[derive(PartialEq, Eq, Hash)]
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub struct Vertex {
-    id: u32,
-    source: String,
-    shape: Shape,
+    pub id: u32,
+    pub source: String,
+    pub shape: Shape,
 }
 
 impl Vertex {

@@ -306,7 +306,7 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn analyze(&mut self, config: &GraphConfig, mut handlers: Vec<impl Oracle>)
+    pub fn analyze(&mut self, config: &GraphConfig, mut handlers: Vec<Box<Oracle>>)
     {
         let walker = Walker::new(self.value, self.source);
         let mut graph = Graph::new(config, walker);
