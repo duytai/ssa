@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
 contract E {
-  uint startAt;
+  uint startAt = now;
   mapping(address => uint) balances;
 
   function echo(uint x) returns (uint) {
@@ -11,7 +11,10 @@ contract E {
   function pay(uint amount) {
     if(amount <= balances[msg.sender]) {
       amount += (now - startAt);
+    } else {
+      amount = 0;
     }
+    amount = 10;
     //msg.sender.transfer(amount);
     //msg.sender.transfer(0);
     //msg.sender.send(amount);

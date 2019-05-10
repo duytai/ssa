@@ -6,7 +6,7 @@ mod vertex;
 mod oracle;
 
 use flow::{ Flow, GraphKind, GraphConfig };
-use oracle::{ Dot, Block, Oracle };
+use oracle::{ Dot, BlockDependency, Oracle };
 use json;
 use std::{
     fs,
@@ -28,13 +28,13 @@ fn main() -> io::Result<()> {
         let config = GraphConfig { 
             kind: GraphKind::Function("pay"),
             contract_name: "E",
-            include_state: false,
+            include_state: true,
         };
         let dot = Dot::new();
-        let block = Block::new();
+        let block_dependency = BlockDependency::new();
         let mut handlers: Vec<Box<Oracle>> = vec![
             Box::new(dot),
-            Box::new(block)
+            Box::new(block_dependency)
         ];
         flow.analyze(&config, handlers);
     }
