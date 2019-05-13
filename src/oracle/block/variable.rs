@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use crate::walker::{ Walker };
 
 #[derive(Debug, Hash, PartialEq, Eq)]
@@ -6,11 +7,25 @@ pub enum Member {
     Nothing,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Variable {
     pub members: Vec<Member>,
     pub kill: bool,
 }
+
+impl PartialEq for Variable {
+    fn eq(&self, other: &Variable) -> bool {
+        self.members.iter().eq(other.members.iter())
+    }
+}
+
+impl Hash for Variable {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.members.hash(state);
+    }
+}
+
+impl Eq for Variable {}
 
 impl Variable {
     pub fn parse(walker: &Walker) -> Option<Self> {

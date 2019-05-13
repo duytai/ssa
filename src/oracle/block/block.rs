@@ -8,7 +8,7 @@ use crate::{
 use super::{
     variable::{ Variable },
     assignment::{ Assignment },
-    table::{ FlowTable },
+    table::{ FlowTable, FlowItem },
 };
 
 #[derive(Debug)]
@@ -142,7 +142,8 @@ impl Oracle for BlockDependency {
                     Shape::DoubleCircle => {
                         let variables = self.find_sending_variables(&walker);
                         let table = self.tables.get_mut(&id).unwrap();
-                        table.insert_variables(variables);
+                        let item = FlowItem::Variables(variables);
+                        table.insert(item);
                     },
                     Shape::Box => {
                         let assignments = self.find_assignments(&walker);
