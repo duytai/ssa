@@ -6,27 +6,11 @@ pub enum Member {
     Nothing,
 }
 
-#[derive(Debug, Hash)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 pub struct Variable {
-    members: Vec<Member>,
-    kill: bool,
+    pub members: Vec<Member>,
+    pub kill: bool,
 }
-
-impl PartialEq for Variable {
-    fn eq(&self, other: &Variable) -> bool {
-        if self.members.len() == other.members.len() {
-            let mut ret = true;
-            for (index, member) in self.members.iter().enumerate() {
-                ret = ret && member == &other.members[index];
-            }
-            ret
-        } else {
-            false
-        }
-    }
-}
-
-impl Eq for Variable {}
 
 impl Variable {
     pub fn parse(walker: &Walker) -> Option<Self> {

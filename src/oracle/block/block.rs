@@ -5,13 +5,16 @@ use crate::{
     oracle::{ Oracle },
     walker::{ Walker },
 };
-use super::variable::{ Variable };
-use super::assignment::{ Assignment };
+use super::{
+    variable::{ Variable },
+    assignment::{ Assignment },
+    table::{ FlowTable },
+};
 
 #[derive(Debug)]
 pub struct BlockDependency {
     parents: HashMap<u32, Vec<u32>>, 
-    props: HashMap<u32, HashSet<Variable>>,
+    tables: HashMap<u32, FlowTable>,
     start: u32,
     stop: u32,
 }
@@ -20,7 +23,7 @@ impl BlockDependency {
     pub fn new() -> Self {
         BlockDependency {
             parents: HashMap::new(),
-            props: HashMap::new(),
+            tables: HashMap::new(),
             start: 0,
             stop: 1000000,
         }
@@ -35,7 +38,7 @@ impl BlockDependency {
                 None => {
                     self.parents.insert(*to, vec![*from]);
                     if to != &self.stop {
-                        self.props.insert(*to, HashSet::new());
+                        self.tables.insert(*to, FlowTable::new());
                     }
                 }
             }
@@ -138,6 +141,8 @@ impl Oracle for BlockDependency {
                 match vertex.shape {
                     Shape::DoubleCircle => {
                         let variables = self.find_sending_variables(&walker);
+                        let table = self.tables.get_mut(&id).unwrap();
+                        table.insert_variables(variables);
                     },
                     Shape::Box => {
                         let assignments = self.find_assignments(&walker);
@@ -150,5 +155,6 @@ impl Oracle for BlockDependency {
                 stack.append(parents);
             }
         }
+        println!("{:?}", self.tables);
     }
 }
