@@ -45,24 +45,23 @@ impl FlowTable {
                             if !kill {
                                 match v.contains(&variable) {
                                     VariableComparison::Equal => {
-                                        match op {
-                                            Operator::Equal => {
-                                                table.variables.insert(v.clone(), true);
-                                                for r in rhs.iter() {
-                                                    table.variables.insert(r.clone(), false);
-                                                }
-                                            },
-                                            Operator::Other => {
-                                                for r in rhs.iter() {
-                                                    table.variables.insert(r.clone(), false);
-                                                }
-                                            },
+                                        if op == Operator::Equal {
+                                            table.variables.insert(v.clone(), true);
+                                        }
+                                        for r in rhs.iter() {
+                                            table.variables.insert(r.clone(), false);
                                         }
                                     },
                                     VariableComparison::Partial => {
+                                        if op == Operator::Equal {
+                                            table.variables.insert(v.clone(), true);
+                                        }
+                                        for r in rhs.iter() {
+                                            let new_variable = v.clone().merge(r);
+                                            table.variables.insert(new_variable, false);
+                                        }
                                     },
-                                    VariableComparison::NotEqual => {
-                                    },
+                                    VariableComparison::NotEqual => {},
                                 }
                             }
                         }
