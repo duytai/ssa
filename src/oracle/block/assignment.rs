@@ -9,9 +9,9 @@ pub enum Operator {
 
 #[derive(Debug)]
 pub struct Assignment {
-    lhs: HashSet<Variable>,
-    rhs: HashSet<Variable>,
-    op: Operator,
+    pub lhs: HashSet<Variable>,
+    pub rhs: HashSet<Variable>,
+    pub op: Operator,
 }
 
 impl Assignment {

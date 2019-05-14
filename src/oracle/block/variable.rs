@@ -1,40 +1,48 @@
-use std::hash::{Hash, Hasher};
 use crate::walker::{ Walker };
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Member {
     Reference(u32),
     Nothing,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum VariableComparison {
+    Equal,
+    NotEqual,
+    Partial,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Variable {
     pub members: Vec<Member>,
-    pub kill: bool,
 }
-
-impl PartialEq for Variable {
-    fn eq(&self, other: &Variable) -> bool {
-        self.members.iter().eq(other.members.iter())
-    }
-}
-
-impl Hash for Variable {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.members.hash(state);
-    }
-}
-
-impl Eq for Variable {}
 
 impl Variable {
     pub fn parse(walker: &Walker) -> Option<Self> {
-        let mut variable = Variable { members: vec![], kill: false };
+        let mut variable = Variable { members: vec![] };
         variable.members = Variable::find_variable(walker);
         if variable.members.len() > 0 {
             Some(variable)
         } else {
             None
+        }
+    }
+
+    pub fn contains(&self, other: &Variable) -> VariableComparison {
+        let other_len = other.members.len();
+        let my_len = self.members.len();
+        let sub = &self.members[(my_len - other_len) .. my_len];
+        let eq = sub.iter().eq(other.members.iter());
+        match eq {
+            true => {
+                if my_len == other_len {
+                    VariableComparison::Equal
+                } else {
+                    VariableComparison::Partial
+                }
+            },
+            false => VariableComparison::NotEqual,
         }
     }
 
@@ -75,18 +83,13 @@ impl Variable {
 }
 
 #[test]
-fn variable() {
-    use std::collections::HashSet;
-
-    let mut set = HashSet::new();
-    let v1 = Variable { members: vec![Member::Reference(10), Member::Nothing], kill: true }; 
-    let v2 = Variable { members: vec![Member::Reference(10), Member::Nothing], kill: false }; 
-    let v3 = Variable { members: vec![Member::Reference(10), Member::Nothing], kill: false }; 
-    set.insert(v1);
-    assert!(set.contains(&v2));
-    set.remove(&v2);
-    set.insert(v2);
-    let v = set.get(&v3).unwrap();
-    assert!(!v.kill);
+fn variable_contains() {
+    let v1 = Variable { members: vec![Member::Reference(10), Member::Nothing, Member::Reference(20)]};
+    let v2 = Variable { members: vec![Member::Nothing, Member::Reference(20)]};
+    let v3 = Variable { members: vec![Member::Nothing, Member::Reference(0)]};
+    let v4 = Variable { members: vec![Member::Reference(20), Member::Nothing]};
+    assert_eq!(v1.contains(&v2), VariableComparison::Partial);
+    assert_eq!(v1.contains(&v3), VariableComparison::NotEqual);
+    assert_eq!(v1.contains(&v4), VariableComparison::NotEqual);
+    assert_eq!(v1.contains(&v1), VariableComparison::Equal);
 }
-

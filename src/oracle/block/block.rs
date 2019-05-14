@@ -132,30 +132,53 @@ impl BlockDependency {
 impl Oracle for BlockDependency {
     fn analyze(&mut self, edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>, dict: &Dictionary) {
         self.initialize(edges, vertices);
-        let mut stack = vec![self.stop];
+        let mut stack: Vec<(u32, u32)> = vec![];
+        let mut visted: HashSet<u32> = HashSet::new();
+        if let Some(parents) = self.parents.get_mut(&self.stop) {
+            for parent in parents {
+                stack.push((self.stop, *parent));
+            }
+            visted.insert(self.stop);
+        }
         while stack.len() > 0 {
-            let id = stack.pop().unwrap();
-            if id != self.stop && id != self.start {
-                let vertex = vertices.iter().find(|v| v.id == id).unwrap();
-                let walker = dict.lookup(id).unwrap();
-                match vertex.shape {
-                    Shape::DoubleCircle => {
-                        let variables = self.find_sending_variables(&walker);
-                        let table = self.tables.get_mut(&id).unwrap();
-                        let item = FlowItem::Variables(variables);
-                        table.insert(item);
-                    },
-                    Shape::Box => {
-                        let assignments = self.find_assignments(&walker);
-                    },
-                    Shape::Diamond => {},
-                    Shape::Point => {},
+            let (child, id) = stack.pop().unwrap();
+            let vertex = vertices.iter().find(|v| v.id == id).unwrap();
+            let child = self.tables.get(&child).unwrap();
+            let mut item;
+            match vertex.shape {
+                Shape::DoubleCircle => {
+                    let walker = dict.lookup(id).unwrap();
+                    let variables = self.find_sending_variables(&walker);
+                    item = FlowItem::Variables(variables);
+                },
+                Shape::Box => {
+                    let walker = dict.lookup(id).unwrap();
+                    let assignments = self.find_assignments(&walker);
+                    item = FlowItem::Assignments(assignments);
+                },
+                Shape::Diamond => {
+                    item = FlowItem::Comparison;
+                },
+                Shape::Point => {
+                    item = FlowItem::None;
+                },
+            }
+            let table = FlowTable::merge(child, item);
+            let cur = self.tables.get(&id).unwrap();
+            if &table != cur || !visted.contains(&id) {
+                self.tables.insert(id, table);
+                if let Some(parents) = self.parents.get_mut(&id) {
+                    for parent in parents {
+                        stack.push((id, *parent));
+                    }
                 }
             }
-            if let Some(parents) = self.parents.get_mut(&id) {
-                stack.append(parents);
-            }
+            visted.insert(id);
         }
-        println!("{:?}", self.tables);
+        for (key, value) in self.tables.iter() {
+            println!("node {}", key);
+            println!("value: ");
+            println!("{:?}", value);
+        }
     }
 }

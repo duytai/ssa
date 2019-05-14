@@ -1,38 +1,50 @@
-use std::collections::HashSet;
-use super::variable::Variable;
-use super::assignment::Assignment;
+use std::{
+    collections::{ HashMap, HashSet },
+};
+use super::{
+    variable::{ Variable },
+    assignment::{ Assignment, Operator },
+};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FlowTable {
-    variables: HashSet<Variable>
+    variables: HashMap<Variable, bool>,
 }
 
 #[derive(Debug)]
 pub enum FlowItem {
     Variables(HashSet<Variable>),
     Assignments(Vec<Assignment>),
+    Comparison,
+    None,
 }
 
 impl FlowTable {
     pub fn new() -> Self {
-        FlowTable { variables: HashSet::new() }
+        FlowTable {
+            variables: HashMap::new(),
+        }
     }
 
-    pub fn insert(&mut self, item: FlowItem) {
+    pub fn insert(&mut self, variable: Variable, kill: bool) {
+        self.variables.insert(variable, kill);
+    }
+
+    pub fn merge(child: &FlowTable, item: FlowItem) -> FlowTable {
+        let mut table = child.clone();
         match item {
             FlowItem::Variables(variables) => {
                 for variable in variables {
-                    let mut variable = variable;
-                    if self.variables.contains(&variable) {
-                        let mut v = self.variables.get(&variable).unwrap();
-                        variable.kill = variable.kill && v.kill;
-                        self.variables.remove(&variable);
-                    }
-                    self.variables.insert(variable);
+                    table.insert(variable, false);
                 }
             },
             FlowItem::Assignments(assignments) => {
-            }
+            }, 
+            FlowItem::Comparison => {
+            },
+            FlowItem::None => {
+            },
         }
+        table
     }
 }
