@@ -29,6 +29,15 @@ impl Variable {
         }
     }
 
+    pub fn merge(&self, other: &Variable) -> Variable {
+        let mut members = self.members.clone();
+        let diff_len = self.members.len() - other.members.len();
+        for i in (0..other.members.len()) {
+            members[diff_len + i] = other.members[i].clone();
+        }
+        Variable { members }
+    }
+
     pub fn contains(&self, other: &Variable) -> VariableComparison {
         let other_len = other.members.len();
         let my_len = self.members.len();
@@ -92,4 +101,37 @@ fn variable_contains() {
     assert_eq!(v1.contains(&v3), VariableComparison::NotEqual);
     assert_eq!(v1.contains(&v4), VariableComparison::NotEqual);
     assert_eq!(v1.contains(&v1), VariableComparison::Equal);
+}
+
+#[test]
+fn variable_merge() {
+    let v1 = Variable {
+        members: vec![
+            Member::Reference(10),
+            Member::Nothing,
+            Member::Reference(20),
+        ],
+    };
+    let v2 = Variable {
+        members: vec![
+            Member::Reference(3),
+        ],
+    };
+    let v3 = Variable {
+        members: vec![
+            Member::Reference(3),
+            Member::Reference(3),
+            Member::Reference(3),
+        ],
+    };
+    assert_eq!(v1.merge(&v2), Variable { members: vec![
+        Member::Reference(10),
+        Member::Nothing,
+        Member::Reference(3),
+    ]});
+    assert_eq!(v1.merge(&v3), Variable { members: vec![
+        Member::Reference(3),
+        Member::Reference(3),
+        Member::Reference(3),
+    ]});
 }
