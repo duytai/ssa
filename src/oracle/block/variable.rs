@@ -74,3 +74,19 @@ impl Variable {
     }
 }
 
+#[test]
+fn variable() {
+    use std::collections::HashSet;
+
+    let mut set = HashSet::new();
+    let v1 = Variable { members: vec![Member::Reference(10), Member::Nothing], kill: true }; 
+    let v2 = Variable { members: vec![Member::Reference(10), Member::Nothing], kill: false }; 
+    let v3 = Variable { members: vec![Member::Reference(10), Member::Nothing], kill: false }; 
+    set.insert(v1);
+    assert!(set.contains(&v2));
+    set.remove(&v2);
+    set.insert(v2);
+    let v = set.get(&v3).unwrap();
+    assert!(!v.kill);
+}
+

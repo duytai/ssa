@@ -26,6 +26,7 @@ impl FlowTable {
                     if self.variables.contains(&variable) {
                         let mut v = self.variables.get(&variable).unwrap();
                         variable.kill = variable.kill && v.kill;
+                        self.variables.remove(&variable);
                     }
                     self.variables.insert(variable);
                 }

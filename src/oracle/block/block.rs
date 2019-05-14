@@ -29,7 +29,7 @@ impl BlockDependency {
         }
     }
 
-    pub fn initialize(&mut self, edges: &HashSet<(u32, u32)>) {
+    pub fn initialize(&mut self, edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>) {
         for (from, to) in edges {
             match self.parents.get_mut(to) {
                 Some(v) => {
@@ -37,11 +37,11 @@ impl BlockDependency {
                 },
                 None => {
                     self.parents.insert(*to, vec![*from]);
-                    if to != &self.stop {
-                        self.tables.insert(*to, FlowTable::new());
-                    }
                 }
             }
+        }
+        for Vertex { id, ..} in vertices {
+            self.tables.insert(*id, FlowTable::new());
         }
     }
 
@@ -131,7 +131,7 @@ impl BlockDependency {
 
 impl Oracle for BlockDependency {
     fn analyze(&mut self, edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>, dict: &Dictionary) {
-        self.initialize(edges);
+        self.initialize(edges, vertices);
         let mut stack = vec![self.stop];
         while stack.len() > 0 {
             let id = stack.pop().unwrap();
