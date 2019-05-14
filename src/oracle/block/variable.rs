@@ -57,6 +57,9 @@ impl Variable {
 
     fn find_variable(walker: &Walker) -> Vec<Member> {
         match walker.node.name {
+            "VariableDeclaration" => {
+                vec![Member::Reference(walker.node.id)]
+            },
             "Identifier" => {
                 let reference = walker.node
                     .attributes["referencedDeclaration"]

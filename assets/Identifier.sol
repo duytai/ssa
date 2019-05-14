@@ -15,13 +15,9 @@
 //}
 
 contract Identifier {
-  struct Voter {
-    uint voted;
-  }
   function test() {
-    Voter v0;
-    Voter v1;
-    v0 = v1;
-    msg.sender.send(v0.voted);
+    uint x = 10;
+    uint amount = x;
+    msg.sender.send(amount);
   }
 }

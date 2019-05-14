@@ -47,14 +47,19 @@ impl BlockDependency {
 
     pub fn find_assignments(&self, walker: &Walker) -> Vec<Assignment> {
         let mut assignments = vec![];
+        let mut declaration_walkers: Vec<Walker> = vec![];
+        if walker.node.name == "VariableDeclarationStatement" {
+            declaration_walkers.push(walker.clone());
+        }
         walker.all(|walker| {
             walker.node.name == "Assignment"
-        }, |walkers| {
+        }, |mut walkers| {
+            walkers.append(&mut declaration_walkers);
             for walker in walkers {
                 let operator = walker.node
                     .attributes["operator"]
                     .as_str()
-                    .unwrap();
+                    .unwrap_or("=");
                 let mut lhs = HashSet::new();
                 let mut rhs = HashSet::new();
                 walker.for_all(|_| {
