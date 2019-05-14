@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use super::variable::{ Variable };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Operator {
     Equal,
     Other,

@@ -57,25 +57,27 @@ impl BlockDependency {
                     .unwrap();
                 let mut lhs = HashSet::new();
                 let mut rhs = HashSet::new();
-                walker.for_each(|walker, index| {
-                    if index == 0 {
-                        if let Some(variable) = Variable::parse(&walker) {
-                            lhs.insert(variable);
-                        }
-                    } else if index == 1 {
-                        walker.all_break(|walker| {
-                            walker.node.name == "FunctionCall"
-                            || walker.node.name == "Identifier"
-                            || walker.node.name == "MemberAccess"
-                            || walker.node.name == "IndexAccess"
-                        }, |walkers| {
-                            for walker in walkers {
+                walker.for_all(|_| {
+                    true
+                }, |walkers| {
+                    let id = walkers[0].node.id;
+                    if let Some(variable) = Variable::parse(&walkers[0]) {
+                        lhs.insert(variable);
+                    }
+                    walker.all_break(|walker| {
+                        walker.node.name == "FunctionCall"
+                        || walker.node.name == "Identifier"
+                        || walker.node.name == "MemberAccess"
+                        || walker.node.name == "IndexAccess"
+                    }, |walkers| {
+                        for walker in walkers {
+                            if walker.node.id != id {
                                 if let Some(variable) = Variable::parse(&walker) {
                                     rhs.insert(variable);
                                 }
                             }
-                        })
-                    }
+                        }
+                    });
                 });
                 let assignment = Assignment::new(lhs, rhs, operator);
                 assignments.push(assignment);
@@ -176,9 +178,7 @@ impl Oracle for BlockDependency {
             visted.insert(id);
         }
         for (key, value) in self.tables.iter() {
-            println!("node {}", key);
-            println!("value: ");
-            println!("{:?}", value);
+            println!("{} - {:?}", key, value);
         }
     }
 }

@@ -2,7 +2,7 @@ use std::{
     collections::{ HashMap, HashSet },
 };
 use super::{
-    variable::{ Variable },
+    variable::{ Variable, VariableComparison },
     assignment::{ Assignment, Operator },
 };
 
@@ -39,6 +39,35 @@ impl FlowTable {
                 }
             },
             FlowItem::Assignments(assignments) => {
+                for Assignment { lhs, rhs, op } in assignments {
+                    for variable in lhs.iter() {
+                        for (v, kill) in child.variables.iter() {
+                            if !kill {
+                                match v.contains(&variable) {
+                                    VariableComparison::Equal => {
+                                        match op {
+                                            Operator::Equal => {
+                                                table.variables.insert(v.clone(), true);
+                                                for r in rhs.iter() {
+                                                    table.variables.insert(r.clone(), false);
+                                                }
+                                            },
+                                            Operator::Other => {
+                                                for r in rhs.iter() {
+                                                    table.variables.insert(r.clone(), false);
+                                                }
+                                            },
+                                        }
+                                    },
+                                    VariableComparison::Partial => {
+                                    },
+                                    VariableComparison::NotEqual => {
+                                    },
+                                }
+                            }
+                        }
+                    }
+                } 
             }, 
             FlowItem::Comparison => {
             },
