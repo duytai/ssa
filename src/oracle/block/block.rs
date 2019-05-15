@@ -1,3 +1,4 @@
+/// TODO: handle function call
 use std::collections::{ HashSet, HashMap };
 use crate::{
     vertex::{ Vertex, Shape },
@@ -164,9 +165,11 @@ impl Oracle for BlockDependency {
                     item = FlowItem::Assignments(assignments);
                 },
                 Shape::Diamond => {
+                    // TODO
                     item = FlowItem::Comparison;
                 },
                 Shape::Point => {
+                    // TODO
                     item = FlowItem::None;
                 },
             }
@@ -182,8 +185,14 @@ impl Oracle for BlockDependency {
             }
             visted.insert(id);
         }
-        for (key, value) in self.tables.iter() {
-            println!("{} - {:?}", key, value);
+        for (id, table) in self.tables.iter() {
+            println!("{} - {:?}", id, table);
+        }
+        let root = self.tables.get(&self.start).unwrap();
+        if root.is_vulerable() {
+            println!(">>>>");
+            println!(">>>>VULNERABLE");
+            println!(">>>>");
         }
     }
 }

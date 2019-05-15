@@ -16,6 +16,10 @@
 
 contract Identifier {
   function test() {
-    msg.sender.send(block.number);
+    uint x = now;
+    uint y = x * 100;
+    uint z;
+    z = y + 100;
+    msg.sender.send(z);
   }
 }
