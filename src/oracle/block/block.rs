@@ -45,9 +45,10 @@ impl BlockDependency {
         }
     }
 
-    pub fn find_assignments(&self, walker: &Walker) -> Vec<Assignment> {
+    pub fn find_assignments(&self,id: u32, dict: &Dictionary) -> Vec<Assignment> {
         let mut assignments = vec![];
         let mut declaration_walkers: Vec<Walker> = vec![];
+        let walker = dict.lookup(id).unwrap();
         if walker.node.name == "VariableDeclarationStatement" {
             declaration_walkers.push(walker.clone());
         }
@@ -66,7 +67,7 @@ impl BlockDependency {
                     true
                 }, |walkers| {
                     let id = walkers[0].node.id;
-                    if let Some(variable) = Variable::parse(&walkers[0]) {
+                    if let Some(variable) = Variable::parse(&walkers[0], dict) {
                         lhs.insert(variable);
                     }
                     walker.all_break(|walker| {
@@ -77,7 +78,7 @@ impl BlockDependency {
                     }, |walkers| {
                         for walker in walkers {
                             if walker.node.id != id {
-                                if let Some(variable) = Variable::parse(&walker) {
+                                if let Some(variable) = Variable::parse(&walker, dict) {
                                     rhs.insert(variable);
                                 }
                             }
@@ -91,7 +92,8 @@ impl BlockDependency {
         assignments
     }
 
-    pub fn find_sending_variables(&self, walker: &Walker) -> HashSet<Variable> {
+    pub fn find_sending_variables(&self, id: u32, dict: &Dictionary) -> HashSet<Variable> {
+        let walker = dict.lookup(id).unwrap();
         let mut variables = HashSet::new();
         walker.for_all(|_| {
             true
@@ -121,7 +123,7 @@ impl BlockDependency {
                         }, |walkers| {
                             for walker in walkers {
                                 if walker.node.id != id {
-                                    let variable = Variable::parse(&walker);
+                                    let variable = Variable::parse(&walker, dict);
                                     if let Some(variable) = variable {
                                         variables.insert(variable);
                                     }
@@ -154,13 +156,11 @@ impl Oracle for BlockDependency {
             let mut item;
             match vertex.shape {
                 Shape::DoubleCircle => {
-                    let walker = dict.lookup(id).unwrap();
-                    let variables = self.find_sending_variables(&walker);
+                    let variables = self.find_sending_variables(id, dict);
                     item = FlowItem::Variables(variables);
                 },
                 Shape::Box => {
-                    let walker = dict.lookup(id).unwrap();
-                    let assignments = self.find_assignments(&walker);
+                    let assignments = self.find_assignments(id, dict);
                     item = FlowItem::Assignments(assignments);
                 },
                 Shape::Diamond => {

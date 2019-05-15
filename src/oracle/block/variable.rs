@@ -1,9 +1,13 @@
-use crate::walker::{ Walker };
+use crate:: {
+    walker::{ Walker },
+    dict::{ Dictionary },
+};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Member {
     Reference(u32),
-    Nothing,
+    Global(String),
+    IndexAccess,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -19,9 +23,9 @@ pub struct Variable {
 }
 
 impl Variable {
-    pub fn parse(walker: &Walker) -> Option<Self> {
+    pub fn parse(walker: &Walker, dict: &Dictionary) -> Option<Self> {
         let mut variable = Variable { members: vec![] };
-        variable.members = Variable::find_variable(walker);
+        variable.members = Variable::find_variable(walker, dict);
         if variable.members.len() > 0 {
             Some(variable)
         } else {
@@ -32,7 +36,7 @@ impl Variable {
     pub fn merge(&self, other: &Variable) -> Variable {
         let mut members = self.members.clone();
         let diff_len = self.members.len() - other.members.len();
-        for i in (0..other.members.len()) {
+        for i in 0..other.members.len() {
             members[diff_len + i] = other.members[i].clone();
         }
         Variable { members }
@@ -55,26 +59,46 @@ impl Variable {
         }
     }
 
-    fn find_variable(walker: &Walker) -> Vec<Member> {
+    fn find_variable(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
+        let reference = walker.node.attributes["referencedDeclaration"].as_u32();
+        let member_name = walker.node.attributes["member_name"].as_str().unwrap_or("");
+        let value = walker.node.attributes["value"].as_str().unwrap_or("");
         match walker.node.name {
             "VariableDeclaration" => {
                 vec![Member::Reference(walker.node.id)]
             },
             "Identifier" => {
-                let reference = walker.node
-                    .attributes["referencedDeclaration"]
-                    .as_u32()
-                    .unwrap();
-                vec![Member::Reference(reference)]
+                let mut ret = vec![];
+                match reference {
+                    Some(reference) => {
+                        if dict.lookup(reference).is_some() {
+                            ret.push(Member::Reference(reference));
+                        } else {
+                            ret.push(Member::Global(value.to_string()));
+                        }
+                    },
+                    None => {
+                        ret.push(Member::Global(member_name.to_string()));
+                    },
+                }
+                ret
             },
             "MemberAccess" => {
-                let reference = walker.node
-                    .attributes["referencedDeclaration"]
-                    .as_u32()
-                    .unwrap();
-                let mut ret = vec![Member::Reference(reference)];
+                let mut ret = vec![];
+                match reference {
+                    Some(reference) => {
+                        if dict.lookup(reference).is_some() {
+                            ret.push(Member::Reference(reference));
+                        } else {
+                            ret.push(Member::Global(member_name.to_string()));
+                        }
+                    },
+                    None => {
+                        ret.push(Member::Global(member_name.to_string()));
+                    }
+                }
                 walker.for_each(|walker, _| {
-                    ret.append(&mut Variable::find_variable(&walker));
+                    ret.append(&mut Variable::find_variable(&walker, dict));
                 });
                 ret
             },
@@ -82,9 +106,9 @@ impl Variable {
                 let mut ret = vec![];
                 walker.for_each(|walker, index| {
                     if index == 0 {
-                        ret.append(&mut Variable::find_variable(&walker));
+                        ret.append(&mut Variable::find_variable(&walker, dict));
                     } else if index == 1 {
-                        ret.insert(0, Member::Nothing);
+                        ret.insert(0, Member::IndexAccess);
                     }
                 });
                 ret
@@ -96,10 +120,10 @@ impl Variable {
 
 #[test]
 fn variable_contains() {
-    let v1 = Variable { members: vec![Member::Reference(10), Member::Nothing, Member::Reference(20)]};
-    let v2 = Variable { members: vec![Member::Nothing, Member::Reference(20)]};
-    let v3 = Variable { members: vec![Member::Nothing, Member::Reference(0)]};
-    let v4 = Variable { members: vec![Member::Reference(20), Member::Nothing]};
+    let v1 = Variable { members: vec![Member::Reference(10), Member::IndexAccess, Member::Reference(20)]};
+    let v2 = Variable { members: vec![Member::IndexAccess, Member::Reference(20)]};
+    let v3 = Variable { members: vec![Member::IndexAccess, Member::Reference(0)]};
+    let v4 = Variable { members: vec![Member::Reference(20), Member::IndexAccess]};
     assert_eq!(v1.contains(&v2), VariableComparison::Partial);
     assert_eq!(v1.contains(&v3), VariableComparison::NotEqual);
     assert_eq!(v1.contains(&v4), VariableComparison::NotEqual);
@@ -111,7 +135,7 @@ fn variable_merge() {
     let v1 = Variable {
         members: vec![
             Member::Reference(10),
-            Member::Nothing,
+            Member::IndexAccess,
             Member::Reference(20),
         ],
     };
@@ -129,7 +153,7 @@ fn variable_merge() {
     };
     assert_eq!(v1.merge(&v2), Variable { members: vec![
         Member::Reference(10),
-        Member::Nothing,
+        Member::IndexAccess,
         Member::Reference(3),
     ]});
     assert_eq!(v1.merge(&v3), Variable { members: vec![
