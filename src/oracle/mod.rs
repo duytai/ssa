@@ -1,7 +1,7 @@
 mod dot;
-mod block;
+mod data;
 mod oracle;
 
 pub use dot::Dot;
-pub use block::BlockDependency;
+pub use data::DataFlowGraph;
 pub use oracle::Oracle;

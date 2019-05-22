@@ -8,7 +8,7 @@ mod oracle;
 use flow::{ Flow, GraphKind, GraphConfig };
 use oracle::{ 
     Dot, 
-    BlockDependency, 
+    DataFlowGraph,
     Oracle,
 };
 use json;
@@ -35,10 +35,10 @@ fn main() -> io::Result<()> {
             include_state: true,
         };
         let dot = Dot::new();
-        let block_dependency = BlockDependency::new();
+        let data_flow = DataFlowGraph::new();
         let mut handlers: Vec<Box<Oracle>> = vec![
             Box::new(dot),
-            Box::new(block_dependency)
+            Box::new(data_flow)
         ];
         flow.analyze(&config, handlers);
     }

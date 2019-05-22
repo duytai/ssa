@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate:: {
     walker::{ Walker },
     dict::{ Dictionary },
@@ -23,7 +24,32 @@ pub struct Variable {
 }
 
 impl Variable {
-    pub fn parse(walker: &Walker, dict: &Dictionary) -> Option<Self> {
+    pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
+        let mut ret = HashSet::new();
+        let variable = Variable::parse_one(&walker, dict);
+        if variable.is_some() {
+            ret.insert(variable.unwrap());
+        }
+        walker.all_break(|walker| {
+            walker.node.name == "FunctionCall"
+            || walker.node.name == "Identifier"
+            || walker.node.name == "MemberAccess"
+            || walker.node.name == "IndexAccess"
+            || walker.node.name == "Literal"
+        }, |walkers| {
+            for walker in walkers {
+                if walker.node.name != "FunctionCall" {
+                    let variable = Variable::parse_one(&walker, dict);
+                    if variable.is_some() {
+                        ret.insert(variable.unwrap());
+                    }
+                }
+            }
+        });
+        ret
+    }
+
+    fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
         let mut variable = Variable { members: vec![] };
         variable.members = Variable::find_variable(walker, dict);
         if variable.members.len() > 0 {

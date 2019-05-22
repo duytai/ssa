@@ -30,34 +30,6 @@ impl FlowTable {
         self.variables.insert(variable, kill);
     }
 
-    pub fn is_vulerable(&self) -> bool {
-        let block_timestamp = Variable {
-            members: vec![
-                Member::Global(String::from("timestamp")),
-                Member::Global(String::from("block")),
-            ],
-        };
-        let block_number = Variable {
-            members: vec![
-                Member::Global(String::from("number")),
-                Member::Global(String::from("block")),
-            ],
-        };
-        let now = Variable {
-            members: vec![
-                Member::Global(String::from("now")),
-            ],
-        };
-        for (variable, _) in self.variables.iter() {
-            if variable.contains(&block_timestamp) == VariableComparison::Equal 
-               || variable.contains(&now) == VariableComparison::Equal
-               || variable.contains(&block_number) == VariableComparison::Equal {
-                return true;
-            }
-        }
-        false
-    } 
-    
     pub fn merge(child: &FlowTable, item: FlowItem) -> FlowTable {
         let mut table = child.clone();
         match item {
