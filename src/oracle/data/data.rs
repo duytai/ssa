@@ -7,14 +7,12 @@ use crate::{
 };
 use super::{
     variable::{ Variable },
-    assignment::{ Assignment },
-    table::{ FlowTable, FlowItem },
+    assignment::{ Assignment, Operator },
 };
 
 #[derive(Debug)]
 pub struct DataFlowGraph {
     parents: HashMap<u32, Vec<u32>>, 
-    tables: HashMap<u32, FlowTable>,
     start: u32,
     stop: u32,
 }
@@ -23,7 +21,6 @@ impl DataFlowGraph {
     pub fn new() -> Self {
         DataFlowGraph {
             parents: HashMap::new(),
-            tables: HashMap::new(),
             start: 0,
             stop: 1000000,
         }
@@ -35,9 +32,6 @@ impl DataFlowGraph {
                 Some(v) => { v.push(*from); },
                 None => { self.parents.insert(*to, vec![*from]); },
             }
-        }
-        for Vertex { id, ..} in vertices {
-            self.tables.insert(*id, FlowTable::new());
         }
     }
 
@@ -57,54 +51,62 @@ impl DataFlowGraph {
         });
         variables
     }
+
+    pub fn traverse(
+        &self,
+        id: u32,
+        visited: &mut HashSet<u32>,
+        mut variables: HashMap<Variable, HashSet<u32>>,
+        vertices: &HashSet<Vertex>,
+        dict: &Dictionary
+    ) {
+        let vertex = vertices.iter().find(|v| v.id == id).unwrap();
+        match vertex.shape {
+            Shape::DoubleCircle => {
+                let vars = self.find_parameters(id, dict);
+                for var in vars {
+                    if let Some(ids) = variables.get_mut(&var) {
+                        ids.insert(id);
+                    } else {
+                        let mut ids = HashSet::new();
+                        ids.insert(id);
+                        variables.insert(var, ids);
+                    }
+                }
+            },
+            Shape::Box => {
+                let assignments = self.find_assignments(id, dict);
+                println!("len: {}", assignments.len());
+                for assignment in assignments {
+                    let Assignment { lhs, rhs, op } = assignment;
+                    match op {
+                        Operator::Equal => {},
+                        Operator::Other => {},
+                    }
+                }
+            },
+            Shape::Diamond => {},
+            Shape::Point => {},
+        }
+        visited.insert(id);
+        println!("{} - variables: {:?}", id, variables);
+        if let Some(parents) = self.parents.get(&id) {
+            for parent in parents {
+                self.traverse(*parent, visited, variables.clone(), vertices, dict);
+            }
+        }
+    }
 }
 
 impl Oracle for DataFlowGraph {
-    fn analyze(&mut self, edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>, dict: &Dictionary) {
+    fn analyze(
+        &mut self,
+        edges: &HashSet<(u32, u32)>,
+        vertices: &HashSet<Vertex>,
+        dict: &Dictionary
+    ) {
         self.initialize(edges, vertices);
-        let mut stack: Vec<(u32, u32)> = vec![];
-        let mut visted: HashSet<u32> = HashSet::new();
-        if let Some(parents) = self.parents.get_mut(&self.stop) {
-            for parent in parents {
-                stack.push((self.stop, *parent));
-            }
-            visted.insert(self.stop);
-        }
-        while stack.len() > 0 {
-            let (child, id) = stack.pop().unwrap();
-            let vertex = vertices.iter().find(|v| v.id == id).unwrap();
-            let child = self.tables.get(&child).unwrap();
-            let mut item;
-            match vertex.shape {
-                Shape::DoubleCircle => {
-                    let variables = self.find_parameters(id, dict);
-                    item = FlowItem::Variables(variables);
-                },
-                Shape::Box => {
-                    let assignments = self.find_assignments(id, dict);
-                    item = FlowItem::Assignments(assignments);
-                },
-                Shape::Diamond => {
-                    item = FlowItem::Comparison;
-                },
-                Shape::Point => {
-                    item = FlowItem::None;
-                },
-            }
-            let table = FlowTable::merge(child, item);
-            let cur = self.tables.get(&id).unwrap();
-            if &table != cur || !visted.contains(&id) {
-                self.tables.insert(id, table);
-                if let Some(parents) = self.parents.get_mut(&id) {
-                    for parent in parents {
-                        stack.push((id, *parent));
-                    }
-                }
-            }
-            visted.insert(id);
-        }
-        for (id, table) in self.tables.iter() {
-            println!("{} - {:?}", id, table);
-        }
+        let mut visited: HashSet<u32> = HashSet::new();
+        self.traverse(self.stop, &mut visited, HashMap::new(), vertices, dict);
     }
 }

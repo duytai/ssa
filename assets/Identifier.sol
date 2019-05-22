@@ -1,7 +1,7 @@
 contract Identifier {
   function test() {
     uint x = 10;
-    uint y = x;
+    x + 10;
     msg.sender.send(x);
   }
 }

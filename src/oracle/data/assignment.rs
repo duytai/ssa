@@ -21,18 +21,14 @@ impl Assignment {
         let mut assignments = vec![];
         match walker.node.name {
             "VariableDeclarationStatement" => {
-                if let Some(assignment) = Assignment::parse_one(walker, dict) {
-                    assignments.push(assignment);
-                }
+                assignments.push(Assignment::parse_one(&walker, dict));
             },
             _ => {
                 walker.for_all(|walker| {
                     walker.node.name == "Assignment"
                 }, |walkers| {
                     for walker in walkers {
-                        if let Some(assignment) = Assignment::parse_one(&walker, dict) {
-                            assignments.push(assignment);
-                        }
+                        assignments.push(Assignment::parse_one(&walker, dict));
                     }
                 });
             },
@@ -40,7 +36,7 @@ impl Assignment {
         assignments
     }
 
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Assignment> {
+    fn parse_one(walker: &Walker, dict: &Dictionary) -> Assignment {
         let operator = walker.node.attributes["operator"].as_str().unwrap_or("=");
         let op = match operator {
             "=" => Operator::Equal,
@@ -48,18 +44,12 @@ impl Assignment {
         };
         let mut lhs = HashSet::new();
         let mut rhs = HashSet::new();
-        let mut has_rhs = false;
         walker.for_all(|_| { true }, |walkers| {
             lhs.extend(Variable::parse(&walkers[0], dict));
             if walkers.len() >= 2 {
                 rhs.extend(Variable::parse(&walkers[1], dict));
-                has_rhs = true;
             }
         });
-        if has_rhs {
-            Some(Assignment { lhs, rhs, op })
-        } else {
-            None
-        }
+        Assignment { lhs, rhs, op }
     }
 }
