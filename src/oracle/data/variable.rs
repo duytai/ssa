@@ -59,35 +59,38 @@ impl Variable {
         }
     }
 
-    pub fn merge(&self, other: &Variable) -> Variable {
-        let mut members = self.members.clone();
-        if self.members.len() < other.members.len() {
-            panic!("Unsupported merged");
-        }
-        let diff_len = self.members.len() - other.members.len();
-        for i in 0..other.members.len() {
-            members[diff_len + i] = other.members[i].clone();
-        }
-        Variable { members }
-    }
+    // pub fn merge(&self, other: &Variable) -> Variable {
+        // let mut members = self.members.clone();
+        // if self.members.len() < other.members.len() {
+            // panic!("Unsupported merged");
+        // }
+        // let diff_len = self.members.len() - other.members.len();
+        // for i in 0..other.members.len() {
+            // members[diff_len + i] = other.members[i].clone();
+        // }
+        // Variable { members }
+    // }
 
     pub fn contains(&self, other: &Variable) -> VariableComparison {
-        let other_len = other.members.len();
-        let my_len = self.members.len();
-        if my_len < other_len {
-            return VariableComparison::NotEqual;
-        }
-        let sub = &self.members[(my_len - other_len) .. my_len];
-        let eq = sub.iter().eq(other.members.iter());
-        match eq {
-            true => {
-                if my_len == other_len {
-                    VariableComparison::Equal
-                } else {
-                    VariableComparison::Partial
-                }
-            },
-            false => VariableComparison::NotEqual,
+        if other.members.len() > self.members.len() {
+            let offset = other.members.len() - self.members.len();
+            let sub = &other.members[offset..];
+            match sub.iter().eq(self.members.iter()) {
+                true => VariableComparison::Partial,
+                false => VariableComparison::NotEqual,
+            }
+        } else {
+            let offset = self.members.len() - other.members.len();
+            let sub = &self.members[offset..];
+            match sub.iter().eq(other.members.iter()) {
+                true => {
+                    match offset == 0 {
+                        true => VariableComparison::Equal,
+                        false => VariableComparison::NotEqual,
+                    }
+                },
+                false => VariableComparison::NotEqual,
+            }
         }
     }
 
