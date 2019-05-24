@@ -54,10 +54,10 @@ impl Oracle for DataFlowGraph {
     ) {
         let stop = 1000000;
         let mut visited: HashSet<u32> = HashSet::new();
-        let mut stack: Vec<(u32, u32, HashSet<Action>)> = vec![];
+        let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
-        let actions: HashSet<Action> = HashSet::new(); 
+        let actions: Vec<Action> = vec![]; 
         for vertex in vertices {
             tables.insert(vertex.id, HashSet::new());
         }
@@ -78,12 +78,12 @@ impl Oracle for DataFlowGraph {
             let pre_table = tables.get(&from).unwrap().clone();
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
-            let mut new_actions: HashSet<Action> = HashSet::new();
-            let mut kill_action = None;
+            let mut new_actions = vec![];
+            let mut kill_pos = vec![];
             match vertex.shape {
                 Shape::DoubleCircle => {
                     for var in self.find_parameters(id, dict) {
-                        new_actions.insert(Action::Use(var, id));
+                        new_actions.push(Action::Use(var, id));
                     }
                 },
                 Shape::Box => {
@@ -94,21 +94,23 @@ impl Oracle for DataFlowGraph {
                             for l in lhs {
                                 match op {
                                     Operator::Equal => {
-                                        kill_action = Some(Action::Kill(l, id));
+                                        kill_pos.push(actions.len() + new_actions.len());
+                                        new_actions.push(Action::Kill(l, id));
                                     },
                                     Operator::Other => {
-                                        kill_action = Some(Action::Kill(l.clone(), id));
-                                        new_actions.insert(Action::Use(l, id));
+                                        kill_pos.push(actions.len() + new_actions.len());
+                                        new_actions.push(Action::Kill(l.clone(), id));
+                                        new_actions.push(Action::Use(l, id));
                                     }
                                 }
                             }
                             for r in rhs {
-                                new_actions.insert(Action::Use(r, id));
+                                new_actions.push(Action::Use(r, id));
                             }
                         }
                     } else {
                         for var in self.find_variables(id, dict) {
-                            new_actions.insert(Action::Use(var, id));
+                            new_actions.push(Action::Use(var, id));
                         }
                     }
                 },
@@ -118,28 +120,37 @@ impl Oracle for DataFlowGraph {
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
-            if let Some(kill_action) = kill_action {
-                cur_table.insert(kill_action.clone());
-                if let Action::Kill(kill_var, kill_id) = kill_action {
-                    actions.retain(|action| {
-                        match action {
-                            Action::Use(variable, id) => {
-                                match kill_var.contains(variable) {
-                                    VariableComparison::Equal => {
-                                        println!("LINK {} - {}", id, kill_id);
-                                        false
-                                    },
-                                    VariableComparison::NotEqual => {
-                                        true
-                                    },
-                                    VariableComparison::Partial => {
-                                        true
+            for pos in kill_pos {
+                if let Action::Kill(kill_var, kill_id) = actions[pos].clone() {
+                    actions = actions
+                        .into_iter()
+                        .enumerate()
+                        .filter(|(index, action)| {
+                            if index < &pos {
+                                if let Action::Use(variable, id) = action {
+                                    match kill_var.contains(variable) {
+                                        VariableComparison::Equal => {
+                                            println!("LINK {} - {}", id, kill_id);
+                                            false
+                                        },
+                                        VariableComparison::NotEqual => {
+                                            true
+                                        },
+                                        VariableComparison::Partial => {
+                                            true
+                                        }
                                     }
+                                } else {
+                                    true
                                 }
-                            },
-                            _ => true,
-                        }
-                    });
+                            } else if index > &pos {
+                                true
+                            } else {
+                                false
+                            }
+                        })
+                        .map(|(_, action)| action)
+                        .collect();
                 }
             }
             if cur_table.len() != cur_table_len || !visited.contains(&id) {
