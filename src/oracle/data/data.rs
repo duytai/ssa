@@ -37,7 +37,9 @@ impl DataFlowGraph {
         let mut variables = HashSet::new();
         walker.for_all(|_| { true }, |walkers| {
             for walker in &walkers[1..] {
+                println!("----begin-");
                 let vars = Variable::parse(walker, dict);
+                println!("----end--");
                 variables.extend(vars);
             }
         });
@@ -57,6 +59,7 @@ impl Oracle for DataFlowGraph {
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
+        let mut links: HashSet<(u32, u32, Variable)> = HashSet::new(); 
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices {
             tables.insert(vertex.id, HashSet::new());
@@ -120,7 +123,6 @@ impl Oracle for DataFlowGraph {
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
-            // println!("{} - {:?}", id, cur_table);
             for pos in kill_pos {
                 if let Action::Kill(kill_var, kill_id) = actions[pos].clone() {
                     actions = actions
@@ -131,7 +133,7 @@ impl Oracle for DataFlowGraph {
                                 if let Action::Use(variable, id) = action {
                                     match kill_var.contains(variable) {
                                         VariableComparison::Equal => {
-                                            println!("LINK {} - {}", id, kill_id);
+                                            links.insert((*id, kill_id, variable.clone()));
                                             cur_table.remove(action);
                                             false
                                         },
@@ -164,6 +166,9 @@ impl Oracle for DataFlowGraph {
                     }
                 }
             }
+        }
+        for link in links {
+            println!("Link: {:?}", link);
         }
     }
 }

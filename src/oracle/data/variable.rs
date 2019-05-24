@@ -29,23 +29,23 @@ impl Variable {
         let variable = Variable::parse_one(&walker, dict);
         if variable.is_some() {
             ret.insert(variable.unwrap());
-        }
-        walker.all_break(|walker| {
-            walker.node.name == "FunctionCall"
-            || walker.node.name == "Identifier"
-            || walker.node.name == "MemberAccess"
-            || walker.node.name == "IndexAccess"
-            || walker.node.name == "Literal"
-        }, |walkers| {
-            for walker in walkers {
-                if walker.node.name != "FunctionCall" {
-                    let variable = Variable::parse_one(&walker, dict);
-                    if variable.is_some() {
-                        ret.insert(variable.unwrap());
+        } else {
+            walker.all_break(|walker| {
+                walker.node.name == "FunctionCall"
+                    || walker.node.name == "Identifier"
+                    || walker.node.name == "MemberAccess"
+                    || walker.node.name == "IndexAccess"
+            }, |walkers| {
+                for walker in walkers {
+                    if walker.node.name != "FunctionCall" {
+                        let variable = Variable::parse_one(&walker, dict);
+                        if variable.is_some() {
+                            ret.insert(variable.unwrap());
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         ret
     }
 
@@ -58,18 +58,6 @@ impl Variable {
             None
         }
     }
-
-    // pub fn merge(&self, other: &Variable) -> Variable {
-        // let mut members = self.members.clone();
-        // if self.members.len() < other.members.len() {
-            // panic!("Unsupported merged");
-        // }
-        // let diff_len = self.members.len() - other.members.len();
-        // for i in 0..other.members.len() {
-            // members[diff_len + i] = other.members[i].clone();
-        // }
-        // Variable { members }
-    // }
 
     pub fn contains(&self, other: &Variable) -> VariableComparison {
         if other.members.len() > self.members.len() {

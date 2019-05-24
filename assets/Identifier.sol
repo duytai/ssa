@@ -1,10 +1,11 @@
 contract Identifier {
-  function test() {
+  struct Tuple {
     uint x;
-    while (x > 0) {
-      x = 10;
-      x = 20;
-    }
-    msg.sender.send(x);
+    uint y;
+  }
+
+  function test() {
+    Tuple t0;
+    msg.sender.send(t0.x);
   }
 }
