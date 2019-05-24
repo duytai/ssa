@@ -120,6 +120,7 @@ impl Oracle for DataFlowGraph {
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
+            // println!("{} - {:?}", id, cur_table);
             for pos in kill_pos {
                 if let Action::Kill(kill_var, kill_id) = actions[pos].clone() {
                     actions = actions
@@ -131,6 +132,7 @@ impl Oracle for DataFlowGraph {
                                     match kill_var.contains(variable) {
                                         VariableComparison::Equal => {
                                             println!("LINK {} - {}", id, kill_id);
+                                            cur_table.remove(action);
                                             false
                                         },
                                         VariableComparison::NotEqual => {
@@ -146,6 +148,7 @@ impl Oracle for DataFlowGraph {
                             } else if index > &pos {
                                 true
                             } else {
+                                cur_table.remove(action);
                                 false
                             }
                         })

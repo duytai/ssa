@@ -1,11 +1,9 @@
 contract Identifier {
   function test() {
-    uint x = 10;
+    uint x;
     while (x > 0) {
-      x = 100;
-      if (x > 0) {
-        x += 10;
-      }
+      x = 10;
+      x = 20;
     }
     msg.sender.send(x);
   }
