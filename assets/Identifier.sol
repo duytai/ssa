@@ -6,6 +6,10 @@ contract Identifier {
 
   function test() {
     Tuple t0;
-    msg.sender.send(t0.x);
+    uint x = t0.x;
+    while (x > 0) {
+      x += 10;
+    }
+    msg.sender.send(x);
   }
 }

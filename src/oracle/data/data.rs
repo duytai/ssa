@@ -37,9 +37,7 @@ impl DataFlowGraph {
         let mut variables = HashSet::new();
         walker.for_all(|_| { true }, |walkers| {
             for walker in &walkers[1..] {
-                println!("----begin-");
                 let vars = Variable::parse(walker, dict);
-                println!("----end--");
                 variables.extend(vars);
             }
         });
@@ -137,12 +135,18 @@ impl Oracle for DataFlowGraph {
                                             cur_table.remove(action);
                                             false
                                         },
+                                        VariableComparison::Partial => {
+                                            if kill_var.members.len() > variable.members.len() {
+                                                links.insert((*id, kill_id, kill_var.clone()));
+                                            } else {
+                                                links.insert((*id, kill_id, variable.clone()));
+                                            }
+                                            cur_table.remove(action);
+                                            true
+                                        },
                                         VariableComparison::NotEqual => {
                                             true
                                         },
-                                        VariableComparison::Partial => {
-                                            true
-                                        }
                                     }
                                 } else {
                                     true
