@@ -328,17 +328,20 @@ impl<'a> Graph<'a> {
             NodeKind::DoWhileStatement => {
                 let mut condition = CodeBlock::None; 
                 let mut blocks = vec![];
-                walker.for_each(|walker, _| {
-                    match walker.node.name {
-                        "BinaryOperation" => {
+                walker.for_all(|_| true, |walkers| {
+                    for (index, walker) in walkers.into_iter().enumerate() {
+                        if index == 0 {
                             condition = CodeBlock::Block(walker);
-                        },
-                        "Block" => {
-                            blocks = self.build_block(BlockKind::Body, walker);
-                        },
-                        _ => {
-                            blocks.append(&mut self.build_items(walker));
-                        },
+                        } else {
+                            match walker.node.name {
+                                "Block" => {
+                                    blocks = self.build_block(BlockKind::Body, walker);
+                                },
+                                _ => {
+                                    blocks.append(&mut self.build_items(walker));
+                                }
+                            }
+                        }
                     }
                 });
                 GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks })
@@ -346,17 +349,20 @@ impl<'a> Graph<'a> {
             NodeKind::WhileStatement => {
                 let mut condition = CodeBlock::None; 
                 let mut blocks = vec![];
-                walker.for_each(|walker, _| {
-                    match walker.node.name {
-                        "BinaryOperation" => {
+                walker.for_all(|_| true, |walkers| {
+                    for (index, walker) in walkers.into_iter().enumerate() {
+                        if index == 0 {
                             condition = CodeBlock::Block(walker);
-                        },
-                        "Block" => {
-                            blocks = self.build_block(BlockKind::Body, walker);
-                        },
-                        _ => {
-                            blocks.append(&mut self.build_items(walker));
-                        },
+                        } else {
+                            match walker.node.name {
+                                "Block" => {
+                                    blocks = self.build_block(BlockKind::Body, walker);
+                                },
+                                _ => {
+                                    blocks.append(&mut self.build_items(walker));
+                                }
+                            }
+                        }
                     }
                 });
                 GraphNode::WhileStatement(WhileStatement { condition, blocks })
@@ -365,20 +371,23 @@ impl<'a> Graph<'a> {
                 let mut condition = CodeBlock::None; 
                 let mut tblocks = vec![];
                 let mut fblocks = vec![];
-                walker.for_each(|walker, index | {
-                    match walker.node.name {
-                        "BinaryOperation" => {
+                walker.for_all(|_| true, |walkers| {
+                    for (index, walker) in walkers.into_iter().enumerate() {
+                        if index == 0 {
                             condition = CodeBlock::Block(walker);
-                        },
-                        "Block" => {
-                            if index == 1 {
-                                tblocks = self.build_block(BlockKind::Body, walker);
-                            } else {
-                                fblocks = self.build_block(BlockKind::Body, walker);
+                        } else {
+                            match walker.node.name {
+                                "Block" => {
+                                    if index == 1 {
+                                        tblocks = self.build_block(BlockKind::Body, walker);
+                                    } else {
+                                        fblocks = self.build_block(BlockKind::Body, walker);
+                                    }
+                                },
+                                _ => {
+                                    tblocks.append(&mut self.build_items(walker));
+                                }
                             }
-                        },
-                        _ => {
-                            tblocks.append(&mut self.build_items(walker));
                         }
                     }
                 });
