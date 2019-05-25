@@ -15,7 +15,7 @@ use super::{
     walker::{ Walker, Node },
     vertex::{ Vertex, Shape },
     dict::{ Dictionary },
-    oracle::{ Oracle },
+    analyzer::{ Analyzer },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -313,7 +313,7 @@ impl<'a> ControlFlowGraph <'a> {
         return predecessors;
     }
 
-    pub fn analyze(&mut self, config: &GraphConfig, mut handlers: Vec<Box<Oracle>>)
+    pub fn analyze(&mut self, config: &GraphConfig, mut handlers: Vec<Box<Analyzer>>)
     {
         let walker = Walker::new(self.value, self.source);
         let mut graph = Graph::new(config, walker);

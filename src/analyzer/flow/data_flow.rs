@@ -1,8 +1,8 @@
 use std::collections::{ HashSet, HashMap };
 use crate::{
-    vertex::{ Vertex, Shape },
+    vertex::{ Shape },
     dict::Dictionary,
-    oracle::{ Oracle },
+    analyzer::{ Analyzer },
     flow::{ State },
 };
 use super::{
@@ -46,7 +46,7 @@ impl DataFlowGraph {
     }
 }
 
-impl Oracle for DataFlowGraph {
+impl Analyzer for DataFlowGraph {
     fn analyze(&mut self, state: &State) {
         let stop = 1000000;
         let State { vertices, edges, dict } = state;

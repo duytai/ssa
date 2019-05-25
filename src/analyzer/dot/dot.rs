@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use crate::{
     vertex::Vertex,
     dict::Dictionary,
-    oracle::Oracle,
+    analyzer::Analyzer,
     flow::{ State },
 };
 
@@ -14,7 +14,7 @@ impl Dot {
     }
 }
 
-impl Oracle for Dot {
+impl Analyzer for Dot {
     fn analyze(&mut self, state: &State) {
         let mut vertices_str = String::from("");
         let mut edges_str = String::from("");

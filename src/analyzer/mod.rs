@@ -1,7 +1,7 @@
 mod dot;
 mod flow;
-mod oracle;
+mod analyzer;
 
 pub use dot::Dot;
 pub use flow::DataFlowGraph;
-pub use oracle::Oracle;
+pub use analyzer::Analyzer;

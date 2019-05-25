@@ -1,8 +1,7 @@
-use std::collections::HashSet;
 use crate::{
     flow::State,
 };
 
-pub trait Oracle {
+pub trait Analyzer {
     fn analyze(&mut self, state: &State);
 }

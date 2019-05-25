@@ -3,13 +3,13 @@ mod graph;
 mod flow;
 mod dict;
 mod vertex;
-mod oracle;
+mod analyzer;
 
 use flow::{ ControlFlowGraph, GraphKind, GraphConfig };
-use oracle::{ 
+use analyzer::{ 
     Dot, 
     DataFlowGraph,
-    Oracle,
+    Analyzer,
 };
 use json;
 use std::{
@@ -36,7 +36,7 @@ fn main() -> io::Result<()> {
         };
         let dot = Dot::new();
         let data_flow = DataFlowGraph::new();
-        let handlers: Vec<Box<Oracle>> = vec![
+        let handlers: Vec<Box<Analyzer>> = vec![
             Box::new(data_flow),
             Box::new(dot),
         ];
