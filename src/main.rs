@@ -37,8 +37,8 @@ fn main() -> io::Result<()> {
         let dot = Dot::new();
         let data_flow = DataFlowGraph::new();
         let mut handlers: Vec<Box<Oracle>> = vec![
+            Box::new(data_flow),
             Box::new(dot),
-            Box::new(data_flow)
         ];
         flow.analyze(&config, handlers);
     }

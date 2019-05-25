@@ -41,6 +41,13 @@ pub struct LoopBreaker {
     id: u32,
 }
 
+#[derive(Debug)]
+pub struct State<'a> {
+    pub edges: &'a HashSet<(u32, u32)>,
+    pub vertices: &'a HashSet<Vertex>,
+    pub dict: &'a Dictionary<'a>, 
+}
+
 impl<'a> Flow<'a> {
     pub fn new(value: &'a json::JsonValue, source: &'a str) -> Self {
         Flow {
@@ -323,8 +330,13 @@ impl<'a> Flow<'a> {
             }
         }
         let dict = Dictionary::new(self.value, self.source);
+        let state = State {
+            edges: &self.edges,
+            vertices: &self.vertices,
+            dict: &dict,
+        };
         for handler in handlers.iter_mut() {
-            handler.analyze(&self.edges, &self.vertices, &dict);
+            handler.analyze(&state);
         }
     }
 }

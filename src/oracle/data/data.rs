@@ -3,6 +3,7 @@ use crate::{
     vertex::{ Vertex, Shape },
     dict::Dictionary,
     oracle::{ Oracle },
+    flow::{ State },
 };
 use super::{
     variable::{ Variable, VariableComparison },
@@ -46,23 +47,19 @@ impl DataFlowGraph {
 }
 
 impl Oracle for DataFlowGraph {
-    fn analyze(
-        &mut self,
-        edges: &HashSet<(u32, u32)>,
-        vertices: &HashSet<Vertex>,
-        dict: &Dictionary
-    ) {
+    fn analyze(&mut self, state: &State) {
         let stop = 1000000;
+        let State { vertices, edges, dict } = state;
         let mut visited: HashSet<u32> = HashSet::new();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
         let mut links: HashSet<(u32, u32, Variable)> = HashSet::new(); 
         let actions: Vec<Action> = vec![]; 
-        for vertex in vertices {
+        for vertex in vertices.iter() {
             tables.insert(vertex.id, HashSet::new());
         }
-        for (from, to) in edges {
+        for (from, to) in edges.iter() {
             match parents.get_mut(to) {
                 Some(v) => { v.push(*from); },
                 None => { parents.insert(*to, vec![*from]); },

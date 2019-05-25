@@ -1,14 +1,8 @@
 use std::collections::HashSet;
 use crate::{
-    vertex::Vertex,
-    dict::Dictionary
+    flow::State,
 };
 
 pub trait Oracle {
-    fn analyze(
-        &mut self,
-        edges: &HashSet<(u32, u32)>,
-        vertices: &HashSet<Vertex>,
-        dict: &Dictionary
-    );
+    fn analyze(&mut self, state: &State);
 }

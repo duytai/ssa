@@ -3,6 +3,7 @@ use crate::{
     vertex::Vertex,
     dict::Dictionary,
     oracle::Oracle,
+    flow::{ State },
 };
 
 pub struct Dot {}
@@ -14,9 +15,10 @@ impl Dot {
 }
 
 impl Oracle for Dot {
-    fn analyze(&mut self, edges: &HashSet<(u32, u32)>, vertices: &HashSet<Vertex>, _dict: &Dictionary) {
+    fn analyze(&mut self, state: &State) {
         let mut vertices_str = String::from("");
         let mut edges_str = String::from("");
+        let State { edges, vertices, .. } =  state;
         for edge in edges.iter() {
             let edge_str = format!("  {} -> {};\n", edge.0, edge.1);
             edges_str.push_str(&edge_str);
