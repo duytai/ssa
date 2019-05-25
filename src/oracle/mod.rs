@@ -1,7 +1,7 @@
 mod dot;
-mod data;
+mod flow;
 mod oracle;
 
 pub use dot::Dot;
-pub use data::DataFlowGraph;
+pub use flow::DataFlowGraph;
 pub use oracle::Oracle;

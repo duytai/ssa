@@ -48,9 +48,9 @@ pub struct State<'a> {
     pub dict: &'a Dictionary<'a>, 
 }
 
-impl<'a> ControlFlowGraph <'a> {
+impl<'a> Flow<'a> {
     pub fn new(value: &'a json::JsonValue, source: &'a str) -> Self {
-        ControlFlowGraph {
+        Flow {
             value,
             source,
             edges: HashSet::new(),

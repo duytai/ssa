@@ -5,7 +5,7 @@ mod dict;
 mod vertex;
 mod oracle;
 
-use flow::{ Flow, GraphKind, GraphConfig };
+use flow::{ ControlFlowGraph, GraphKind, GraphConfig };
 use oracle::{ 
     Dot, 
     DataFlowGraph,
@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
     for source in ast_json["sourceList"].members() {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
-        let mut flow = Flow::new(ast_one, &source_content);
+        let mut control_flow = ControlFlowGraph::new(ast_one, &source_content);
         let config = GraphConfig { 
             kind: GraphKind::Function("test"),
             contract_name: "Identifier",
@@ -36,11 +36,11 @@ fn main() -> io::Result<()> {
         };
         let dot = Dot::new();
         let data_flow = DataFlowGraph::new();
-        let mut handlers: Vec<Box<Oracle>> = vec![
+        let handlers: Vec<Box<Oracle>> = vec![
             Box::new(data_flow),
             Box::new(dot),
         ];
-        flow.analyze(&config, handlers);
+        control_flow.analyze(&config, handlers);
     }
     Ok(())
 }
