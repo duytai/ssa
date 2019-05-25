@@ -11,7 +11,7 @@ impl Dot {
 }
 
 impl Analyzer for Dot {
-    fn analyze(&mut self, state: &State) {
+    fn analyze(&mut self, state: &mut State) {
         let mut vertices_str = String::from("");
         let mut edges_str = String::from("");
         let State { edges, vertices, .. } =  state;

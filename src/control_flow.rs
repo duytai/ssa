@@ -323,13 +323,13 @@ impl<'a> Flow<'a> {
             }
         }
         let dict = Dictionary::new(self.value, self.source);
-        let state = State {
+        let mut state = State {
             edges: &self.edges,
             vertices: &self.vertices,
             dict: &dict,
         };
         for handler in handlers.iter_mut() {
-            handler.analyze(&state);
+            handler.analyze(&mut state);
         }
     }
 }

@@ -12,5 +12,5 @@ pub struct State<'a> {
 }
 
 pub trait Analyzer {
-    fn analyze(&mut self, state: &State);
+    fn analyze(&mut self, state: &mut State);
 }

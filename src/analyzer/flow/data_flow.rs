@@ -46,7 +46,7 @@ impl DataFlowGraph {
 }
 
 impl Analyzer for DataFlowGraph {
-    fn analyze(&mut self, state: &State) {
+    fn analyze(&mut self, state: &mut State) {
         let stop = 1000000;
         let State { vertices, edges, dict } = state;
         let mut visited: HashSet<u32> = HashSet::new();
