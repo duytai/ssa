@@ -15,6 +15,13 @@ pub enum Action {
     Kill(Variable, u32),
 }
 
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct DataLink {
+    from: u32,
+    to: u32,
+    var: Variable,
+}
+
 pub struct DataFlowGraph {}
 
 impl DataFlowGraph {
@@ -48,12 +55,12 @@ impl DataFlowGraph {
 impl Analyzer for DataFlowGraph {
     fn analyze(&mut self, state: &mut State) {
         let stop = 1000000;
-        let State { vertices, edges, dict } = state;
+        let State { vertices, edges, dict, .. } = state;
         let mut visited: HashSet<u32> = HashSet::new();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
-        let mut links: HashSet<(u32, u32, Variable)> = HashSet::new(); 
+        let mut links: HashSet<DataLink> = HashSet::new(); 
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices.iter() {
             tables.insert(vertex.id, HashSet::new());
@@ -131,15 +138,30 @@ impl Analyzer for DataFlowGraph {
                                 if let Action::Use(variable, id) = action {
                                     match kill_var.contains(variable) {
                                         VariableComparison::Equal => {
-                                            links.insert((*id, kill_id, variable.clone()));
+                                            let data_link = DataLink {
+                                                from: *id,
+                                                to: kill_id,
+                                                var: variable.clone(),
+                                            };
+                                            links.insert(data_link);
                                             cur_table.remove(action);
                                             false
                                         },
                                         VariableComparison::Partial => {
                                             if kill_var.members.len() > variable.members.len() {
-                                                links.insert((*id, kill_id, kill_var.clone()));
+                                                let data_link = DataLink {
+                                                    from: *id,
+                                                    to: kill_id,
+                                                    var: kill_var.clone(),
+                                                };
+                                                links.insert(data_link);
                                             } else {
-                                                links.insert((*id, kill_id, variable.clone()));
+                                                let data_link = DataLink {
+                                                    from: *id,
+                                                    to: kill_id,
+                                                    var: variable.clone(),
+                                                };
+                                                links.insert(data_link);
                                             }
                                             cur_table.remove(action);
                                             true
@@ -171,8 +193,6 @@ impl Analyzer for DataFlowGraph {
                 }
             }
         }
-        for link in links {
-            println!("Link: {:?}", link);
-        }
+        state.links = Some(links);
     }
 }

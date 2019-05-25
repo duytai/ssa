@@ -327,6 +327,7 @@ impl<'a> ControlFlowGraph <'a> {
             edges: &self.edges,
             vertices: &self.vertices,
             dict: &dict,
+            links: None,
         };
         for handler in handlers.iter_mut() {
             handler.analyze(&mut state);
