@@ -115,7 +115,11 @@ impl Oracle for DataFlowGraph {
                         }
                     }
                 },
-                Shape::Diamond => {},
+                Shape::Diamond => {
+                    for var in self.find_variables(id, dict) {
+                        new_actions.push(Action::Use(var, id));
+                    }
+                },
                 Shape::Point => {},
             }
             actions.extend(new_actions.clone());
