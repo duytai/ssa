@@ -15,7 +15,7 @@ use super::{
     walker::{ Walker, Node },
     vertex::{ Vertex, Shape },
     dict::{ Dictionary },
-    analyzer::{ Analyzer },
+    analyzer::{ Analyzer, State },
 };
 
 pub use super::graph::{ GraphKind, GraphConfig };
@@ -39,13 +39,6 @@ pub enum BreakerType {
 pub struct LoopBreaker {
     kind: BreakerType,
     id: u32,
-}
-
-#[derive(Debug)]
-pub struct State<'a> {
-    pub edges: &'a HashSet<(u32, u32)>,
-    pub vertices: &'a HashSet<Vertex>,
-    pub dict: &'a Dictionary<'a>, 
 }
 
 impl<'a> ControlFlowGraph <'a> {

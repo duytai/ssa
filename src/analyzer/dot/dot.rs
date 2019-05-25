@@ -1,9 +1,5 @@
-use std::collections::HashSet;
 use crate::{
-    vertex::Vertex,
-    dict::Dictionary,
-    analyzer::Analyzer,
-    flow::{ State },
+    analyzer::{ Analyzer, State },
 };
 
 pub struct Dot {}

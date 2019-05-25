@@ -2,8 +2,7 @@ use std::collections::{ HashSet, HashMap };
 use crate::{
     vertex::{ Shape },
     dict::Dictionary,
-    analyzer::{ Analyzer },
-    flow::{ State },
+    analyzer::{ Analyzer, State },
 };
 use super::{
     variable::{ Variable, VariableComparison },
