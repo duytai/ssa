@@ -21,36 +21,42 @@ pub enum VariableComparison {
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Variable {
     pub members: Vec<Member>,
+    pub source: String,
 }
 
 impl Variable {
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
         let mut ret = HashSet::new();
         let variable = Variable::parse_one(&walker, dict);
-        if variable.is_some() {
-            ret.insert(variable.unwrap());
-        } else {
-            walker.all_break(|walker| {
-                walker.node.name == "FunctionCall"
+        if walker.node.name != "FunctionCall" {
+            if variable.is_some() {
+                ret.insert(variable.unwrap());
+            } else {
+                walker.all_break(|walker| {
+                    walker.node.name == "FunctionCall"
                     || walker.node.name == "Identifier"
                     || walker.node.name == "MemberAccess"
                     || walker.node.name == "IndexAccess"
-            }, |walkers| {
-                for walker in walkers {
-                    if walker.node.name != "FunctionCall" {
-                        let variable = Variable::parse_one(&walker, dict);
-                        if variable.is_some() {
-                            ret.insert(variable.unwrap());
+                }, |walkers| {
+                    for walker in walkers {
+                        if walker.node.name != "FunctionCall" {
+                            let variable = Variable::parse_one(&walker, dict);
+                            if variable.is_some() {
+                                ret.insert(variable.unwrap());
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
         ret
     }
 
     fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
-        let mut variable = Variable { members: vec![] };
+        let mut variable = Variable {
+            members: vec![],
+            source: walker.node.source.to_string(),
+        };
         variable.members = Variable::find_variable(walker, dict);
         if variable.members.len() > 0 {
             Some(variable)

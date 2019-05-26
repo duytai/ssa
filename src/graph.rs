@@ -100,24 +100,79 @@ impl<'a> Graph<'a> {
     pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
         match walker.node.name {
             "IfStatement" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
+                        let node = GraphNode::FunctionCall(block);
+                        blocks.push(CodeBlock::Link(Box::new(node)));
+                    }
+                });
                 let node = self.build_node(NodeKind::IfStatement, walker); 
-                vec![CodeBlock::Link(Box::new(node))]
+                blocks.push(CodeBlock::Link(Box::new(node)));
+                blocks
             },
             "WhileStatement" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
+                        let node = GraphNode::FunctionCall(block);
+                        blocks.push(CodeBlock::Link(Box::new(node)));
+                    }
+                });
                 let node = self.build_node(NodeKind::WhileStatement, walker);
-                vec![CodeBlock::Link(Box::new(node))]
+                blocks.push(CodeBlock::Link(Box::new(node)));
+                blocks
             },
             "ForStatement" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
+                        let node = GraphNode::FunctionCall(block);
+                        blocks.push(CodeBlock::Link(Box::new(node)));
+                    }
+                });
                 let node = self.build_node(NodeKind::ForStatement, walker);
-                vec![CodeBlock::Link(Box::new(node))]
+                blocks.push(CodeBlock::Link(Box::new(node)));
+                blocks
             },
             "DoWhileStatement" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
+                        let node = GraphNode::FunctionCall(block);
+                        blocks.push(CodeBlock::Link(Box::new(node)));
+                    }
+                });
                 let node = self.build_node(NodeKind::DoWhileStatement, walker);
-                vec![CodeBlock::Link(Box::new(node))]
+                blocks.push(CodeBlock::Link(Box::new(node)));
+                blocks
             },
             "Return" => {
+                let mut blocks = vec![];
+                walker.all(|walker| {
+                    walker.node.name == "FunctionCall"
+                }, |walkers| {
+                    for walker in walkers {
+                        let block = CodeBlock::Block(walker);
+                        let node = GraphNode::FunctionCall(block);
+                        blocks.push(CodeBlock::Link(Box::new(node)));
+                    }
+                });
                 let node = GraphNode::Return(CodeBlock::Block(walker));
-                vec![CodeBlock::Link(Box::new(node))]
+                blocks.push(CodeBlock::Link(Box::new(node)));
+                blocks
             },
             "Throw" => {
                 let node = GraphNode::Throw(CodeBlock::Block(walker));

@@ -17,9 +17,9 @@ pub enum Action {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DataLink {
-    from: u32,
-    to: u32,
-    var: Variable,
+    pub from: u32,
+    pub to: u32,
+    pub var: Variable,
 }
 
 pub struct DataFlowGraph {}
