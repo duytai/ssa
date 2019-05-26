@@ -83,7 +83,6 @@ impl Analyzer for DataFlowGraph {
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
-            let mut kill_pos = vec![];
             match vertex.shape {
                 Shape::DoubleCircle => {
                     for var in self.find_parameters(id, dict) {
@@ -98,11 +97,9 @@ impl Analyzer for DataFlowGraph {
                             for l in lhs {
                                 match op {
                                     Operator::Equal => {
-                                        kill_pos.push(actions.len() + new_actions.len());
                                         new_actions.push(Action::Kill(l, id));
                                     },
                                     Operator::Other => {
-                                        kill_pos.push(actions.len() + new_actions.len());
                                         new_actions.push(Action::Kill(l.clone(), id));
                                         new_actions.push(Action::Use(l, id));
                                     }
@@ -128,60 +125,71 @@ impl Analyzer for DataFlowGraph {
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
-            for pos in kill_pos {
-                if let Action::Kill(kill_var, kill_id) = actions[pos].clone() {
-                    actions = actions
-                        .into_iter()
-                        .enumerate()
-                        .filter(|(index, action)| {
-                            if index < &pos {
-                                if let Action::Use(variable, id) = action {
-                                    match kill_var.contains(variable) {
-                                        VariableComparison::Equal => {
-                                            let data_link = DataLink {
-                                                from: *id,
-                                                to: kill_id,
-                                                var: variable.clone(),
-                                            };
-                                            links.insert(data_link);
-                                            cur_table.remove(action);
-                                            false
-                                        },
-                                        VariableComparison::Partial => {
-                                            if kill_var.members.len() > variable.members.len() {
-                                                let data_link = DataLink {
-                                                    from: *id,
-                                                    to: kill_id,
-                                                    var: kill_var.clone(),
-                                                };
-                                                links.insert(data_link);
-                                            } else {
+            loop {
+                let mut pos: Option<usize> = None;
+                for (index, action) in actions.iter().enumerate() {
+                    if let Action::Kill(_, _) = action {
+                        pos = Some(index);
+                        break;
+                    }
+                }
+                if let Some(pos) = pos {
+                    if let Action::Kill(kill_var, kill_id) = actions[pos].clone() {
+                        actions = actions
+                            .into_iter()
+                            .enumerate()
+                            .filter(|(index, action)| {
+                                if index < &pos {
+                                    if let Action::Use(variable, id) = action {
+                                        match kill_var.contains(variable) {
+                                            VariableComparison::Equal => {
                                                 let data_link = DataLink {
                                                     from: *id,
                                                     to: kill_id,
                                                     var: variable.clone(),
                                                 };
                                                 links.insert(data_link);
-                                            }
-                                            cur_table.remove(action);
-                                            true
-                                        },
-                                        VariableComparison::NotEqual => {
-                                            true
-                                        },
+                                                cur_table.remove(action);
+                                                false
+                                            },
+                                            VariableComparison::Partial => {
+                                                if kill_var.members.len() > variable.members.len() {
+                                                    let data_link = DataLink {
+                                                        from: *id,
+                                                        to: kill_id,
+                                                        var: kill_var.clone(),
+                                                    };
+                                                    links.insert(data_link);
+                                                } else {
+                                                    let data_link = DataLink {
+                                                        from: *id,
+                                                        to: kill_id,
+                                                        var: variable.clone(),
+                                                    };
+                                                    links.insert(data_link);
+                                                }
+                                                cur_table.remove(action);
+                                                true
+                                            },
+                                            VariableComparison::NotEqual => {
+                                                true
+                                            },
+                                        }
+                                    } else {
+                                        true
                                     }
-                                } else {
+                                } else if index > &pos {
                                     true
+                                } else {
+                                    cur_table.remove(action);
+                                    false
                                 }
-                            } else if index > &pos {
-                                true
-                            } else {
-                                cur_table.remove(action);
-                                false
-                            }
-                        })
+                            })
                         .map(|(_, action)| action)
                         .collect();
+                    }
+                } else {
+                    break;
                 }
             }
             if cur_table.len() != cur_table_len || !visited.contains(&id) {

@@ -20,6 +20,14 @@ impl Assignment {
     pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
         let mut assignments = vec![];
         match walker.node.name {
+            "ParameterList" => {
+                walker.for_each(|walker, _| {
+                    let op = Operator::Equal;
+                    let lhs = Variable::parse(&walker, dict);
+                    let rhs = HashSet::new();
+                    assignments.push(Assignment { lhs, rhs, op });
+                });
+            },
             "VariableDeclarationStatement" => {
                 assignments.push(Assignment::parse_one(&walker, dict));
             },

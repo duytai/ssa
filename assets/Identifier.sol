@@ -1,11 +1,12 @@
 contract Identifier {
-  function add(uint x, uint y) returns(uint) {
-    x + y;
-  }
-  function test() {
-    uint x = 10;
-    uint y = 20;
-    while (this.add(x, this.add(x, y)) > 0) {
+  address owner;
+  modifier isOwner() {
+    require(msg.sender == owner);
+    _;
+  } 
+
+  function test(uint x, uint y) {
+    while (true) {
       x += y;
     }
   }
