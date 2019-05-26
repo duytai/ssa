@@ -298,7 +298,7 @@ impl<'a> Graph<'a> {
                     for walker in walkers {
                         if self.config.include_state {
                             walker.for_all(|walker| {
-                                walker.node.name != "FunctionDefinition"
+                                walker.node.name == "VariableDeclaration"
                             }, |walkers| {
                                 for walker in walkers {
                                     let block = CodeBlock::Block(walker);

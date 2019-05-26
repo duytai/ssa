@@ -32,7 +32,7 @@ fn main() -> io::Result<()> {
         let config = GraphConfig { 
             kind: GraphKind::Function("test"),
             contract_name: "Identifier",
-            include_state: false,
+            include_state: true,
         };
         let dot = Dot::new();
         let data_flow = DataFlowGraph::new();

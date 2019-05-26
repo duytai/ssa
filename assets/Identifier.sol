@@ -1,13 +1,19 @@
 contract Identifier {
   address owner;
-  modifier isOwner() {
-    require(msg.sender == owner);
-    _;
+  modifier isOwner(bool n) {
+    if (msg.sender == owner) {
+      _;
+    } else {
+      _;
+    }
   } 
-
+  uint z = 10;
   function test(uint x, uint y) {
     while (true) {
-      x += y;
+      if (msg.sender.send(x)) {
+        y += x;
+        z += y;
+      }
     }
   }
 }
