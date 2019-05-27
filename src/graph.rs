@@ -48,6 +48,8 @@ pub enum GraphNode<'a> {
     Selfdestruct(CodeBlock<'a>),
     FunctionCall(CodeBlock<'a>),
     ModifierInvocation(CodeBlock<'a>),
+    PlaceHolder(CodeBlock<'a>),
+    Jump(u32),
     None,
 }
 
@@ -235,7 +237,11 @@ impl<'a> Graph<'a> {
                 blocks
             },
             "InlineAssemblyStatement" => unimplemented!(),
-            "PlaceholderStatement" => unimplemented!(), 
+            "PlaceholderStatement" => {
+                let block = CodeBlock::Block(walker);
+                let node = GraphNode::PlaceHolder(block);
+                vec![CodeBlock::Link(Box::new(node))]
+            }, 
             _ => vec![CodeBlock::Block(walker)],
         }
     }
@@ -258,9 +264,19 @@ impl<'a> Graph<'a> {
                             }
                         },
                         "ModifierInvocation" => {
+                            let mut to = None;
+                            walker.for_each(|walker, index| {
+                                if index == 0 {
+                                    to = walker.node.attributes["referencedDeclaration"].as_u32();
+                                }
+                            });
                             let block = CodeBlock::Block(walker);
                             let node = GraphNode::ModifierInvocation(block);
                             blocks.push(CodeBlock::Link(Box::new(node)));
+                            if let Some(to) = to {
+                                let node = GraphNode::Jump(to);
+                                blocks.push(CodeBlock::Link(Box::new(node)));
+                            }
                         },
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
@@ -276,11 +292,14 @@ impl<'a> Graph<'a> {
     pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> GraphNode<'a> {
         match kind {
             NodeKind::Root => {
-                if walker.node.name == "FunctionDefinition" {
-                    GraphNode::Root(self.build_block(BlockKind::Param, walker))
-                } else {
-                    println!("name: {}", walker.node.name);
-                    panic!("Entry point of graph must be a function");
+                match walker.node.name {
+                    "FunctionDefinition" | "ModifierDefinition" => {
+                        GraphNode::Root(self.build_block(BlockKind::Param, walker))
+                    },
+                    _ => {
+                        println!("name: {}", walker.node.name);
+                        panic!("Entry point of graph must be a function");
+                    }
                 }
             },
             NodeKind::ForStatement => {

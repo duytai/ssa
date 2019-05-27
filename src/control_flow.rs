@@ -1,5 +1,8 @@
 use std::{
-    collections::HashSet,
+    collections::{
+        HashMap,
+        HashSet,
+    },
 };
 use super::{
     graph::{
@@ -12,12 +15,13 @@ use super::{
         ForStatement,
     },
     dict::{ Dictionary },
-    walker::{ Node, Walker },
+    walker::{ Node },
     vertex::{ Vertex, Shape },
     analyzer::{ Analyzer, State },
 };
 
 pub struct ControlFlowGraph<'a> {
+    entries: HashMap<u32, Vec<u32>>,
     edges: HashSet<(u32, u32)>,
     vertices: HashSet<Vertex>,
     dict: &'a Dictionary<'a>,
@@ -40,6 +44,7 @@ pub struct LoopBreaker {
 impl<'a> ControlFlowGraph<'a> {
     pub fn new(dict: &'a Dictionary) -> Self {
         ControlFlowGraph {
+            entries: HashMap::new(), 
             edges: HashSet::new(),
             vertices: HashSet::new(),
             dict,
@@ -48,8 +53,7 @@ impl<'a> ControlFlowGraph<'a> {
         }
     }
 
-    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
-        let mut predecessors = predecessors;
+    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>, to: u32) -> Vec<u32> {
         for block in blocks {
             if predecessors.is_empty() {
                 return vec![];
@@ -87,8 +91,8 @@ impl<'a> ControlFlowGraph<'a> {
                                     let vertice = Vertex::new(id, source, Shape::Diamond);
                                     self.vertices.insert(vertice);
                                 }
-                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
-                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
+                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers, to);
+                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers, to);
                                 predecessors.clear();
                                 predecessors.append(&mut t);
                                 predecessors.append(&mut f);
@@ -100,7 +104,7 @@ impl<'a> ControlFlowGraph<'a> {
                                 let mut our_breakers = vec![];
                                 let Node { id, source, .. } = walker.node;
                                 for counter in 0..2 {
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, to);
                                     our_breakers
                                         .iter()
                                         .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -149,7 +153,7 @@ impl<'a> ControlFlowGraph<'a> {
                                         self.vertices.insert(vertice);
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, to);
                                     our_breakers
                                         .iter()
                                         .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -201,7 +205,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     }
                                     if counter == 0 { cond_predecessors = predecessors.clone(); }
                                 }
-                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers, to);
                                 our_breakers
                                     .iter()
                                     .filter(|breaker| breaker.kind == BreakerType::Continue)
@@ -285,7 +289,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     if !self.edges.insert((*predecessor, id)) { return None; }
                                     Some(id)
                                 })
-                            .collect::<Vec<u32>>();
+                                .collect::<Vec<u32>>();
                             if !predecessors.is_empty() {
                                 let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                                 self.vertices.insert(vertice);
@@ -293,7 +297,28 @@ impl<'a> ControlFlowGraph<'a> {
                             predecessors.dedup();
                         },
                         GraphNode::ModifierInvocation(CodeBlock::Block(walker)) => {
-                            // TODO
+                            let Node { id, source, .. } = walker.node;
+                            predecessors = predecessors
+                                .iter()
+                                .filter_map(|predecessor| {
+                                    if !self.edges.insert((*predecessor, id)) { return None; }
+                                    Some(id)
+                                })
+                                .collect::<Vec<u32>>();
+                            if !predecessors.is_empty() {
+                                let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                                self.vertices.insert(vertice);
+                            }
+                            predecessors.dedup();
+                        },
+                        GraphNode::Jump(to) => {
+                            // TODO: jump to other ref
+                            let p = self.jump(*to, predecessors, *to);
+                            predecessors = vec![]
+                        },
+                        GraphNode::PlaceHolder(CodeBlock::Block(walker)) => {
+                            // TODO: jump back to prev
+                            panic!("PLACE HOLDER");
                         },
                         _ => unimplemented!(),
                     }
@@ -304,8 +329,25 @@ impl<'a> ControlFlowGraph<'a> {
         return predecessors;
     }
 
-    pub fn analyze(&mut self, entry: u32, mut handlers: Vec<Box<Analyzer>>)
-    {
+    fn jump(&mut self, entry: u32, mut predecessors: Vec<u32>, to: u32) -> Vec<u32> {
+        if self.entries.contains_key(&entry) {
+            for predecessor in predecessors {
+                self.edges.insert((predecessor, entry));
+            }
+            self.entries.get(&entry).unwrap().clone()
+        } else {
+            let walker = self.dict.lookup(entry).expect("must exist").clone();
+            let mut graph = Graph::new(walker);
+            let root = graph.update();
+            if let GraphNode::Root(blocks) = root {
+                self.traverse(blocks, predecessors, &mut vec![], to)
+            } else {
+                vec![]
+            }
+        }
+    }
+
+    pub fn analyze(&mut self, entry: u32, mut handlers: Vec<Box<Analyzer>>) {
         let walker = self.dict.lookup(entry).expect("must exist").clone();
         let mut graph = Graph::new(walker);
         let root = graph.update();
@@ -315,10 +357,12 @@ impl<'a> ControlFlowGraph<'a> {
             let vertice = Vertex::new(self.stop, "STOP", Shape::Point);
             self.vertices.insert(vertice);
             let mut predecessors = vec![self.start];
-            predecessors = self.traverse(blocks, predecessors, &mut vec![]);
-            for predecessor in predecessors {
-                self.edges.insert((predecessor, self.stop));
+            self.entries.insert(entry, vec![]);
+            predecessors = self.traverse(blocks, predecessors, &mut vec![], self.stop);
+            for predecessor in predecessors.iter() {
+                self.edges.insert((*predecessor, self.stop));
             }
+            self.entries.insert(entry, predecessors);
         }
         let mut state = State {
             edges: &self.edges,

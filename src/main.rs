@@ -32,8 +32,8 @@ fn main() -> io::Result<()> {
         let dict = Dictionary::new(ast_one, &source_content);
         let mut control_flow = ControlFlowGraph::new(&dict);
         let handlers: Vec<Box<Analyzer>> = vec![
-            Box::new(Dot::new()),
             Box::new(DataFlowGraph::new()),
+            Box::new(Dot::new()),
         ];
         control_flow.analyze(31, handlers);
     }

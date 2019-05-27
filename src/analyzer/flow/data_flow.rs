@@ -30,25 +30,33 @@ impl DataFlowGraph {
     }
 
     pub fn find_assignments(&self, id: u32, dict: &Dictionary) -> Vec<Assignment> {
-        let walker = dict.lookup(id).unwrap();
-        Assignment::parse(walker, dict)
+        match dict.lookup(id) {
+            Some(walker) => Assignment::parse(walker, dict),
+            None => vec![],
+        }
     }
 
     pub fn find_variables(&self, id: u32, dict: &Dictionary) -> HashSet<Variable> {
-        let walker = dict.lookup(id).unwrap();
-        Variable::parse(walker, dict)
+        match dict.lookup(id) {
+            Some(walker) => Variable::parse(walker, dict),
+            None => HashSet::new(),
+        }
     }
 
     pub fn find_parameters(&self, id: u32, dict: &Dictionary) -> HashSet<Variable> {
-        let walker = dict.lookup(id).unwrap();
-        let mut variables = HashSet::new();
-        walker.for_all(|_| { true }, |walkers| {
-            for walker in &walkers[1..] {
-                let vars = Variable::parse(walker, dict);
-                variables.extend(vars);
-            }
-        });
-        variables
+        match dict.lookup(id) {
+            Some(walker) => {
+                let mut variables = HashSet::new();
+                walker.for_all(|_| { true }, |walkers| {
+                    for walker in &walkers[1..] {
+                        let vars = Variable::parse(walker, dict);
+                        variables.extend(vars);
+                    }
+                });
+                variables
+            },
+            None => HashSet::new(),
+        }
     }
 }
 
