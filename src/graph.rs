@@ -4,23 +4,8 @@ use super::{
 
 #[derive(Debug)]
 pub struct Graph<'a> {
-    config: &'a GraphConfig<'a>,
     walker: Walker<'a>,
     root: GraphNode<'a>,
-}
-
-#[derive(Debug)]
-pub struct GraphConfig<'a> {
-    pub contract_name: &'a str,
-    pub kind: GraphKind<'a>,
-    pub include_state: bool,
-}
-
-#[derive(Debug)]
-pub enum GraphKind<'a> {
-    Constructor,
-    Fallback,
-    Function(&'a str),
 }
 
 #[derive(Debug)]
@@ -93,8 +78,8 @@ pub struct ForStatement<'a> {
 }
 
 impl<'a> Graph<'a> {
-    pub fn new(config: &'a GraphConfig, walker: Walker<'a>) -> Self {
-        Graph { config, walker, root: GraphNode::None }
+    pub fn new(walker: Walker<'a>) -> Self {
+        Graph { walker, root: GraphNode::None }
     }
 
     pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
@@ -272,7 +257,6 @@ impl<'a> Graph<'a> {
                             }
                         },
                         "ModifierInvocation" => {
-                            unimplemented!();
                         },
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
@@ -288,63 +272,11 @@ impl<'a> Graph<'a> {
     pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> GraphNode<'a> {
         match kind {
             NodeKind::Root => {
-                let mut blocks = vec![]; 
-                let contract_name = self.config.contract_name;
-                let config_kind = &self.config.kind;
-                walker.for_all(|walker| {
-                    walker.node.name == "ContractDefinition"
-                    && walker.node.attributes["name"].as_str().unwrap_or("") == contract_name
-                }, |walkers| {
-                    for walker in walkers {
-                        if self.config.include_state {
-                            walker.for_all(|walker| {
-                                walker.node.name == "VariableDeclaration"
-                            }, |walkers| {
-                                for walker in walkers {
-                                    let block = CodeBlock::Block(walker);
-                                    blocks.push(block);
-                                }
-                            });
-                        }
-                        match config_kind {
-                            GraphKind::Constructor => {
-                                walker.for_all(|walker| {
-                                    walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
-                                }, |walkers| {
-                                    for walker in walkers {
-                                        blocks.append(
-                                            &mut self.build_block(BlockKind::Param, walker)
-                                        );
-                                    }
-                                });
-                            },
-                            GraphKind::Fallback => {
-                                walker.for_all(|walker| {
-                                    !walker.node.attributes["isConstructor"].as_bool().unwrap_or(false)
-                                    && walker.node.attributes["name"].as_str().unwrap_or("") == ""
-                                }, |walkers| {
-                                    for walker in walkers {
-                                        blocks.append(
-                                            &mut self.build_block(BlockKind::Param, walker)
-                                        );
-                                    }
-                                });
-                            },
-                            GraphKind::Function(name) => {
-                                walker.for_all(|walker| {
-                                    walker.node.attributes["name"].as_str().unwrap_or("") == *name
-                                }, |walkers| {
-                                    for walker in walkers {
-                                        blocks.append(
-                                            &mut self.build_block(BlockKind::Param, walker)
-                                        );
-                                    }
-                                });
-                            },
-                        }
-                    }
-                });
-                GraphNode::Root(blocks)
+                if walker.node.name == "FunctionDefinition" {
+                    GraphNode::Root(self.build_block(BlockKind::Param, walker))
+                } else {
+                    panic!("Entry point of graph must be a function");
+                }
             },
             NodeKind::ForStatement => {
                 let mut blocks = vec![];

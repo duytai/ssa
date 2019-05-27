@@ -12,13 +12,11 @@ use super::{
         DoWhileStatement,
         ForStatement,
     },
-    walker::{ Walker, Node },
+    walker::{ Node },
     vertex::{ Vertex, Shape },
     dict::{ Dictionary },
-    analyzer::{ State },
+    analyzer::{ Analyzer, State },
 };
-
-pub use super::graph::{ GraphKind, GraphConfig };
 
 pub struct ControlFlowGraph<'a> {
     value: &'a json::JsonValue,
@@ -41,9 +39,9 @@ pub struct LoopBreaker {
     id: u32,
 }
 
-impl<'a> Flow<'a> {
+impl<'a> ControlFlowGraph <'a> {
     pub fn new(value: &'a json::JsonValue, source: &'a str) -> Self {
-        Flow {
+        ControlFlowGraph {
             value,
             source,
             edges: HashSet::new(),
@@ -306,10 +304,11 @@ impl<'a> Flow<'a> {
         return predecessors;
     }
 
-    pub fn analyze(&mut self, config: &GraphConfig, mut handlers: Vec<Box<Oracle>>)
+    pub fn analyze(&mut self, entry: u32, mut handlers: Vec<Box<Analyzer>>)
     {
-        let walker = Walker::new(self.value, self.source);
-        let mut graph = Graph::new(config, walker);
+        let dict = Dictionary::new(self.value, self.source);
+        let walker = dict.lookup(entry).expect("must exist");
+        let mut graph = Graph::new(walker.clone());
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
             let vertice = Vertex::new(self.start, "START", Shape::Point);
@@ -322,11 +321,11 @@ impl<'a> Flow<'a> {
                 self.edges.insert((predecessor, self.stop));
             }
         }
-        let dict = Dictionary::new(self.value, self.source);
         let mut state = State {
             edges: &self.edges,
             vertices: &self.vertices,
             dict: &dict,
+            links: None,
         };
         for handler in handlers.iter_mut() {
             handler.analyze(&mut state);

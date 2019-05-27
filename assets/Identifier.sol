@@ -7,13 +7,7 @@ contract Identifier {
       _;
     }
   } 
-  uint z = 10;
-  function test(uint x, uint y) {
-    while (true) {
-      if (msg.sender.send(x)) {
-        y += x;
-        z += y;
-      }
-    }
+  function test(uint x) isOwner(x == 20) {
+    x += 10;
   }
 }

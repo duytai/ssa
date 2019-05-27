@@ -1,11 +1,11 @@
 mod walker;
 mod graph;
-mod flow;
+mod control_flow;
 mod dict;
 mod vertex;
 mod analyzer;
 
-use flow::{ ControlFlowGraph, GraphKind, GraphConfig };
+use control_flow::{ ControlFlowGraph };
 use analyzer::{ 
     Dot, 
     DataFlowGraph,
@@ -29,18 +29,13 @@ fn main() -> io::Result<()> {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
         let mut control_flow = ControlFlowGraph::new(ast_one, &source_content);
-        let config = GraphConfig { 
-            kind: GraphKind::Function("test"),
-            contract_name: "Identifier",
-            include_state: true,
-        };
         let dot = Dot::new();
         let data_flow = DataFlowGraph::new();
         let handlers: Vec<Box<Analyzer>> = vec![
             Box::new(data_flow),
             Box::new(dot),
         ];
-        control_flow.analyze(&config, handlers);
+        control_flow.analyze(31, handlers);
     }
     Ok(())
 }
