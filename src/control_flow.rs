@@ -1,7 +1,6 @@
 use std::{
     collections::HashSet,
 };
-use json;
 use super::{
     graph::{
         Graph,
@@ -12,17 +11,16 @@ use super::{
         DoWhileStatement,
         ForStatement,
     },
-    walker::{ Node },
-    vertex::{ Vertex, Shape },
     dict::{ Dictionary },
+    walker::{ Node, Walker },
+    vertex::{ Vertex, Shape },
     analyzer::{ Analyzer, State },
 };
 
 pub struct ControlFlowGraph<'a> {
-    value: &'a json::JsonValue,
-    source: &'a str, 
     edges: HashSet<(u32, u32)>,
     vertices: HashSet<Vertex>,
+    dict: &'a Dictionary<'a>,
     start: u32,
     stop: u32,
 }
@@ -39,13 +37,12 @@ pub struct LoopBreaker {
     id: u32,
 }
 
-impl<'a> ControlFlowGraph <'a> {
-    pub fn new(value: &'a json::JsonValue, source: &'a str) -> Self {
+impl<'a> ControlFlowGraph<'a> {
+    pub fn new(dict: &'a Dictionary) -> Self {
         ControlFlowGraph {
-            value,
-            source,
             edges: HashSet::new(),
             vertices: HashSet::new(),
+            dict,
             start: 0,
             stop: 1000000,
         }
@@ -295,6 +292,9 @@ impl<'a> ControlFlowGraph <'a> {
                             }
                             predecessors.dedup();
                         },
+                        GraphNode::ModifierInvocation(CodeBlock::Block(walker)) => {
+                            // TODO
+                        },
                         _ => unimplemented!(),
                     }
                 },
@@ -306,9 +306,8 @@ impl<'a> ControlFlowGraph <'a> {
 
     pub fn analyze(&mut self, entry: u32, mut handlers: Vec<Box<Analyzer>>)
     {
-        let dict = Dictionary::new(self.value, self.source);
-        let walker = dict.lookup(entry).expect("must exist");
-        let mut graph = Graph::new(walker.clone());
+        let walker = self.dict.lookup(entry).expect("must exist").clone();
+        let mut graph = Graph::new(walker);
         let root = graph.update();
         if let GraphNode::Root(blocks) = root {
             let vertice = Vertex::new(self.start, "START", Shape::Point);
@@ -324,7 +323,7 @@ impl<'a> ControlFlowGraph <'a> {
         let mut state = State {
             edges: &self.edges,
             vertices: &self.vertices,
-            dict: &dict,
+            dict: &self.dict,
             links: None,
         };
         for handler in handlers.iter_mut() {

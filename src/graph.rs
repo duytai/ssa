@@ -47,6 +47,7 @@ pub enum GraphNode<'a> {
     Suicide(CodeBlock<'a>),
     Selfdestruct(CodeBlock<'a>),
     FunctionCall(CodeBlock<'a>),
+    ModifierInvocation(CodeBlock<'a>),
     None,
 }
 
@@ -257,6 +258,9 @@ impl<'a> Graph<'a> {
                             }
                         },
                         "ModifierInvocation" => {
+                            let block = CodeBlock::Block(walker);
+                            let node = GraphNode::ModifierInvocation(block);
+                            blocks.push(CodeBlock::Link(Box::new(node)));
                         },
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
@@ -275,6 +279,7 @@ impl<'a> Graph<'a> {
                 if walker.node.name == "FunctionDefinition" {
                     GraphNode::Root(self.build_block(BlockKind::Param, walker))
                 } else {
+                    println!("name: {}", walker.node.name);
                     panic!("Entry point of graph must be a function");
                 }
             },

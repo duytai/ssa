@@ -6,6 +6,7 @@ mod vertex;
 mod analyzer;
 
 use control_flow::{ ControlFlowGraph };
+use dict::{ Dictionary };
 use analyzer::{ 
     Dot, 
     DataFlowGraph,
@@ -28,12 +29,11 @@ fn main() -> io::Result<()> {
     for source in ast_json["sourceList"].members() {
         let source = source.as_str().unwrap();
         let ast_one = &ast_json["sources"][source]["AST"];
-        let mut control_flow = ControlFlowGraph::new(ast_one, &source_content);
-        let dot = Dot::new();
-        let data_flow = DataFlowGraph::new();
+        let dict = Dictionary::new(ast_one, &source_content);
+        let mut control_flow = ControlFlowGraph::new(&dict);
         let handlers: Vec<Box<Analyzer>> = vec![
-            Box::new(data_flow),
-            Box::new(dot),
+            Box::new(Dot::new()),
+            Box::new(DataFlowGraph::new()),
         ];
         control_flow.analyze(31, handlers);
     }
