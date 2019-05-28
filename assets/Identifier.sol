@@ -1,7 +1,11 @@
 contract Identifier {
   address owner;
-  function test(uint x) {
+  modifier isOwner(bool n) {
     selfdestruct(this);
+    _;
+    n = !n;
+  } 
+  function test(uint x) isOwner(x == 20) {
     x += 10;
   }
 }

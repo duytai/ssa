@@ -245,11 +245,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        GraphNode::Return(CodeBlock::Block(walker)) 
-                            | GraphNode::Revert(CodeBlock::Block(walker))
-                            | GraphNode::Throw(CodeBlock::Block(walker)) 
-                            | GraphNode::Suicide(CodeBlock::Block(walker)) 
-                            | GraphNode::Selfdestruct(CodeBlock::Block(walker)) => {
+                        GraphNode::Return(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
@@ -260,16 +256,30 @@ impl<'a> ControlFlowGraph<'a> {
                             self.edges.insert((id, stop));
                             predecessors = vec![];
                         },
-                        GraphNode::Require(CodeBlock::Block(walker))
-                            | GraphNode::Assert(CodeBlock::Block(walker)) => {
+                        GraphNode::Revert(CodeBlock::Block(walker))
+                            | GraphNode::Throw(CodeBlock::Block(walker)) 
+                            | GraphNode::Suicide(CodeBlock::Block(walker)) 
+                            | GraphNode::Selfdestruct(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
-                            let vertice = Vertex::new(id, source, Shape::Diamond);
+                            let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                             self.vertices.insert(vertice);
                             for predecessor in predecessors.iter() {
                                 self.edges.insert((*predecessor, id));
                             }
-                            let stop = self.entries.get(&call_param.entry_id).unwrap().1;
-                            self.edges.insert((id, stop));
+                            let (_, stop) = self.entries.get(&0).unwrap();
+                            self.edges.insert((id, *stop));
+                            predecessors = vec![];
+                        },
+                        GraphNode::Require(CodeBlock::Block(walker))
+                            | GraphNode::Assert(CodeBlock::Block(walker)) => {
+                            let Node { id, source, .. } = walker.node;
+                            let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                            self.vertices.insert(vertice);
+                            for predecessor in predecessors.iter() {
+                                self.edges.insert((*predecessor, id));
+                            }
+                            let (_, stop) = self.entries.get(&0).unwrap();
+                            self.edges.insert((id, *stop));
                             predecessors = vec![id];
                         },
                         GraphNode::Break(CodeBlock::Block(walker)) => {

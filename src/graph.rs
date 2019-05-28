@@ -200,43 +200,35 @@ impl<'a> Graph<'a> {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
                     for walker in walkers {
-                        let mut funcs = (false, false, false, false, false);
-                        let node_value = walker.node.attributes["value"]
-                            .as_str()
-                            .unwrap_or("");
-                        let node_type = walker.node.attributes["type"]
-                            .as_str()
-                            .unwrap_or("");
-                        match(node_value, node_type) {
-                            ("revert", "function () pure") => funcs.0 = true,
-                            ("assert", "function (bool) pure") => funcs.1 = true,
-                            ("require", "function (bool) pure") =>  funcs.2 = true,
-                            ("suicide", "function (address)") => funcs.3 = true,
-                            ("selfdestruct", "function (address)") => funcs.4 = true,
-                            _ => {},
-                        };
-                        let block = CodeBlock::Block(walker);
-                        match funcs {
-                            (true, _, _, _, _) => {
-                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Revert(block))));
-                            },
-                            (_, true, _, _, _) => {
-                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Assert(block))));
-                            },
-                            (_, _, true, _, _) => {
-                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Require(block))));
-                            },
-                            (_, _, _, true, _) => {
-                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Suicide(block))));
-                            },
-                            (_, _, _, _, true) => {
-                                blocks.push(CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block))));
-                            },
-                            (_, _, _, _, _) => {
-                                let node = GraphNode::FunctionCall(block);
-                                blocks.push(CodeBlock::Link(Box::new(node)));
-                            },
-                        };
+                        walker.for_each(|w, index| {
+                            if index == 0 {
+                                let block = CodeBlock::Block(walker.clone());
+                                let node_value = w.node.attributes["value"]
+                                    .as_str()
+                                    .unwrap_or("");
+                                match node_value {
+                                    "revert" => {
+                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Revert(block))));
+                                    },
+                                    "assert" => {
+                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Assert(block))));
+                                    },
+                                    "require" => {
+                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Require(block))));
+                                    },
+                                    "suicide" => {
+                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Suicide(block))));
+                                    },
+                                    "selfdestruct" => {
+                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block))));
+                                    },
+                                    _ => {
+                                        let node = GraphNode::FunctionCall(block);
+                                        blocks.push(CodeBlock::Link(Box::new(node)));
+                                    },
+                                };
+                            }
+                        });
                     }
                 });
                 blocks.push(CodeBlock::Block(walker));
