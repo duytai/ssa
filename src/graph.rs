@@ -30,6 +30,12 @@ pub enum CodeBlock<'a> {
     None,
 }
 
+#[derive(Debug, Clone)]
+pub enum JumpKind {
+    Function,
+    Modifier,
+}
+
 #[derive(Debug)]
 pub enum GraphNode<'a> {
     Root(Vec<CodeBlock<'a>>),
@@ -49,7 +55,7 @@ pub enum GraphNode<'a> {
     FunctionCall(CodeBlock<'a>),
     ModifierInvocation(CodeBlock<'a>),
     PlaceHolder(CodeBlock<'a>),
-    Jump(u32),
+    Jump(JumpKind, u32, u32),
     None,
 }
 
@@ -265,6 +271,7 @@ impl<'a> Graph<'a> {
                         },
                         "ModifierInvocation" => {
                             let mut to = None;
+                            let from = walker.node.id;
                             walker.for_each(|walker, index| {
                                 if index == 0 {
                                     to = walker.node.attributes["referencedDeclaration"].as_u32();
@@ -274,7 +281,7 @@ impl<'a> Graph<'a> {
                             let node = GraphNode::ModifierInvocation(block);
                             blocks.push(CodeBlock::Link(Box::new(node)));
                             if let Some(to) = to {
-                                let node = GraphNode::Jump(to);
+                                let node = GraphNode::Jump(JumpKind::Modifier, from, to);
                                 blocks.push(CodeBlock::Link(Box::new(node)));
                             }
                         },

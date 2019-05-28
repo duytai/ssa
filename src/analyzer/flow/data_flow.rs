@@ -62,8 +62,7 @@ impl DataFlowGraph {
 
 impl Analyzer for DataFlowGraph {
     fn analyze(&mut self, state: &mut State) {
-        let stop = 1000000;
-        let State { vertices, edges, dict, .. } = state;
+        let State { vertices, edges, dict, stop, .. } = state;
         let mut visited: HashSet<u32> = HashSet::new();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
@@ -81,7 +80,7 @@ impl Analyzer for DataFlowGraph {
         }
         if let Some(parents) = parents.get(&stop) {
             for parent in parents {
-                stack.push((stop, *parent, actions.clone()));
+                stack.push((*stop, *parent, actions.clone()));
             }
         } 
         while stack.len() > 0 {
