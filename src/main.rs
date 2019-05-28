@@ -35,7 +35,7 @@ fn main() -> io::Result<()> {
             Box::new(DataFlowGraph::new()),
             Box::new(Dot::new()),
         ];
-        control_flow.analyze(32, handlers);
+        control_flow.analyze(27, handlers);
     }
     Ok(())
 }

@@ -30,12 +30,6 @@ pub enum CodeBlock<'a> {
     None,
 }
 
-#[derive(Debug, Clone)]
-pub enum JumpKind {
-    Function,
-    Modifier,
-}
-
 #[derive(Debug)]
 pub enum GraphNode<'a> {
     Root(Vec<CodeBlock<'a>>),
@@ -54,8 +48,6 @@ pub enum GraphNode<'a> {
     Selfdestruct(CodeBlock<'a>),
     FunctionCall(CodeBlock<'a>),
     ModifierInvocation(CodeBlock<'a>),
-    PlaceHolder(CodeBlock<'a>),
-    Jump(JumpKind, u32, u32),
     None,
 }
 
@@ -235,11 +227,7 @@ impl<'a> Graph<'a> {
                 blocks
             },
             "InlineAssemblyStatement" => unimplemented!(),
-            "PlaceholderStatement" => {
-                let block = CodeBlock::Block(walker);
-                let node = GraphNode::PlaceHolder(block);
-                vec![CodeBlock::Link(Box::new(node))]
-            }, 
+            "PlaceholderStatement" => unimplemented!(), 
             _ => vec![CodeBlock::Block(walker)],
         }
     }
@@ -262,20 +250,9 @@ impl<'a> Graph<'a> {
                             }
                         },
                         "ModifierInvocation" => {
-                            let mut to = None;
-                            let from = walker.node.id;
-                            walker.for_each(|walker, index| {
-                                if index == 0 {
-                                    to = walker.node.attributes["referencedDeclaration"].as_u32();
-                                }
-                            });
                             let block = CodeBlock::Block(walker);
                             let node = GraphNode::ModifierInvocation(block);
                             blocks.push(CodeBlock::Link(Box::new(node)));
-                            if let Some(to) = to {
-                                let node = GraphNode::Jump(JumpKind::Modifier, from, to);
-                                blocks.push(CodeBlock::Link(Box::new(node)));
-                            }
                         },
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));

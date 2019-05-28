@@ -1,9 +1,8 @@
 contract Identifier {
   address owner;
   modifier isOwner(bool n) {
-    selfdestruct(this);
+    require(n);
     _;
-    n = !n;
   } 
   function test(uint x) isOwner(x == 20) {
     x += 10;
