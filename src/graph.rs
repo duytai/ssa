@@ -87,75 +87,30 @@ impl<'a> Graph<'a> {
         match walker.node.name {
             "IfStatement" => {
                 let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        let block = CodeBlock::Block(walker);
-                        let node = GraphNode::FunctionCall(block);
-                        blocks.push(CodeBlock::Link(Box::new(node)));
-                    }
-                });
                 let node = self.build_node(NodeKind::IfStatement, walker); 
                 blocks.push(CodeBlock::Link(Box::new(node)));
                 blocks
             },
             "WhileStatement" => {
                 let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        let block = CodeBlock::Block(walker);
-                        let node = GraphNode::FunctionCall(block);
-                        blocks.push(CodeBlock::Link(Box::new(node)));
-                    }
-                });
                 let node = self.build_node(NodeKind::WhileStatement, walker);
                 blocks.push(CodeBlock::Link(Box::new(node)));
                 blocks
             },
             "ForStatement" => {
                 let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        let block = CodeBlock::Block(walker);
-                        let node = GraphNode::FunctionCall(block);
-                        blocks.push(CodeBlock::Link(Box::new(node)));
-                    }
-                });
                 let node = self.build_node(NodeKind::ForStatement, walker);
                 blocks.push(CodeBlock::Link(Box::new(node)));
                 blocks
             },
             "DoWhileStatement" => {
                 let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        let block = CodeBlock::Block(walker);
-                        let node = GraphNode::FunctionCall(block);
-                        blocks.push(CodeBlock::Link(Box::new(node)));
-                    }
-                });
                 let node = self.build_node(NodeKind::DoWhileStatement, walker);
                 blocks.push(CodeBlock::Link(Box::new(node)));
                 blocks
             },
             "Return" => {
                 let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        let block = CodeBlock::Block(walker);
-                        let node = GraphNode::FunctionCall(block);
-                        blocks.push(CodeBlock::Link(Box::new(node)));
-                    }
-                });
                 let node = GraphNode::Return(CodeBlock::Block(walker));
                 blocks.push(CodeBlock::Link(Box::new(node)));
                 blocks
@@ -174,15 +129,6 @@ impl<'a> Graph<'a> {
             },
             "VariableDeclarationStatement" | "EmitStatement" => {
                 let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        let block = CodeBlock::Block(walker);
-                        let node = GraphNode::FunctionCall(block);
-                        blocks.push(CodeBlock::Link(Box::new(node)));
-                    }
-                });
                 blocks.push(CodeBlock::Block(walker));
                 blocks
             },

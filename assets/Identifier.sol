@@ -1,7 +1,7 @@
 contract Identifier {
   address owner;
   function pay(uint amount) {
-    if (amount < 1000) {
+    if (msg.sender.send(amount)) {
       msg.sender.send(amount);
     }
   }
