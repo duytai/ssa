@@ -1,10 +1,8 @@
 contract Identifier {
   address owner;
-  modifier isOwner(bool n) {
-    require(n);
-    _;
-  } 
-  function test(uint x) isOwner(x == 20) {
-    x += 10;
+  function pay(uint amount) {
+    if (amount < 1000) {
+      msg.sender.send(amount);
+    }
   }
 }
