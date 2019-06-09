@@ -1,12 +1,17 @@
+use std::path::PathBuf;
+use std::fs::File;
+use std::io::prelude::*;
 use crate::{
     analyzer::{ Analyzer, State },
 };
 
-pub struct Dot {}
+pub struct Dot {
+    file_path: PathBuf,
+}
 
 impl Dot {
-    pub fn new() -> Self {
-        Dot {}
+    pub fn new(file_path: PathBuf) -> Self {
+        Dot { file_path }
     }
 }
 
@@ -30,7 +35,10 @@ impl Analyzer for Dot {
             }
         }
 
-        println!("digraph {{\n{0}{1}}}", vertices_str, edges_str);
+        let mut file = File::create(&self.file_path).unwrap();
+        let data = format!("digraph {{\n{0}{1}}}", vertices_str, edges_str);
+        println!("{}", data);
+        file.write_all(data.as_bytes()).unwrap();
     }
 }
 
