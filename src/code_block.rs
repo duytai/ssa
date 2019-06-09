@@ -56,60 +56,55 @@ pub struct ForStatement<'a> {
 }
 
 impl<'a> CodeBlock<'a> {
-    pub fn is_function_call(&self) -> bool {
-        match self {
-            CodeBlock::Block(walker) => {
-                walker.node.name == "FunctionCall"
-            },
-            _ => false,
+    fn to_call(&self, walker: Walker<'a>) -> Option<CodeBlock<'a>> {
+        let mut function_name = None;
+        if walker.node.name == "FunctionCall" {
+            walker.for_each(|walker, index| {
+                if index == 0 {
+                    let temp = walker.node.attributes["value"].as_str().unwrap_or("");
+                    function_name = Some(temp);
+                }
+            });
         }
+        let block = CodeBlock::Block(walker);
+        function_name.map(|function_name| {
+            match function_name {
+                "revert" => CodeBlock::Link(Box::new(GraphNode::Revert(block))), 
+                "assert" => CodeBlock::Link(Box::new(GraphNode::Assert(block))),
+                "require" => CodeBlock::Link(Box::new(GraphNode::Require(block))),
+                "suicide" => CodeBlock::Link(Box::new(GraphNode::Suicide(block))),
+                "selfdestruct" => CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block))),
+                _ => CodeBlock::Link(Box::new(GraphNode::FunctionCall(block))), 
+            }
+        })
     }
 
-    pub fn find_function_calls(&self) -> Vec<CodeBlock<'a>> {
+    pub fn to_primitives(&self) -> Vec<CodeBlock<'a>> {
         match self {
             CodeBlock::Block(walker) => {
-                let mut function_calls = vec![];
+                let mut calls = vec![];
+                let mut last_call_source = None;
                 walker.all(|walker| {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
                     for walker in walkers {
-                        walker.for_each(|walker, index| {
-                            if index == 0 {
-                                let function_name = walker.node.attributes["value"]
-                                    .as_str()
-                                    .unwrap_or("");
-                                let block = CodeBlock::Block(walker);
-                                match function_name {
-                                    "revert" => {
-                                        let node = GraphNode::Revert(block);
-                                        function_calls.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                    "assert" => {
-                                        let node = GraphNode::Assert(block);
-                                        function_calls.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                    "require" => {
-                                        let node = GraphNode::Require(block);
-                                        function_calls.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                    "suicide" => {
-                                        let node = GraphNode::Suicide(block);
-                                        function_calls.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                    "selfdestruct" => {
-                                        let node = GraphNode::Selfdestruct(block);
-                                        function_calls.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                    _ => {
-                                        let node = GraphNode::FunctionCall(block);
-                                        function_calls.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                };
-                            }
-                        })
+                        let source = walker.node.source;
+                        if let Some(call) = self.to_call(walker) {
+                            calls.push(call);
+                            last_call_source = Some(source);
+                        }
                     }
                 });
-                function_calls
+                if let Some(call) = self.to_call(walker.clone()) {
+                    calls.push(call);
+                } else {
+                    if let Some(last_call_source) = last_call_source {
+                        if last_call_source.trim() != walker.node.source.trim() {
+                            calls.push(CodeBlock::Block(walker.clone()));
+                        }
+                    }
+                }
+                calls
             },
             _ => vec![],
         }

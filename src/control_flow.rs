@@ -51,7 +51,7 @@ impl<'a> ControlFlowGraph<'a> {
             if predecessors.is_empty() {
                 return vec![];
             }
-            block.find_function_calls();
+            block.to_primitives();
             match block {
                 CodeBlock::Block(walker) => {
                     let Node { id, source, .. } = walker.node;
