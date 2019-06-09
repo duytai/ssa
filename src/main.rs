@@ -1,5 +1,6 @@
 mod walker;
 mod graph;
+mod code_block;
 mod control_flow;
 mod dict;
 mod vertex;

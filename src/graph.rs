@@ -1,5 +1,11 @@
-use super::{
-    walker::{ Walker },
+use crate::walker::Walker;
+use crate::code_block::{
+    CodeBlock,
+    GraphNode,
+    IfStatement,
+    WhileStatement,
+    DoWhileStatement,
+    ForStatement,
 };
 
 #[derive(Debug)]
@@ -23,60 +29,7 @@ pub enum NodeKind {
     DoWhileStatement,
 }
 
-#[derive(Debug)]
-pub enum CodeBlock<'a> {
-    Block(Walker<'a>),
-    Link(Box<GraphNode<'a>>),
-    None,
-}
 
-#[derive(Debug)]
-pub enum GraphNode<'a> {
-    Root(Vec<CodeBlock<'a>>),
-    IfStatement(IfStatement<'a>),
-    WhileStatement(WhileStatement<'a>),
-    ForStatement(ForStatement<'a>),
-    DoWhileStatement(DoWhileStatement<'a>),
-    Return(CodeBlock<'a>),
-    Require(CodeBlock<'a>),
-    Assert(CodeBlock<'a>),
-    Revert(CodeBlock<'a>),
-    Throw(CodeBlock<'a>),
-    Break(CodeBlock<'a>),
-    Continue(CodeBlock<'a>),
-    Suicide(CodeBlock<'a>),
-    Selfdestruct(CodeBlock<'a>),
-    FunctionCall(CodeBlock<'a>),
-    ModifierInvocation(CodeBlock<'a>),
-    None,
-}
-
-#[derive(Debug)]
-pub struct WhileStatement<'a> {
-    pub condition: CodeBlock<'a>,
-    pub blocks: Vec<CodeBlock<'a>>,
-}
-
-#[derive(Debug)]
-pub struct DoWhileStatement<'a> {
-    pub condition: CodeBlock<'a>,
-    pub blocks: Vec<CodeBlock<'a>>,
-}
-
-#[derive(Debug)]
-pub struct IfStatement<'a> {
-    pub condition: CodeBlock<'a>,
-    pub tblocks: Vec<CodeBlock<'a>>,
-    pub fblocks: Vec<CodeBlock<'a>>,
-}
-
-#[derive(Debug)]
-pub struct ForStatement<'a> {
-    pub condition: CodeBlock<'a>,
-    pub init: CodeBlock<'a>,
-    pub expression: CodeBlock<'a>,  
-    pub blocks: Vec<CodeBlock<'a>>,
-}
 
 impl<'a> Graph<'a> {
     pub fn new(walker: Walker<'a>) -> Self {
@@ -127,48 +80,8 @@ impl<'a> Graph<'a> {
                 let node = GraphNode::Break(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
-            "VariableDeclarationStatement" | "EmitStatement" => {
+            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" => {
                 let mut blocks = vec![];
-                blocks.push(CodeBlock::Block(walker));
-                blocks
-            },
-            "ExpressionStatement" => {
-                let mut blocks = vec![];
-                walker.all(|walker| {
-                    walker.node.name == "FunctionCall"
-                }, |walkers| {
-                    for walker in walkers {
-                        walker.for_each(|w, index| {
-                            if index == 0 {
-                                let block = CodeBlock::Block(walker.clone());
-                                let node_value = w.node.attributes["value"]
-                                    .as_str()
-                                    .unwrap_or("");
-                                match node_value {
-                                    "revert" => {
-                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Revert(block))));
-                                    },
-                                    "assert" => {
-                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Assert(block))));
-                                    },
-                                    "require" => {
-                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Require(block))));
-                                    },
-                                    "suicide" => {
-                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Suicide(block))));
-                                    },
-                                    "selfdestruct" => {
-                                        blocks.push(CodeBlock::Link(Box::new(GraphNode::Selfdestruct(block))));
-                                    },
-                                    _ => {
-                                        let node = GraphNode::FunctionCall(block);
-                                        blocks.push(CodeBlock::Link(Box::new(node)));
-                                    },
-                                };
-                            }
-                        });
-                    }
-                });
                 blocks.push(CodeBlock::Block(walker));
                 blocks
             },

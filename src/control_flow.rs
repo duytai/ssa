@@ -1,12 +1,6 @@
-use std::{
-    collections::{
-        HashMap,
-        HashSet,
-    },
-};
-use super::{
-    graph::{
-        Graph,
+use std::collections::HashSet;
+use crate::{
+    code_block::{
         GraphNode,
         CodeBlock,
         IfStatement,
@@ -14,8 +8,9 @@ use super::{
         DoWhileStatement,
         ForStatement,
     },
-    dict::{ Dictionary },
-    walker::{ Node },
+    graph::Graph,
+    dict::Dictionary,
+    walker::Node,
     vertex::{ Vertex, Shape },
     analyzer::{ Analyzer, State },
 };
@@ -56,6 +51,7 @@ impl<'a> ControlFlowGraph<'a> {
             if predecessors.is_empty() {
                 return vec![];
             }
+            block.find_function_calls();
             match block {
                 CodeBlock::Block(walker) => {
                     let Node { id, source, .. } = walker.node;
