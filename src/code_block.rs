@@ -2,7 +2,6 @@ use crate::walker::Walker;
 
 #[derive(Debug)]
 pub enum CodeBlock<'a> {
-    Unit(Walker<'a>),
     Block(Walker<'a>),
     Link(Box<GraphNode<'a>>),
     None,
@@ -80,34 +79,37 @@ impl<'a> CodeBlock<'a> {
         })
     }
 
-    pub fn split(&self) -> Vec<CodeBlock<'a>> {
+    pub fn split(&self) -> (Vec<CodeBlock<'a>>, Option<CodeBlock<'a>>, Option<(u32, &str)>) {
         match self {
             CodeBlock::Block(walker) => {
+                let mut original_block = None; 
+                let mut last_vertex = None;
                 let mut calls = vec![];
-                let mut last_call_source = None;
                 walker.all(|walker| {
                     walker.node.name == "FunctionCall"
                 }, |walkers| {
                     for walker in walkers {
+                        let id = walker.node.id;
                         let source = walker.node.source;
                         if let Some(call) = self.to_call(walker) {
+                            last_vertex = Some((id, source));
                             calls.push(call);
-                            last_call_source = Some(source);
                         }
                     }
                 });
                 if let Some(call) = self.to_call(walker.clone()) {
+                    last_vertex = Some((walker.node.id, walker.node.source));
                     calls.push(call);
-                } else if let Some(last_call_source) = last_call_source {
-                    if last_call_source.trim() != walker.node.source.trim() {
-                        calls.push(CodeBlock::Unit(walker.clone()));
+                } else if let Some((_, source)) = last_vertex {
+                    if source.trim() != walker.node.source.trim() {
+                        original_block = Some(CodeBlock::Block(walker.clone()));
                     }
                 } else {
-                    calls.push(CodeBlock::Unit(walker.clone()));
+                    original_block = Some(CodeBlock::Block(walker.clone()));
                 }
-                calls
+                (calls, original_block, last_vertex)
             },
-            _ => vec![],
+            _ => (vec![], None, None),
         }
     }
 }

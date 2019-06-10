@@ -1,12 +1,13 @@
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum Shape {
     Point,
     Box,
     Diamond,
     DoubleCircle,
+    Mdiamond,
 }
 
-#[derive(PartialEq, Eq, Hash, Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Vertex {
     pub id: u32,
     pub source: String,
@@ -28,6 +29,7 @@ impl Vertex {
             Shape::Box => "box",
             Shape::Diamond => "diamond",
             Shape::DoubleCircle => "doublecircle",
+            Shape::Mdiamond => "Mdiamond",
         };
         format!("  {}[label={:?}, shape=\"{}\"];\n", self.id, self.source, shape)
     }

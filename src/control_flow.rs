@@ -48,53 +48,68 @@ impl<'a> ControlFlowGraph<'a> {
 
     pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
         for block in blocks {
-            if predecessors.is_empty() {
-                return vec![];
-            }
+            if predecessors.is_empty() { return vec![]; }
             match block {
-                CodeBlock::Unit(walker) => {
-                    let Node { id, source, .. } = walker.node;
-                    predecessors = predecessors
-                        .iter()
-                        .filter_map(|predecessor| {
-                            if !self.edges.insert((*predecessor, id)) { return None; }
-                            Some(id)
-                        })
-                    .collect::<Vec<u32>>();
-                    if !predecessors.is_empty() {
-                        let vertice = Vertex::new(id, source, Shape::Box);
-                        self.vertices.insert(vertice);
-                    }
-                    predecessors.dedup();
-                },
                 CodeBlock::Block(_) => {
-                    let smaller_blocks = block.split(); 
-                    predecessors = self.traverse(&smaller_blocks, predecessors.clone(), breakers);
-                    predecessors.dedup();
+                    let (function_calls, current_block, _) = block.split();
+                    if function_calls.len() > 0 {
+                        predecessors = self.traverse(&function_calls, predecessors.clone(), breakers);
+                    }
+                    if let Some(current_block) = current_block {
+                        if let CodeBlock::Block(walker) = current_block {
+                            let Node { id, source, .. } = walker.node;
+                            predecessors = predecessors
+                                .iter()
+                                .filter_map(|predecessor| {
+                                    if !self.edges.insert((*predecessor, id)) { return None; }
+                                    Some(id)
+                                })
+                            .collect::<Vec<u32>>();
+                            predecessors.dedup();
+                            if !predecessors.is_empty() {
+                                let vertice = Vertex::new(id, source, Shape::Box);
+                                self.vertices.insert(vertice);
+                            }
+                        }
+                    }
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
                         GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
-                            if let CodeBlock::Block(walker) = condition {
-                                let Node { id, source, .. } = walker.node;
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, id)) { return None; }
-                                        Some(id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                                if !predecessors.is_empty() {
-                                    let vertice = Vertex::new(id, source, Shape::Diamond);
-                                    self.vertices.insert(vertice);
+                            let (function_calls, current_block, last_vertex) = condition.split();
+                            if function_calls.len() > 0 {
+                                predecessors = self.traverse(&function_calls, predecessors.clone(), breakers);
+                                if current_block.is_none() {
+                                    if let Some((id, source)) = last_vertex {
+                                        self.vertices.retain(|vertex| vertex.id != id);
+                                        let vertex = Vertex::new(id, source, Shape::Mdiamond);
+                                        self.vertices.insert(vertex);
+                                    }
                                 }
-                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
-                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
-                                predecessors.clear();
-                                predecessors.append(&mut t);
-                                predecessors.append(&mut f);
                             }
+                            if let Some(current_block) = current_block {
+                                if let CodeBlock::Block(walker) = current_block {
+                                    let Node { id, source, .. } = walker.node;
+                                    predecessors = predecessors
+                                        .iter()
+                                        .filter_map(|predecessor| {
+                                            if !self.edges.insert((*predecessor, id)) { return None; }
+                                            Some(id)
+                                        })
+                                    .collect::<Vec<u32>>();
+                                    predecessors.dedup();
+                                    if !predecessors.is_empty() {
+                                        let vertice = Vertex::new(id, source, Shape::Diamond);
+                                        self.vertices.insert(vertice);
+                                    }
+                                }
+                            }
+                            let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
+                            let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
+                            predecessors.clear();
+                            predecessors.append(&mut t);
+                            predecessors.append(&mut f);
+                            predecessors.dedup();
                         },
                         GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
