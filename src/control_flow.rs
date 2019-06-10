@@ -51,9 +51,8 @@ impl<'a> ControlFlowGraph<'a> {
             if predecessors.is_empty() {
                 return vec![];
             }
-            block.to_primitives();
             match block {
-                CodeBlock::Block(walker) => {
+                CodeBlock::Unit(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
                         .iter()
@@ -61,11 +60,16 @@ impl<'a> ControlFlowGraph<'a> {
                             if !self.edges.insert((*predecessor, id)) { return None; }
                             Some(id)
                         })
-                        .collect::<Vec<u32>>();
+                    .collect::<Vec<u32>>();
                     if !predecessors.is_empty() {
                         let vertice = Vertex::new(id, source, Shape::Box);
                         self.vertices.insert(vertice);
                     }
+                    predecessors.dedup();
+                },
+                CodeBlock::Block(_) => {
+                    let smaller_blocks = block.split(); 
+                    predecessors = self.traverse(&smaller_blocks, predecessors.clone(), breakers);
                     predecessors.dedup();
                 },
                 CodeBlock::Link(link) => {

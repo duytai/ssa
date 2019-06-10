@@ -2,6 +2,7 @@ use crate::walker::Walker;
 
 #[derive(Debug)]
 pub enum CodeBlock<'a> {
+    Unit(Walker<'a>),
     Block(Walker<'a>),
     Link(Box<GraphNode<'a>>),
     None,
@@ -79,7 +80,7 @@ impl<'a> CodeBlock<'a> {
         })
     }
 
-    pub fn to_primitives(&self) -> Vec<CodeBlock<'a>> {
+    pub fn split(&self) -> Vec<CodeBlock<'a>> {
         match self {
             CodeBlock::Block(walker) => {
                 let mut calls = vec![];
@@ -97,12 +98,12 @@ impl<'a> CodeBlock<'a> {
                 });
                 if let Some(call) = self.to_call(walker.clone()) {
                     calls.push(call);
-                } else {
-                    if let Some(last_call_source) = last_call_source {
-                        if last_call_source.trim() != walker.node.source.trim() {
-                            calls.push(CodeBlock::Block(walker.clone()));
-                        }
+                } else if let Some(last_call_source) = last_call_source {
+                    if last_call_source.trim() != walker.node.source.trim() {
+                        calls.push(CodeBlock::Unit(walker.clone()));
                     }
+                } else {
+                    calls.push(CodeBlock::Unit(walker.clone()));
                 }
                 calls
             },
