@@ -1,7 +1,7 @@
 use crate::walker::Walker;
 use crate::code_block::{
     CodeBlock,
-    GraphNode,
+    BlockNode,
     IfStatement,
     WhileStatement,
     DoWhileStatement,
@@ -11,7 +11,7 @@ use crate::code_block::{
 #[derive(Debug)]
 pub struct Graph<'a> {
     walker: Walker<'a>,
-    root: GraphNode<'a>,
+    root: BlockNode<'a>,
 }
 
 #[derive(Debug)]
@@ -29,11 +29,32 @@ pub enum NodeKind {
     DoWhileStatement,
 }
 
-
-
 impl<'a> Graph<'a> {
     pub fn new(walker: Walker<'a>) -> Self {
-        Graph { walker, root: GraphNode::None }
+        Graph { walker, root: BlockNode::None }
+    }
+
+    fn to_call(&self, walker: Walker<'a>) -> Option<CodeBlock<'a>> {
+        let mut function_name = None;
+        if walker.node.name == "FunctionCall" {
+            walker.for_each(|walker, index| {
+                if index == 0 {
+                    let temp = walker.node.attributes["value"].as_str().unwrap_or("");
+                    function_name = Some(temp);
+                }
+            });
+        }
+        let block = CodeBlock::Block(walker);
+        function_name.map(|function_name| {
+            match function_name {
+                "revert" => CodeBlock::Link(Box::new(BlockNode::Revert(block))),
+                "assert" => CodeBlock::Link(Box::new(BlockNode::Assert(block))),
+                "require" => CodeBlock::Link(Box::new(BlockNode::Require(block))),
+                "suicide" => CodeBlock::Link(Box::new(BlockNode::Suicide(block))),
+                "selfdestruct" => CodeBlock::Link(Box::new(BlockNode::Selfdestruct(block))),
+                _ => CodeBlock::Link(Box::new(BlockNode::FunctionCall(block))),
+            }
+        })
     }
 
     pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
@@ -64,20 +85,20 @@ impl<'a> Graph<'a> {
             },
             "Return" => {
                 let mut blocks = vec![];
-                let node = GraphNode::Return(CodeBlock::Block(walker));
+                let node = BlockNode::Return(CodeBlock::Block(walker));
                 blocks.push(CodeBlock::Link(Box::new(node)));
                 blocks
             },
             "Throw" => {
-                let node = GraphNode::Throw(CodeBlock::Block(walker));
+                let node = BlockNode::Throw(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Continue" => {
-                let node = GraphNode::Continue(CodeBlock::Block(walker));
+                let node = BlockNode::Continue(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Break" => {
-                let node = GraphNode::Break(CodeBlock::Block(walker));
+                let node = BlockNode::Break(CodeBlock::Block(walker));
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" => {
@@ -110,7 +131,7 @@ impl<'a> Graph<'a> {
                         },
                         "ModifierInvocation" => {
                             let block = CodeBlock::Block(walker);
-                            let node = GraphNode::ModifierInvocation(block);
+                            let node = BlockNode::ModifierInvocation(block);
                             blocks.push(CodeBlock::Link(Box::new(node)));
                         },
                         "Block" => {
@@ -124,12 +145,12 @@ impl<'a> Graph<'a> {
         blocks
     } 
 
-    pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> GraphNode<'a> {
+    pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> BlockNode<'a> {
         match kind {
             NodeKind::Root => {
                 match walker.node.name {
                     "FunctionDefinition" | "ModifierDefinition" => {
-                        GraphNode::Root(self.build_block(BlockKind::Param, walker))
+                        BlockNode::Root(self.build_block(BlockKind::Param, walker))
                     },
                     _ => {
                         println!("name: {}", walker.node.name);
@@ -169,7 +190,7 @@ impl<'a> Graph<'a> {
                         },
                     }
                 });
-                GraphNode::ForStatement(ForStatement { condition, init, expression, blocks })
+                BlockNode::ForStatement(ForStatement { condition, init, expression, blocks })
             },
             NodeKind::DoWhileStatement => {
                 let mut condition = CodeBlock::None; 
@@ -190,7 +211,7 @@ impl<'a> Graph<'a> {
                         }
                     }
                 });
-                GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks })
+                BlockNode::DoWhileStatement(DoWhileStatement { condition, blocks })
             },
             NodeKind::WhileStatement => {
                 let mut condition = CodeBlock::None; 
@@ -211,7 +232,7 @@ impl<'a> Graph<'a> {
                         }
                     }
                 });
-                GraphNode::WhileStatement(WhileStatement { condition, blocks })
+                BlockNode::WhileStatement(WhileStatement { condition, blocks })
             },
             NodeKind::IfStatement => {
                 let mut condition = CodeBlock::None; 
@@ -237,14 +258,14 @@ impl<'a> Graph<'a> {
                         }
                     }
                 });
-                GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks })
+                BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks })
             },
         } 
     }
 
-    pub fn update(&mut self) -> &GraphNode {
+    pub fn update(&mut self) -> &BlockNode {
         match self.root {
-            GraphNode::None => {
+            BlockNode::None => {
                 self.root = self.build_node(NodeKind::Root, self.walker.clone());
                 &self.root
             },

@@ -4,7 +4,6 @@ pub enum Shape {
     Box,
     Diamond,
     DoubleCircle,
-    Mdiamond,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -29,7 +28,6 @@ impl Vertex {
             Shape::Box => "box",
             Shape::Diamond => "diamond",
             Shape::DoubleCircle => "doublecircle",
-            Shape::Mdiamond => "Mdiamond",
         };
         format!("  {}[label={:?}, shape=\"{}\"];\n", self.id, self.source, shape)
     }

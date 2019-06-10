@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use crate::{
     code_block::{
-        GraphNode,
+        BlockNode,
         CodeBlock,
         IfStatement,
         WhileStatement,
@@ -67,7 +67,7 @@ impl<'a> ControlFlowGraph<'a> {
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
-                        GraphNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
+                        BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
                             if let CodeBlock::Block(walker) = condition {
                                 let Node { id, source, .. } = walker.node;
                                 predecessors = predecessors
@@ -89,7 +89,7 @@ impl<'a> ControlFlowGraph<'a> {
                                 predecessors.append(&mut f);
                             }
                         },
-                        GraphNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
+                        BlockNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
                                 let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
@@ -125,7 +125,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     });
                             }
                         },
-                        GraphNode::WhileStatement(WhileStatement { condition, blocks }) => {
+                        BlockNode::WhileStatement(WhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
                                 let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
@@ -161,7 +161,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     });
                             }
                         },
-                        GraphNode::ForStatement(ForStatement { init, condition, expression, blocks }) => {
+                        BlockNode::ForStatement(ForStatement { init, condition, expression, blocks }) => {
                             let mut cond_predecessors = vec![];
                             let mut our_breakers =  vec![];
                             if let CodeBlock::Block(walker) = init {
@@ -227,7 +227,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        GraphNode::Return(CodeBlock::Block(walker)) => {
+                        BlockNode::Return(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
@@ -237,10 +237,10 @@ impl<'a> ControlFlowGraph<'a> {
                             self.edges.insert((id, self.stop));
                             predecessors = vec![];
                         },
-                        GraphNode::Revert(CodeBlock::Block(walker))
-                            | GraphNode::Throw(CodeBlock::Block(walker)) 
-                            | GraphNode::Suicide(CodeBlock::Block(walker)) 
-                            | GraphNode::Selfdestruct(CodeBlock::Block(walker)) => {
+                        BlockNode::Revert(CodeBlock::Block(walker))
+                            | BlockNode::Throw(CodeBlock::Block(walker)) 
+                            | BlockNode::Suicide(CodeBlock::Block(walker)) 
+                            | BlockNode::Selfdestruct(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                             self.vertices.insert(vertice);
@@ -250,8 +250,8 @@ impl<'a> ControlFlowGraph<'a> {
                             self.edges.insert((id, self.stop));
                             predecessors = vec![];
                         },
-                        GraphNode::Require(CodeBlock::Block(walker))
-                            | GraphNode::Assert(CodeBlock::Block(walker)) => {
+                        BlockNode::Require(CodeBlock::Block(walker))
+                            | BlockNode::Assert(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                             self.vertices.insert(vertice);
@@ -261,7 +261,7 @@ impl<'a> ControlFlowGraph<'a> {
                             self.edges.insert((id, self.stop));
                             predecessors = vec![id];
                         },
-                        GraphNode::Break(CodeBlock::Block(walker)) => {
+                        BlockNode::Break(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
@@ -271,7 +271,7 @@ impl<'a> ControlFlowGraph<'a> {
                             breakers.push(LoopBreaker { kind: BreakerType::Break, id });
                             predecessors = vec![];
                         },
-                        GraphNode::Continue(CodeBlock::Block(walker)) => {
+                        BlockNode::Continue(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             let vertice = Vertex::new(id, source, Shape::Box);
                             self.vertices.insert(vertice);
@@ -281,7 +281,7 @@ impl<'a> ControlFlowGraph<'a> {
                             breakers.push(LoopBreaker { kind: BreakerType::Continue, id });
                             predecessors = vec![];
                         },
-                        GraphNode::FunctionCall(CodeBlock::Block(walker)) => {
+                        BlockNode::FunctionCall(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             predecessors = predecessors
                                 .iter()
@@ -296,7 +296,7 @@ impl<'a> ControlFlowGraph<'a> {
                             }
                             predecessors.dedup();
                         },
-                        GraphNode::ModifierInvocation(CodeBlock::Block(walker)) => {
+                        BlockNode::ModifierInvocation(CodeBlock::Block(walker)) => {
                             let Node { id, source, .. } = walker.node;
                             predecessors = predecessors
                                 .iter()
@@ -324,7 +324,7 @@ impl<'a> ControlFlowGraph<'a> {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
         let mut graph = Graph::new(walker);
         let root = graph.update();
-        if let GraphNode::Root(blocks) = root {
+        if let BlockNode::Root(blocks) = root {
             let vertex = Vertex::new(self.start, "START", Shape::Point);
             self.vertices.insert(vertex);
             let vertex = Vertex::new(self.stop, "STOP", Shape::Point);
