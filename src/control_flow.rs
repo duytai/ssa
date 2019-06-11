@@ -285,10 +285,11 @@ impl<'a> ControlFlowGraph<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        BlockNode::Return(_) => {
+                        BlockNode::Return(blocks) => {
+                            predecessors = self.simple_traverse(blocks, predecessors.clone(), breakers);
                         },
-                        BlockNode::Root(_) => {},
-                        BlockNode::None => {},
+                        BlockNode::Root(_) => unimplemented!(),
+                        BlockNode::None => unimplemented!(),
                     }
                 },
                 CodeBlock::SimpleBlocks(blocks) => {
