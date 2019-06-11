@@ -51,14 +51,49 @@ impl<'a> ControlFlowGraph<'a> {
         for block in blocks {
             if predecessors.is_empty() { return vec![]; }
             match block {
-                SimpleBlockNode::Throw(walker) => {},
-                SimpleBlockNode::Break(walker) => {},
-                SimpleBlockNode::Continue(walker) => {},
-                SimpleBlockNode::Require(walker) => {},
-                SimpleBlockNode::Assert(walker) => {},
-                SimpleBlockNode::Revert(walker) => {},
-                SimpleBlockNode::Suicide(walker) => {},
-                SimpleBlockNode::Selfdestruct(walker) => {},
+                SimpleBlockNode::Break(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::Box);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        self.edges.insert((*predecessor, id));
+                    }
+                    breakers.push(LoopBreaker { kind: BreakerType::Break, id });
+                    predecessors = vec![];
+                },
+                SimpleBlockNode::Continue(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::Box);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        self.edges.insert((*predecessor, id));
+                    }
+                    breakers.push(LoopBreaker { kind: BreakerType::Continue, id });
+                    predecessors = vec![];
+                },
+                SimpleBlockNode::Require(walker) | SimpleBlockNode::Assert(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        self.edges.insert((*predecessor, id));
+                    }
+                    self.edges.insert((id, self.stop));
+                    predecessors = vec![id];
+                },
+                SimpleBlockNode::Revert(walker) 
+                    | SimpleBlockNode::Selfdestruct(walker)
+                    | SimpleBlockNode::Suicide(walker)
+                    | SimpleBlockNode::Throw(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        self.edges.insert((*predecessor, id));
+                    }
+                    self.edges.insert((id, self.stop));
+                    predecessors = vec![];
+                },
                 SimpleBlockNode::FunctionCall(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
@@ -89,7 +124,7 @@ impl<'a> ControlFlowGraph<'a> {
                     }
                     predecessors.dedup();
                 },
-                SimpleBlockNode::None => {},
+                SimpleBlockNode::None => unimplemented!(),
             }
         }
         return predecessors;
@@ -265,7 +300,8 @@ impl<'a> ControlFlowGraph<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        BlockNode::Return(_) => {},
+                        BlockNode::Return(_) => {
+                        },
                         BlockNode::Root(_) => {},
                         BlockNode::None => {},
                     }
