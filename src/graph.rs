@@ -2,6 +2,7 @@ use crate::walker::Walker;
 use crate::code_block::{
     CodeBlock,
     BlockNode,
+    SimpleBlockNode,
     IfStatement,
     WhileStatement,
     DoWhileStatement,
@@ -34,77 +35,107 @@ impl<'a> Graph<'a> {
         Graph { walker, root: BlockNode::None }
     }
 
-    fn to_call(&self, walker: Walker<'a>) -> Option<CodeBlock<'a>> {
-        let mut function_name = None;
+    pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
+        let mut function_calls = vec![];
+        let mut last_source = None;
         if walker.node.name == "FunctionCall" {
-            walker.for_each(|walker, index| {
-                if index == 0 {
-                    let temp = walker.node.attributes["value"].as_str().unwrap_or("");
-                    function_name = Some(temp);
-                }
-            });
+            let node = SimpleBlockNode::FunctionCall(walker.clone());
+            function_calls.push(node);
+            last_source = Some(walker.node.source);
         }
-        let block = CodeBlock::Block(walker);
-        function_name.map(|function_name| {
-            match function_name {
-                "revert" => CodeBlock::Link(Box::new(BlockNode::Revert(block))),
-                "assert" => CodeBlock::Link(Box::new(BlockNode::Assert(block))),
-                "require" => CodeBlock::Link(Box::new(BlockNode::Require(block))),
-                "suicide" => CodeBlock::Link(Box::new(BlockNode::Suicide(block))),
-                "selfdestruct" => CodeBlock::Link(Box::new(BlockNode::Selfdestruct(block))),
-                _ => CodeBlock::Link(Box::new(BlockNode::FunctionCall(block))),
+        walker.all(|walker| {
+            walker.node.name == "FunctionCall"
+        }, |walkers| {
+            for walker in walkers {
+                let mut function_name = None;
+                walker.for_each(|w, index| {
+                    if index == 0 {
+                        function_name = w.node.attributes["value"].as_str();
+                    }
+                });
+                last_source = Some(walker.node.source);
+                match function_name {
+                    Some(function_name) => match function_name {
+                        "revert" => {
+                            let node = SimpleBlockNode::Revert(walker);
+                            function_calls.push(node);
+                        },
+                        "assert" => {
+                            let node = SimpleBlockNode::Assert(walker);
+                            function_calls.push(node);
+                        },
+                        "require" => {
+                            let node = SimpleBlockNode::Require(walker);
+                            function_calls.push(node);
+                        },
+                        "suicide" => {
+                            let node = SimpleBlockNode::Suicide(walker);
+                            function_calls.push(node);
+                        },
+                        "selfdestruct" => {
+                            let node = SimpleBlockNode::Selfdestruct(walker);
+                            function_calls.push(node);
+                        },
+                        _ => {
+                            let node = SimpleBlockNode::FunctionCall(walker);
+                            function_calls.push(node);
+                        }
+                    },
+                    None => {
+                        let node = SimpleBlockNode::FunctionCall(walker);
+                        function_calls.push(node);
+                    }
+                }
             }
-        })
+        });
+        if let Some(last_source) = last_source {
+            if last_source.trim() != walker.node.source.trim() {
+                let node = SimpleBlockNode::Unit(walker.clone());
+                function_calls.push(node);
+            } 
+        } else {
+            let node = SimpleBlockNode::Unit(walker.clone());
+            function_calls.push(node);
+        }
+        function_calls
     }
 
     pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
         match walker.node.name {
             "IfStatement" => {
-                let mut blocks = vec![];
                 let node = self.build_node(NodeKind::IfStatement, walker); 
-                blocks.push(CodeBlock::Link(Box::new(node)));
-                blocks
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "WhileStatement" => {
-                let mut blocks = vec![];
                 let node = self.build_node(NodeKind::WhileStatement, walker);
-                blocks.push(CodeBlock::Link(Box::new(node)));
-                blocks
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "ForStatement" => {
-                let mut blocks = vec![];
                 let node = self.build_node(NodeKind::ForStatement, walker);
-                blocks.push(CodeBlock::Link(Box::new(node)));
-                blocks
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "DoWhileStatement" => {
-                let mut blocks = vec![];
                 let node = self.build_node(NodeKind::DoWhileStatement, walker);
-                blocks.push(CodeBlock::Link(Box::new(node)));
-                blocks
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "Return" => {
-                let mut blocks = vec![];
-                let node = BlockNode::Return(CodeBlock::Block(walker));
-                blocks.push(CodeBlock::Link(Box::new(node)));
-                blocks
+                let node = BlockNode::Return(Graph::split(walker));
+                vec![CodeBlock::Link(Box::new(node))]
             },
             "Throw" => {
-                let node = BlockNode::Throw(CodeBlock::Block(walker));
-                vec![CodeBlock::Link(Box::new(node))]
+                let node = SimpleBlockNode::Throw(walker);
+                vec![CodeBlock::SimpleBlocks(vec![node])]
             },
             "Continue" => {
-                let node = BlockNode::Continue(CodeBlock::Block(walker));
-                vec![CodeBlock::Link(Box::new(node))]
+                let node = SimpleBlockNode::Continue(walker);
+                vec![CodeBlock::SimpleBlocks(vec![node])]
             },
             "Break" => {
-                let node = BlockNode::Break(CodeBlock::Block(walker));
-                vec![CodeBlock::Link(Box::new(node))]
+                let node = SimpleBlockNode::Break(walker);
+                vec![CodeBlock::SimpleBlocks(vec![node])]
             },
             "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" => {
-                let mut blocks = vec![];
-                blocks.push(CodeBlock::Block(walker));
-                blocks
+                vec![CodeBlock::Block(walker)]
             },
             "InlineAssemblyStatement" => unimplemented!(),
             "PlaceholderStatement" => unimplemented!(), 
@@ -129,11 +160,7 @@ impl<'a> Graph<'a> {
                                 blocks.push(block);
                             }
                         },
-                        "ModifierInvocation" => {
-                            let block = CodeBlock::Block(walker);
-                            let node = BlockNode::ModifierInvocation(block);
-                            blocks.push(CodeBlock::Link(Box::new(node)));
-                        },
+                        "ModifierInvocation" => panic!(),
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
                         },

@@ -3,7 +3,23 @@ use crate::walker::Walker;
 #[derive(Debug)]
 pub enum CodeBlock<'a> {
     Block(Walker<'a>),
+    SimpleBlocks(Vec<SimpleBlockNode<'a>>),
     Link(Box<BlockNode<'a>>),
+    None,
+}
+
+#[derive(Debug)]
+pub enum SimpleBlockNode<'a> {
+    Throw(Walker<'a>),
+    Break(Walker<'a>),
+    Continue(Walker<'a>),
+    Require(Walker<'a>),
+    Assert(Walker<'a>),
+    Revert(Walker<'a>),
+    Suicide(Walker<'a>),
+    Selfdestruct(Walker<'a>),
+    FunctionCall(Walker<'a>),
+    Unit(Walker<'a>),
     None,
 }
 
@@ -14,17 +30,7 @@ pub enum BlockNode<'a> {
     WhileStatement(WhileStatement<'a>),
     ForStatement(ForStatement<'a>),
     DoWhileStatement(DoWhileStatement<'a>),
-    Return(CodeBlock<'a>),
-    Require(CodeBlock<'a>),
-    Assert(CodeBlock<'a>),
-    Revert(CodeBlock<'a>),
-    Throw(CodeBlock<'a>),
-    Break(CodeBlock<'a>),
-    Continue(CodeBlock<'a>),
-    Suicide(CodeBlock<'a>),
-    Selfdestruct(CodeBlock<'a>),
-    FunctionCall(CodeBlock<'a>),
-    ModifierInvocation(CodeBlock<'a>),
+    Return(Vec<SimpleBlockNode<'a>>),
     None,
 }
 

@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use crate::{
     code_block::{
         BlockNode,
+        SimpleBlockNode,
         CodeBlock,
         IfStatement,
         WhileStatement,
@@ -46,11 +47,19 @@ impl<'a> ControlFlowGraph<'a> {
         }
     }
 
-    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
+    pub fn simple_traverse(&mut self, blocks: &Vec<SimpleBlockNode>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
         for block in blocks {
             if predecessors.is_empty() { return vec![]; }
             match block {
-                CodeBlock::Block(walker) => {
+                SimpleBlockNode::Throw(walker) => {},
+                SimpleBlockNode::Break(walker) => {},
+                SimpleBlockNode::Continue(walker) => {},
+                SimpleBlockNode::Require(walker) => {},
+                SimpleBlockNode::Assert(walker) => {},
+                SimpleBlockNode::Revert(walker) => {},
+                SimpleBlockNode::Suicide(walker) => {},
+                SimpleBlockNode::Selfdestruct(walker) => {},
+                SimpleBlockNode::FunctionCall(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
                         .iter()
@@ -58,12 +67,41 @@ impl<'a> ControlFlowGraph<'a> {
                             if !self.edges.insert((*predecessor, id)) { return None; }
                             Some(id)
                         })
-                        .collect::<Vec<u32>>();
+                    .collect::<Vec<u32>>();
+                    if !predecessors.is_empty() {
+                        let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                        self.vertices.insert(vertice);
+                    }
+                    predecessors.dedup();
+                },
+                SimpleBlockNode::Unit(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    predecessors = predecessors
+                        .iter()
+                        .filter_map(|predecessor| {
+                            if !self.edges.insert((*predecessor, id)) { return None; }
+                            Some(id)
+                        })
+                    .collect::<Vec<u32>>();
                     if !predecessors.is_empty() {
                         let vertice = Vertex::new(id, source, Shape::Box);
                         self.vertices.insert(vertice);
                     }
                     predecessors.dedup();
+                },
+                SimpleBlockNode::None => {},
+            }
+        }
+        return predecessors;
+    }
+
+    pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
+        for block in blocks {
+            if predecessors.is_empty() { return vec![]; }
+            match block {
+                CodeBlock::Block(walker) => {
+                    let blocks = Graph::split(walker.clone());
+                    predecessors = self.simple_traverse(&blocks, predecessors.clone(), breakers);
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
@@ -227,92 +265,13 @@ impl<'a> ControlFlowGraph<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        BlockNode::Return(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            let vertice = Vertex::new(id, source, Shape::Box);
-                            self.vertices.insert(vertice);
-                            for predecessor in predecessors.iter() {
-                                self.edges.insert((*predecessor, id));
-                            }
-                            self.edges.insert((id, self.stop));
-                            predecessors = vec![];
-                        },
-                        BlockNode::Revert(CodeBlock::Block(walker))
-                            | BlockNode::Throw(CodeBlock::Block(walker)) 
-                            | BlockNode::Suicide(CodeBlock::Block(walker)) 
-                            | BlockNode::Selfdestruct(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                            self.vertices.insert(vertice);
-                            for predecessor in predecessors.iter() {
-                                self.edges.insert((*predecessor, id));
-                            }
-                            self.edges.insert((id, self.stop));
-                            predecessors = vec![];
-                        },
-                        BlockNode::Require(CodeBlock::Block(walker))
-                            | BlockNode::Assert(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                            self.vertices.insert(vertice);
-                            for predecessor in predecessors.iter() {
-                                self.edges.insert((*predecessor, id));
-                            }
-                            self.edges.insert((id, self.stop));
-                            predecessors = vec![id];
-                        },
-                        BlockNode::Break(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            let vertice = Vertex::new(id, source, Shape::Box);
-                            self.vertices.insert(vertice);
-                            for predecessor in predecessors.iter() {
-                                self.edges.insert((*predecessor, id));
-                            }
-                            breakers.push(LoopBreaker { kind: BreakerType::Break, id });
-                            predecessors = vec![];
-                        },
-                        BlockNode::Continue(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            let vertice = Vertex::new(id, source, Shape::Box);
-                            self.vertices.insert(vertice);
-                            for predecessor in predecessors.iter() {
-                                self.edges.insert((*predecessor, id));
-                            }
-                            breakers.push(LoopBreaker { kind: BreakerType::Continue, id });
-                            predecessors = vec![];
-                        },
-                        BlockNode::FunctionCall(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            predecessors = predecessors
-                                .iter()
-                                .filter_map(|predecessor| {
-                                    if !self.edges.insert((*predecessor, id)) { return None; }
-                                    Some(id)
-                                })
-                                .collect::<Vec<u32>>();
-                            if !predecessors.is_empty() {
-                                let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                                self.vertices.insert(vertice);
-                            }
-                            predecessors.dedup();
-                        },
-                        BlockNode::ModifierInvocation(CodeBlock::Block(walker)) => {
-                            let Node { id, source, .. } = walker.node;
-                            predecessors = predecessors
-                                .iter()
-                                .filter_map(|predecessor| {
-                                    if !self.edges.insert((*predecessor, id)) { return None; }
-                                    Some(id)
-                                })
-                                .collect::<Vec<u32>>();
-                            if !predecessors.is_empty() {
-                                let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                                self.vertices.insert(vertice);
-                            }
-                            predecessors.dedup();
-                        },
-                        _ => unimplemented!(),
+                        BlockNode::Return(_) => {},
+                        BlockNode::Root(_) => {},
+                        BlockNode::None => {},
                     }
+                },
+                CodeBlock::SimpleBlocks(blocks) => {
+                    predecessors = self.simple_traverse(blocks, predecessors.clone(), breakers);
                 },
                 CodeBlock::None => unimplemented!(), 
             }
