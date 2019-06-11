@@ -35,7 +35,7 @@ fn main() -> io::Result<()> {
         let dict = Dictionary::new(ast_one, &source_content);
         let mut control_flow = ControlFlowGraph::new(&dict);
         let handlers: Vec<Box<Analyzer>> = vec![
-            // Box::new(DataFlowGraph::new()),
+            Box::new(DataFlowGraph::new()),
             Box::new(Dot::new(graph_file.clone())),
         ];
         let entry = env::var("ENTRY").unwrap();

@@ -111,10 +111,19 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert((id, self.stop));
                     predecessors = vec![id];
                 },
+                SimpleBlockNode::Throw(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::Box);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        self.edges.insert((*predecessor, id));
+                    }
+                    self.edges.insert((id, self.stop));
+                    predecessors = vec![];
+                },
                 SimpleBlockNode::Revert(walker) 
                     | SimpleBlockNode::Selfdestruct(walker)
-                    | SimpleBlockNode::Suicide(walker)
-                    | SimpleBlockNode::Throw(walker) => {
+                    | SimpleBlockNode::Suicide(walker) => {
                     let Node { id, source, .. } = walker.node;
                     let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                     self.vertices.insert(vertice);
