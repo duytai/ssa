@@ -47,8 +47,38 @@ impl<'a> ControlFlowGraph<'a> {
         }
     }
 
+    pub fn condition_traverse(&mut self, blocks: &Vec<SimpleBlockNode>) -> Vec<u32> {
+        let mut chains = vec![];
+        for (index, block) in blocks.iter().enumerate() {
+            match block {
+                SimpleBlockNode::FunctionCall(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    if index == blocks.len() - 1 {
+                        let vertice = Vertex::new(id, source, Shape::Mdiamond);
+                        self.vertices.insert(vertice);
+                    } else {
+                        let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                        self.vertices.insert(vertice);
+                    }
+                    chains.push(id);
+                },
+                SimpleBlockNode::Unit(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::Diamond);
+                    self.vertices.insert(vertice);
+                    chains.push(id);
+                },
+                _ => unimplemented!(),
+            }
+        }
+        for index in 0..chains.len() - 1 {
+            self.edges.insert((chains[index], chains[index + 1]));
+        }
+        chains
+    }
+
     pub fn simple_traverse(&mut self, blocks: &Vec<SimpleBlockNode>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
-        for block in blocks {
+        for block in blocks.iter() {
             if predecessors.is_empty() { return vec![]; }
             match block {
                 SimpleBlockNode::Break(walker) => {
@@ -135,61 +165,49 @@ impl<'a> ControlFlowGraph<'a> {
             if predecessors.is_empty() { return vec![]; }
             match block {
                 CodeBlock::Block(walker) => {
-                    let blocks = Graph::split(walker.clone());
-                    predecessors = self.simple_traverse(&blocks, predecessors.clone(), breakers);
+                    let simple_blocks = Graph::split(walker.clone());
+                    predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
                         BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
                             if let CodeBlock::Block(walker) = condition {
-                                let Node { id, source, .. } = walker.node;
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, id)) { return None; }
-                                        Some(id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                                if !predecessors.is_empty() {
-                                    let vertice = Vertex::new(id, source, Shape::Diamond);
-                                    self.vertices.insert(vertice);
+                                let condition_blocks = Graph::split(walker.clone());
+                                let chains = self.condition_traverse(&condition_blocks);
+                                if !chains.is_empty() {
+                                    for predecessor in predecessors.iter() {
+                                        self.edges.insert((*predecessor, chains[0]));
+                                    }
+                                    predecessors = vec![chains[chains.len() - 1]];
+                                    let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
+                                    let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
+                                    predecessors.clear();
+                                    predecessors.append(&mut t);
+                                    predecessors.append(&mut f);
                                 }
-                                let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
-                                let mut f = self.traverse(fblocks, predecessors.clone(), breakers);
-                                predecessors.clear();
-                                predecessors.append(&mut t);
-                                predecessors.append(&mut f);
                             }
                         },
                         BlockNode::DoWhileStatement(DoWhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
-                                let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
-                                let Node { id, source, .. } = walker.node;
-                                for counter in 0..2 {
-                                    predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
-                                    our_breakers
-                                        .iter()
-                                        .filter(|breaker| breaker.kind == BreakerType::Continue)
-                                        .for_each(|LoopBreaker { id, .. }| {
-                                            predecessors.push(*id);
-                                        });
-                                    predecessors = predecessors
-                                        .iter()
-                                        .filter_map(|predecessor| {
-                                            if !self.edges.insert((*predecessor, id)) { return None; }
-                                            Some(id)
-                                        })
-                                    .collect::<Vec<u32>>();
-                                    predecessors.dedup();
-                                    if !predecessors.is_empty() {
-                                        let vertice = Vertex::new(id, source, Shape::Diamond);
-                                        self.vertices.insert(vertice);
+                                predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
+                                our_breakers
+                                    .iter()
+                                    .filter(|breaker| breaker.kind == BreakerType::Continue)
+                                    .for_each(|LoopBreaker { id, .. }| {
+                                        predecessors.push(*id);
+                                    });
+                                if !predecessors.is_empty() {
+                                    let condition_blocks = Graph::split(walker.clone());
+                                    let chains = self.condition_traverse(&condition_blocks);
+                                    if !chains.is_empty() {
+                                        for predecessor in predecessors.iter() {
+                                            self.edges.insert((*predecessor, chains[0]));
+                                        }
                                     }
-                                    if counter == 0 { cond_predecessors = predecessors.clone(); }
+                                    predecessors = vec![chains[chains.len() - 1]];
+                                    self.traverse(blocks, predecessors.clone(), &mut our_breakers);
                                 }
-                                predecessors = cond_predecessors;
                                 our_breakers
                                     .iter()
                                     .filter(|breaker| breaker.kind == BreakerType::Break)
@@ -200,23 +218,14 @@ impl<'a> ControlFlowGraph<'a> {
                         },
                         BlockNode::WhileStatement(WhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
-                                let mut cond_predecessors = vec![];
                                 let mut our_breakers = vec![];
-                                let Node { id, source, .. } = walker.node;
-                                for counter in 0..2 {
-                                    predecessors = predecessors
-                                        .iter()
-                                        .filter_map(|predecessor| {
-                                            if !self.edges.insert((*predecessor, id)) { return None; }
-                                            Some(id)
-                                        })
-                                    .collect::<Vec<u32>>();
-                                    predecessors.dedup();
-                                    if !predecessors.is_empty() {
-                                        let vertice = Vertex::new(id, source, Shape::Diamond);
-                                        self.vertices.insert(vertice);
+                                let condition_blocks = Graph::split(walker.clone());
+                                let chains = self.condition_traverse(&condition_blocks);
+                                if !chains.is_empty() {
+                                    for predecessor in predecessors.iter() {
+                                        self.edges.insert((*predecessor, chains[0]));
                                     }
-                                    if counter == 0 { cond_predecessors = predecessors.clone(); }
+                                    predecessors = vec![chains[chains.len() - 1]];
                                     predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
                                     our_breakers
                                         .iter()
@@ -224,50 +233,37 @@ impl<'a> ControlFlowGraph<'a> {
                                         .for_each(|LoopBreaker { id, .. }| {
                                             predecessors.push(*id);
                                         });
+                                    for predecessor in predecessors.iter() {
+                                        self.edges.insert((*predecessor, chains[0]));
+                                    }
+                                    predecessors = vec![chains[chains.len() - 1]];
+                                    our_breakers
+                                        .iter()
+                                        .filter(|breaker| breaker.kind == BreakerType::Break)
+                                        .for_each(|LoopBreaker { id, ..}| {
+                                            predecessors.push(*id);
+                                        });
                                 }
-                                predecessors = cond_predecessors;
-                                our_breakers
-                                    .iter()
-                                    .filter(|breaker| breaker.kind == BreakerType::Break)
-                                    .for_each(|LoopBreaker { id, ..}| {
-                                        predecessors.push(*id);
-                                    });
                             }
                         },
                         BlockNode::ForStatement(ForStatement { init, condition, expression, blocks }) => {
+                            let mut our_breakers = vec![];
                             let mut cond_predecessors = vec![];
-                            let mut our_breakers =  vec![];
                             if let CodeBlock::Block(walker) = init {
-                                let Node { id, source, .. } = walker.node;
-                                predecessors = predecessors
-                                    .iter()
-                                    .filter_map(|predecessor| {
-                                        if !self.edges.insert((*predecessor, id)) { return None; }
-                                        Some(id)
-                                    })
-                                .collect::<Vec<u32>>();
-                                predecessors.dedup();
-                                if !predecessors.is_empty() {
-                                    let vertice = Vertex::new(id, source, Shape::Box);
-                                    self.vertices.insert(vertice);
-                                }
+                                let simple_blocks = Graph::split(walker.clone());
+                                predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                             }
-                            for counter in 0..2 {
+                            for _ in 0..2 {
                                 if let CodeBlock::Block(walker) = condition {
-                                    let Node { id, source, .. } = walker.node;
-                                    predecessors = predecessors
-                                        .iter()
-                                        .filter_map(|predecessor| {
-                                            if !self.edges.insert((*predecessor, id)) { return None; }
-                                            Some(id)
-                                        })
-                                    .collect::<Vec<u32>>();
-                                    predecessors.dedup();
-                                    if !predecessors.is_empty() {
-                                        let vertice = Vertex::new(id, source, Shape::Diamond) ;
-                                        self.vertices.insert(vertice);
+                                    let condition_blocks = Graph::split(walker.clone());
+                                    let chains = self.condition_traverse(&condition_blocks);
+                                    if !chains.is_empty() {
+                                        for predecessor in predecessors.iter() {
+                                            self.edges.insert((*predecessor, chains[0]));
+                                        }
+                                        predecessors = vec![chains[chains.len() - 1]];
+                                        cond_predecessors = vec![chains[chains.len() - 1]];
                                     }
-                                    if counter == 0 { cond_predecessors = predecessors.clone(); }
                                 }
                                 predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
                                 our_breakers
@@ -277,20 +273,9 @@ impl<'a> ControlFlowGraph<'a> {
                                         predecessors.push(*id);
                                     });
                                 if let CodeBlock::Block(walker) = expression {
-                                    let Node { id, source, .. } = walker.node;
-                                    predecessors = predecessors
-                                        .iter()
-                                        .filter_map(|predecessor| {
-                                            if !self.edges.insert((*predecessor, id)) { return None; }
-                                            Some(id)
-                                        })
-                                    .collect::<Vec<u32>>();
-                                    predecessors.dedup();
-                                    if !predecessors.is_empty() {
-                                        let vertice = Vertex::new(id, source, Shape::Box);
-                                        self.vertices.insert(vertice);
-                                    }
-                                }
+                                    let simple_blocks = Graph::split(walker.clone());
+                                    predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
+                                } 
                             }
                             predecessors = cond_predecessors;
                             our_breakers

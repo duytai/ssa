@@ -38,11 +38,6 @@ impl<'a> Graph<'a> {
     pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
         let mut last_source = None;
-        if walker.node.name == "FunctionCall" {
-            let node = SimpleBlockNode::FunctionCall(walker.clone());
-            function_calls.push(node);
-            last_source = Some(walker.node.source);
-        }
         walker.all(|walker| {
             walker.node.name == "FunctionCall"
         }, |walkers| {
@@ -88,6 +83,11 @@ impl<'a> Graph<'a> {
                 }
             }
         });
+        if walker.node.name == "FunctionCall" {
+            let node = SimpleBlockNode::FunctionCall(walker.clone());
+            function_calls.push(node);
+            last_source = Some(walker.node.source);
+        }
         if let Some(last_source) = last_source {
             if last_source.trim() != walker.node.source.trim() {
                 let node = SimpleBlockNode::Unit(walker.clone());

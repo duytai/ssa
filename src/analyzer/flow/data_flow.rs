@@ -91,7 +91,7 @@ impl Analyzer for DataFlowGraph {
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
             match vertex.shape {
-                Shape::DoubleCircle => {
+                Shape::DoubleCircle | Shape::Mdiamond => {
                     for var in self.find_parameters(id, dict) {
                         new_actions.push(Action::Use(var, id));
                     }
