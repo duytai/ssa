@@ -224,17 +224,19 @@ impl<'a> Graph<'a> {
                 let mut blocks = vec![];
                 walker.for_all(|_| true, |walkers| {
                     for (index, walker) in walkers.into_iter().enumerate() {
-                        if index == 0 {
-                            condition = CodeBlock::Block(walker);
-                        } else {
-                            match walker.node.name {
+                        match index {
+                            0 => {
+                                condition = CodeBlock::Block(walker);
+                            },
+                            1 => match walker.node.name {
                                 "Block" => {
                                     blocks = self.build_block(BlockKind::Body, walker);
                                 },
                                 _ => {
                                     blocks.append(&mut self.build_items(walker));
                                 }
-                            }
+                            },
+                            _ => unimplemented!(),
                         }
                     }
                 });
@@ -245,17 +247,19 @@ impl<'a> Graph<'a> {
                 let mut blocks = vec![];
                 walker.for_all(|_| true, |walkers| {
                     for (index, walker) in walkers.into_iter().enumerate() {
-                        if index == 0 {
-                            condition = CodeBlock::Block(walker);
-                        } else {
-                            match walker.node.name {
+                        match index {
+                            0 => {
+                                condition = CodeBlock::Block(walker);
+                            },
+                            1 => match walker.node.name {
                                 "Block" => {
                                     blocks = self.build_block(BlockKind::Body, walker);
                                 },
                                 _ => {
                                     blocks.append(&mut self.build_items(walker));
                                 }
-                            }
+                            },
+                            _ => unimplemented!(),
                         }
                     }
                 });
@@ -267,21 +271,27 @@ impl<'a> Graph<'a> {
                 let mut fblocks = vec![];
                 walker.for_all(|_| true, |walkers| {
                     for (index, walker) in walkers.into_iter().enumerate() {
-                        if index == 0 {
-                            condition = CodeBlock::Block(walker);
-                        } else {
-                            match walker.node.name {
+                        match index {
+                            0 => {
+                                condition = CodeBlock::Block(walker);
+                            },
+                            1 => match walker.node.name {
                                 "Block" => {
-                                    if index == 1 {
-                                        tblocks = self.build_block(BlockKind::Body, walker);
-                                    } else {
-                                        fblocks = self.build_block(BlockKind::Body, walker);
-                                    }
+                                    tblocks = self.build_block(BlockKind::Body, walker);
                                 },
                                 _ => {
                                     tblocks.append(&mut self.build_items(walker));
                                 }
-                            }
+                            },
+                            2 => match walker.node.name {
+                                "Block" => {
+                                    fblocks = self.build_block(BlockKind::Body, walker);
+                                },
+                                _ => {
+                                    fblocks.append(&mut self.build_items(walker));
+                                }
+                            },
+                            _ => unimplemented!(),
                         }
                     }
                 });
