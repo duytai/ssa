@@ -175,15 +175,7 @@ impl<'a> Graph<'a> {
     pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> BlockNode<'a> {
         match kind {
             NodeKind::Root => {
-                match walker.node.name {
-                    "FunctionDefinition" | "ModifierDefinition" => {
-                        BlockNode::Root(self.build_block(BlockKind::Param, walker))
-                    },
-                    _ => {
-                        println!("name: {}", walker.node.name);
-                        panic!("Entry point of graph must be a function");
-                    }
-                }
+                BlockNode::Root(self.build_block(BlockKind::Param, walker))
             },
             NodeKind::ForStatement => {
                 let mut blocks = vec![];

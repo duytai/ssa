@@ -312,28 +312,36 @@ impl<'a> ControlFlowGraph<'a> {
 
     pub fn analyze(&mut self, entry_id: u32, mut handlers: Vec<Box<Analyzer>>) {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
-        let mut graph = Graph::new(walker);
-        let root = graph.update();
-        if let BlockNode::Root(blocks) = root {
-            let vertex = Vertex::new(self.start, "START", Shape::Point);
-            self.vertices.insert(vertex);
-            let vertex = Vertex::new(self.stop, "STOP", Shape::Point);
-            self.vertices.insert(vertex);
-            let mut predecessors = vec![self.start];
-            predecessors = self.traverse(blocks, predecessors, &mut vec![]);
-            for predecessor in predecessors.iter() {
-                self.edges.insert((*predecessor, self.stop));
+        let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];
+        if entry_names.contains(&walker.node.name) {
+            let mut graph = Graph::new(walker);
+            let root = graph.update();
+            let states = self.dict.lookup_states(entry_id);
+            if let BlockNode::Root(blocks) = root {
+                let vertex = Vertex::new(self.start, "START", Shape::Point);
+                self.vertices.insert(vertex);
+                // connect with states
+                // 
+                let vertex = Vertex::new(self.stop, "STOP", Shape::Point);
+                self.vertices.insert(vertex);
+                let mut predecessors = vec![self.start];
+                predecessors = self.traverse(blocks, predecessors, &mut vec![]);
+                for predecessor in predecessors.iter() {
+                    self.edges.insert((*predecessor, self.stop));
+                }
             }
-        }
-        let mut state = State {
-            edges: &self.edges,
-            vertices: &self.vertices,
-            dict: &self.dict,
-            links: None,
-            stop: self.stop,
-        };
-        for handler in handlers.iter_mut() {
-            handler.analyze(&mut state);
+            let mut state = State {
+                edges: &self.edges,
+                vertices: &self.vertices,
+                dict: &self.dict,
+                links: None,
+                stop: self.stop,
+            };
+            for handler in handlers.iter_mut() {
+                handler.analyze(&mut state);
+            }
+        } else {
+            panic!(format!("Entry id must be one of {:?}", entry_names));
         }
     }
 }
