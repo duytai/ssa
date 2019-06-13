@@ -318,14 +318,17 @@ impl<'a> ControlFlowGraph<'a> {
             let root = graph.update();
             let states = self.dict.lookup_states(entry_id);
             if let BlockNode::Root(blocks) = root {
-                let vertex = Vertex::new(self.start, "START", Shape::Point);
-                self.vertices.insert(vertex);
-                // connect with states
-                // 
-                let vertex = Vertex::new(self.stop, "STOP", Shape::Point);
-                self.vertices.insert(vertex);
-                let mut predecessors = vec![self.start];
-                predecessors = self.traverse(blocks, predecessors, &mut vec![]);
+                for id in vec![self.start, self.stop] {
+                    let vertex = Vertex::new(id, "", Shape::Point);
+                    self.vertices.insert(vertex);
+                }
+                let last_id = states.iter().fold(self.start, |prev, cur| {
+                    let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
+                    self.vertices.insert(vertex);
+                    self.edges.insert((prev, cur.node.id));
+                    cur.node.id
+                });
+                let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
                 for predecessor in predecessors.iter() {
                     self.edges.insert((*predecessor, self.stop));
                 }
