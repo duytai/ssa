@@ -1,9 +1,9 @@
-extern crate sg;
+extern crate slint;
 mod setup;
 
 use std::io;
 use setup::setup;
-use sg::{ State, Shape };
+use slint::{ State, Shape };
 
 #[test]
 fn if_body_is_expression() -> io::Result<()> {

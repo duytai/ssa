@@ -1,5 +1,5 @@
 [package]
-name = "sg"
+name = "slint"
 version = "0.1.0"
 authors = ["worm"]
 edition = "2018"

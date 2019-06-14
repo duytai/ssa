@@ -1,9 +1,9 @@
-extern crate sg;
+extern crate slint;
 mod setup;
 
 use std::io;
 use setup::setup;
-use sg::{ State, Shape, Vertex };
+use slint::{ State, Shape, Vertex };
 
 #[test]
 fn do_body_is_expression() -> io::Result<()> {
