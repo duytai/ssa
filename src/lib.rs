@@ -8,4 +8,5 @@ mod analyzer;
 
 pub use control_flow::{ ControlFlowGraph };
 pub use dict::{ Dictionary };
+pub use vertex::{ Vertex, Shape };
 pub use analyzer::{ Dot, DataFlowGraph, Analyzer, State };
