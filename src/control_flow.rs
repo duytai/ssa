@@ -310,7 +310,7 @@ impl<'a> ControlFlowGraph<'a> {
         return predecessors;
     }
 
-    pub fn analyze(&mut self, entry_id: u32, mut handlers: Vec<Box<Analyzer>>) {
+    pub fn analyze(&mut self, entry_id: u32, mut handlers: Vec<Box<Analyzer>>) -> Option<State> {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
         let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];
         if entry_names.contains(&walker.node.name) {
@@ -343,8 +343,8 @@ impl<'a> ControlFlowGraph<'a> {
             for handler in handlers.iter_mut() {
                 handler.analyze(&mut state);
             }
-        } else {
-            panic!(format!("Entry id must be one of {:?}", entry_names));
+            return Some(state);
         }
+        return None;
     }
 }

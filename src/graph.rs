@@ -160,10 +160,10 @@ impl<'a> Graph<'a> {
                                 blocks.push(block);
                             }
                         },
-                        "ModifierInvocation" => panic!(),
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
                         },
+                        "ModifierInvocation" => panic!(),
                         _ => {},
                     }
                 })
