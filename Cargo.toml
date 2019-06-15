@@ -6,6 +6,6 @@ edition = "2018"
 
 [workspace]
 members = [
-  "control_flow",
+  "cfg",
   "dot",
 ]

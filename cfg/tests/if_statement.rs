@@ -1,9 +1,9 @@
-extern crate control_flow;
+extern crate cfg;
 mod setup;
 
 use std::io;
 use setup::setup;
-use control_flow::{ State, Shape };
+use cfg::{ State, Shape };
 
 #[test]
 fn if_body_is_expression() -> io::Result<()> {

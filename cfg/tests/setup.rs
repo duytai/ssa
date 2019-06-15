@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::process::{ Command, Output };
 use std::io::{ Result, Error, ErrorKind };
-use control_flow::{ ControlFlowGraph, Dictionary };
+use cfg::{ ControlFlowGraph, Dictionary };
 use json;
 
 pub fn setup<T>(name: &str, mut cb: T)-> Result<()> where T: FnMut(ControlFlowGraph) {
