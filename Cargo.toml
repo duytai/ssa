@@ -6,6 +6,8 @@ edition = "2018"
 
 [workspace]
 members = [
+  "core",
   "cfg",
   "dot",
+  "dfg",
 ]

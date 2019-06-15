@@ -1,8 +1,7 @@
 mod edge;
 mod vertex;
-mod dot;
+mod lang;
 
 pub use edge::DotEdge;
 pub use vertex::DotVertex;
-pub use dot::Dot;
-
+pub use lang::Dot;

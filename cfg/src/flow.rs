@@ -1,20 +1,21 @@
 use std::collections::HashSet;
-use crate::{
-    block::{
-        BlockNode,
-        SimpleBlockNode,
-        CodeBlock,
-        IfStatement,
-        WhileStatement,
-        DoWhileStatement,
-        ForStatement,
-    },
-    graph::Graph,
-    dict::Dictionary,
-    walker::Node,
-    vertex::{ Vertex, Shape },
+use crate::graph::Graph;
+use crate::block::{
+    BlockNode,
+    SimpleBlockNode,
+    CodeBlock,
+    IfStatement,
+    WhileStatement,
+    DoWhileStatement,
+    ForStatement,
 };
-use crate::state::State;
+use crate::core:: {
+    Dictionary,
+    Node,
+    Vertex,
+    Shape,
+    State,
+};
 
 pub struct ControlFlowGraph<'a> {
     edges: HashSet<(u32, u32)>,

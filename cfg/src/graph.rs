@@ -1,4 +1,4 @@
-use crate::walker::Walker;
+use crate::core::Walker;
 use crate::block::{
     CodeBlock,
     BlockNode,

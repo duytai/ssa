@@ -1,4 +1,4 @@
-use crate::walker::Walker;
+use crate::core::Walker;
 
 #[derive(Debug)]
 pub enum CodeBlock<'a> {
