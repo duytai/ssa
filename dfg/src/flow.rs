@@ -62,8 +62,8 @@ impl<'a> DataFlowGraph<'a> {
                     let assignments = utils::find_assignments(id, dict);
                     if assignments.len() > 0 {
                         for assignment in assignments {
-                            let Assignment { lhs, rhs, op } = assignment;
-                            for l in lhs {
+                            let (lhs, rhs, op) = assignment.to_tuple();
+                            for l in lhs.clone() {
                                 match op {
                                     Operator::Equal => {
                                         new_actions.push(Action::Kill(l, id));
@@ -74,7 +74,7 @@ impl<'a> DataFlowGraph<'a> {
                                     }
                                 }
                             }
-                            for r in rhs {
+                            for r in rhs.clone() {
                                 new_actions.push(Action::Use(r, id));
                             }
                         }

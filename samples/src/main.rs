@@ -8,6 +8,7 @@ use std::io::*;
 use std::path::Path;
 use core::{ Dictionary, State };
 use cfg::{ ControlFlowGraph };
+use dfg::{ DataFlowGraph };
 use dot::{
     Dot,
     DotVertex,
@@ -37,7 +38,10 @@ fn main() -> Result<()> {
             let ast_json = json::parse(&ast).expect("Invalid json format");
             let dict = Dictionary::new(&ast_json, &sources);
             let mut control_flow = ControlFlowGraph::new(&dict);
-            let State { vertices, edges, .. } = control_flow.start_at(19).unwrap();
+            let state = control_flow.start_at(19).unwrap();
+            let State { vertices, edges, .. } = state;
+            let data_flow = DataFlowGraph::new(&state);
+            let links = data_flow.find_links();
             let mut dot = Dot::new();
             for vertex in vertices {
                 let dot_vertex: DotVertex = vertex.to_tuple().into();
@@ -45,6 +49,12 @@ fn main() -> Result<()> {
             }
             for edge in edges {
                 let dot_edge: DotEdge = edge.to_tuple().into();
+                dot.add_edge(dot_edge);
+            }
+            for link in links {
+                let (from, to, var) = link.to_tuple();
+                let (_, source) = var.to_tuple();
+                let dot_edge: DotEdge = (from, to, source.clone()).into();
                 dot.add_edge(dot_edge);
             }
             println!("{}", dot.format());

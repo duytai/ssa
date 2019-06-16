@@ -10,12 +10,16 @@ pub enum Operator {
 
 #[derive(Debug)]
 pub struct Assignment {
-    pub lhs: HashSet<Variable>,
-    pub rhs: HashSet<Variable>,
-    pub op: Operator,
+    lhs: HashSet<Variable>,
+    rhs: HashSet<Variable>,
+    op: Operator,
 }
 
 impl Assignment {
+    pub fn to_tuple(&self) -> (&HashSet<Variable>, &HashSet<Variable>, &Operator) {
+        (&self.lhs, &self.rhs, &self.op)
+    }
+
     pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
         let mut assignments = vec![];
         match walker.node.name {
