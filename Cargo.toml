@@ -2,8 +2,10 @@
 name = "ssa"
 description = "Solidty Static Analysis"
 version = "0.1.1"
-authors = ["worm"]
+authors = ["Duy Tai Nguyen duytai.cse@gmail.com"]
 edition = "2018"
+repository = "https://github.com/duytai/ssa"
+license = "GPL-3.0"
 
 [workspace]
 members = [
