@@ -1,10 +1,12 @@
 extern crate loader;
 extern crate json;
 extern crate core;
+extern crate cfg;
 
 use std::io::*;
 use std::path::Path;
-use core::{ Dictionary };
+use core::{ Dictionary, State };
+use cfg::{ ControlFlowGraph };
 use loader::{
     Solidity,
     SolidityOption,
@@ -28,6 +30,8 @@ fn main() -> Result<()> {
         SolidityOutput::AST(SolidityASTOutput { ast, sources }) => {
             let ast_json = json::parse(&ast).expect("Invalid json format");
             let dict = Dictionary::new(&ast_json, &sources);
+            let mut control_flow = ControlFlowGraph::new(&dict);
+            let State { vertices, edges, .. } = control_flow.start_at(19).unwrap();
         }
     }
     Ok(())

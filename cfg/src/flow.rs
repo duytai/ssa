@@ -15,10 +15,11 @@ use crate::core:: {
     Vertex,
     Shape,
     State,
+    Edge,
 };
 
 pub struct ControlFlowGraph<'a> {
-    edges: HashSet<(u32, u32)>,
+    edges: HashSet<Edge>,
     vertices: HashSet<Vertex>,
     dict: &'a Dictionary<'a>,
     start: u32,
@@ -73,7 +74,8 @@ impl<'a> ControlFlowGraph<'a> {
             }
         }
         for index in 0..chains.len() - 1 {
-            self.edges.insert((chains[index], chains[index + 1]));
+            let edge = Edge::new(chains[index], chains[index + 1]);
+            self.edges.insert(edge);
         }
         chains
     }
@@ -87,7 +89,8 @@ impl<'a> ControlFlowGraph<'a> {
                     let vertice = Vertex::new(id, source, Shape::Box);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
-                        self.edges.insert((*predecessor, id));
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
                     }
                     breakers.push(LoopBreaker { kind: BreakerType::Break, id });
                     predecessors = vec![];
@@ -97,7 +100,8 @@ impl<'a> ControlFlowGraph<'a> {
                     let vertice = Vertex::new(id, source, Shape::Box);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
-                        self.edges.insert((*predecessor, id));
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
                     }
                     breakers.push(LoopBreaker { kind: BreakerType::Continue, id });
                     predecessors = vec![];
@@ -107,9 +111,11 @@ impl<'a> ControlFlowGraph<'a> {
                     let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
-                        self.edges.insert((*predecessor, id));
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
                     }
-                    self.edges.insert((id, self.stop));
+                    let edge = Edge::new(id, self.stop);
+                    self.edges.insert(edge);
                     predecessors = vec![id];
                 },
                 SimpleBlockNode::Throw(walker) => {
@@ -117,9 +123,11 @@ impl<'a> ControlFlowGraph<'a> {
                     let vertice = Vertex::new(id, source, Shape::Box);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
-                        self.edges.insert((*predecessor, id));
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
                     }
-                    self.edges.insert((id, self.stop));
+                    let edge = Edge::new(id, self.stop);
+                    self.edges.insert(edge);
                     predecessors = vec![];
                 },
                 SimpleBlockNode::Revert(walker) 
@@ -129,9 +137,11 @@ impl<'a> ControlFlowGraph<'a> {
                     let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
-                        self.edges.insert((*predecessor, id));
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
                     }
-                    self.edges.insert((id, self.stop));
+                    let edge = Edge::new(id, self.stop);
+                    self.edges.insert(edge);
                     predecessors = vec![];
                 },
                 SimpleBlockNode::FunctionCall(walker) => {
@@ -139,7 +149,8 @@ impl<'a> ControlFlowGraph<'a> {
                     predecessors = predecessors
                         .iter()
                         .filter_map(|predecessor| {
-                            if !self.edges.insert((*predecessor, id)) { return None; }
+                            let edge = Edge::new(*predecessor, id);
+                            if !self.edges.insert(edge) { return None; }
                             Some(id)
                         })
                     .collect::<Vec<u32>>();
@@ -154,7 +165,8 @@ impl<'a> ControlFlowGraph<'a> {
                     predecessors = predecessors
                         .iter()
                         .filter_map(|predecessor| {
-                            if !self.edges.insert((*predecessor, id)) { return None; }
+                            let edge = Edge::new(*predecessor, id);
+                            if !self.edges.insert(edge) { return None; }
                             Some(id)
                         })
                     .collect::<Vec<u32>>();
@@ -186,7 +198,8 @@ impl<'a> ControlFlowGraph<'a> {
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
-                                        self.edges.insert((*predecessor, chains[0]));
+                                        let edge = Edge::new(*predecessor, chains[0]);
+                                        self.edges.insert(edge);
                                     }
                                     predecessors = vec![chains[chains.len() - 1]];
                                     let mut t = self.traverse(tblocks, predecessors.clone(), breakers);
@@ -212,7 +225,8 @@ impl<'a> ControlFlowGraph<'a> {
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
-                                            self.edges.insert((*predecessor, chains[0]));
+                                            let edge = Edge::new(*predecessor, chains[0]);
+                                            self.edges.insert(edge);
                                         }
                                     }
                                     predecessors = vec![chains[chains.len() - 1]];
@@ -233,7 +247,8 @@ impl<'a> ControlFlowGraph<'a> {
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
-                                        self.edges.insert((*predecessor, chains[0]));
+                                        let edge = Edge::new(*predecessor, chains[0]);
+                                        self.edges.insert(edge);
                                     }
                                     predecessors = vec![chains[chains.len() - 1]];
                                     predecessors = self.traverse(blocks, predecessors.clone(), &mut our_breakers);
@@ -244,7 +259,8 @@ impl<'a> ControlFlowGraph<'a> {
                                             predecessors.push(*id);
                                         });
                                     for predecessor in predecessors.iter() {
-                                        self.edges.insert((*predecessor, chains[0]));
+                                        let edge = Edge::new(*predecessor, chains[0]);
+                                        self.edges.insert(edge);
                                     }
                                     predecessors = vec![chains[chains.len() - 1]];
                                     our_breakers
@@ -269,7 +285,8 @@ impl<'a> ControlFlowGraph<'a> {
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
-                                            self.edges.insert((*predecessor, chains[0]));
+                                            let edge = Edge::new(*predecessor, chains[0]);
+                                            self.edges.insert(edge);
                                         }
                                         predecessors = vec![chains[chains.len() - 1]];
                                         cond_predecessors = vec![chains[chains.len() - 1]];
@@ -325,13 +342,15 @@ impl<'a> ControlFlowGraph<'a> {
                 }
                 let last_id = states.iter().fold(self.start, |prev, cur| {
                     let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
+                    let edge = Edge::new(prev, cur.node.id);
                     self.vertices.insert(vertex);
-                    self.edges.insert((prev, cur.node.id));
+                    self.edges.insert(edge);
                     cur.node.id
                 });
                 let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
                 for predecessor in predecessors.iter() {
-                    self.edges.insert((*predecessor, self.stop));
+                    let edge = Edge::new(*predecessor, self.stop);
+                    self.edges.insert(edge);
                 }
             }
             return Some(State {

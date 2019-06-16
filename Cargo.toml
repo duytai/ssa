@@ -12,4 +12,5 @@ members = [
   "dfg",
   "loader",
   "samples",
+  "utils",
 ]

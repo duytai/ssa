@@ -22,15 +22,4 @@ impl Vertex {
             source: source.to_string(),
         }
     }
-
-    pub fn to_string(&self) -> String {
-        let shape = match self.shape {
-            Shape::Point => "point",
-            Shape::Box => "box",
-            Shape::Diamond => "diamond",
-            Shape::DoubleCircle => "doublecircle",
-            Shape::Mdiamond => "Mdiamond",
-        };
-        format!("  {}[label={:?}, shape=\"{}\"];\n", self.id, self.source, shape)
-    }
 }
