@@ -15,13 +15,16 @@ pub struct Dictionary<'a> {
 }
 
 impl<'a> Dictionary<'a> {
-    pub fn new(value: &'a json::JsonValue, source: &'a str) -> Self {
-        let walker = Walker::new(value, source);
+    pub fn new(value: &'a json::JsonValue, sources: &'a HashMap<String, String>) -> Self {
         let mut dict = Dictionary {
             entries: HashMap::new(),
             contracts: HashMap::new(),
         };
-        dict.traverse(&walker);
+        for (name, source) in sources {
+            let ast_one = &value["sources"][name]["AST"];
+            let walker = Walker::new(ast_one, source);
+            dict.traverse(&walker);
+        }
         dict
     }
 

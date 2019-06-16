@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::collections::HashMap;
 
 pub enum SolidityOutputKind {
     AST,
@@ -6,7 +7,7 @@ pub enum SolidityOutputKind {
 
 pub struct SolidityASTOutput {
     pub ast: String,
-    pub source: String,
+    pub sources: HashMap<String, String>,
 }
 
 pub enum SolidityOutput {

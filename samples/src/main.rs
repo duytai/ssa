@@ -25,9 +25,9 @@ fn main() -> Result<()> {
     let solidity = Solidity::new(option);
     let solidity_output = solidity.compile()?;
     match solidity_output {
-        SolidityOutput::AST(SolidityASTOutput { ast, source }) => {
+        SolidityOutput::AST(SolidityASTOutput { ast, sources }) => {
             let ast_json = json::parse(&ast).expect("Invalid json format");
-            let dict = Dictionary::new(&ast_json, &source);
+            let dict = Dictionary::new(&ast_json, &sources);
         }
     }
     Ok(())
