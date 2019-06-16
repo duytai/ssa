@@ -23,14 +23,7 @@ impl Vertex {
         }
     }
 
-    pub fn to_tuple(&self) -> (u32, String, String) {
-        let shape = match self.shape {
-            Shape::Point => "point",
-            Shape::Box => "box",
-            Shape::Diamond => "diamond",
-            Shape::DoubleCircle => "doublecircle",
-            Shape::Mdiamond => "Mdiamond",
-        }.to_string();
-        (self.id, self.source.clone(), shape)
+    pub fn to_tuple(&self) -> (u32, &String, &Shape) {
+        (self.id, &self.source, &self.shape)
     }
 }

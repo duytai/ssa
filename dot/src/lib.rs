@@ -1,3 +1,5 @@
+extern crate core;
+
 mod edge;
 mod vertex;
 mod lang;

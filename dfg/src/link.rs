@@ -2,7 +2,13 @@ use crate::variable::Variable;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DataLink {
-    pub from: u32,
-    pub to: u32,
-    pub var: Variable,
+    from: u32,
+    to: u32,
+    var: Variable,
+}
+
+impl DataLink {
+    pub fn new(from: u32, to: u32, var: Variable) -> Self {
+        DataLink { from, to, var }
+    }
 }

@@ -5,3 +5,4 @@ authors = ["Tai Duy Nguyen <duytai.cse@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+core = { path = "../core" }

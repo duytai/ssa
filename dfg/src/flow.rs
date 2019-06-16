@@ -26,12 +26,14 @@ impl<'a> DataFlowGraph<'a> {
         let mut links: HashSet<DataLink> = HashSet::new(); 
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices.iter() {
-            tables.insert(vertex.id, HashSet::new());
+            let (id, _, _) = vertex.to_tuple();
+            tables.insert(id, HashSet::new());
         }
-        for (from, to) in edges.iter() {
-            match parents.get_mut(to) {
-                Some(v) => { v.push(*from); },
-                None => { parents.insert(*to, vec![*from]); },
+        for edge in edges.iter() {
+            let (from, to) = edge.to_tuple();
+            match parents.get_mut(&to) {
+                Some(v) => { v.push(from); },
+                None => { parents.insert(to, vec![from]); },
             }
         }
         if let Some(parents) = parents.get(&stop) {
@@ -41,12 +43,16 @@ impl<'a> DataFlowGraph<'a> {
         } 
         while stack.len() > 0 {
             let (from, id, mut actions) = stack.pop().unwrap();
-            let vertex = vertices.iter().find(|v| v.id == id).unwrap();
+            let vertex = vertices.iter().find(|v| {
+                let (vertex_id, _, _) = v.to_tuple();
+                vertex_id == id
+            }).unwrap();
             let pre_table = tables.get(&from).unwrap().clone();
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
-            match vertex.shape {
+            let (_, _, shape) = vertex.to_tuple();
+            match shape {
                 Shape::DoubleCircle | Shape::Mdiamond => {
                     for var in utils::find_parameters(id, dict) {
                         new_actions.push(Action::Use(var, id));
@@ -106,29 +112,17 @@ impl<'a> DataFlowGraph<'a> {
                                     if let Action::Use(variable, id) = action {
                                         match kill_var.contains(variable) {
                                             VariableComparison::Equal => {
-                                                let data_link = DataLink {
-                                                    from: *id,
-                                                    to: kill_id,
-                                                    var: variable.clone(),
-                                                };
+                                                let data_link = DataLink::new(*id, kill_id, variable.clone());
                                                 links.insert(data_link);
                                                 cur_table.remove(action);
                                                 false
                                             },
                                             VariableComparison::Partial => {
                                                 if kill_var.members.len() > variable.members.len() {
-                                                    let data_link = DataLink {
-                                                        from: *id,
-                                                        to: kill_id,
-                                                        var: kill_var.clone(),
-                                                    };
+                                                    let data_link = DataLink::new(*id, kill_id, kill_var.clone());
                                                     links.insert(data_link);
                                                 } else {
-                                                    let data_link = DataLink {
-                                                        from: *id,
-                                                        to: kill_id,
-                                                        var: variable.clone(),
-                                                    };
+                                                    let data_link = DataLink::new(*id, kill_id, variable.clone());
                                                     links.insert(data_link);
                                                 }
                                                 cur_table.remove(action);
