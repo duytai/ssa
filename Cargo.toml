@@ -1,5 +1,6 @@
 [package]
-name = "solidity"
+name = "ssa"
+description = "Solidty Static Analysis"
 version = "0.1.1"
 authors = ["worm"]
 edition = "2018"
