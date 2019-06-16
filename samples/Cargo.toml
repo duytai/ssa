@@ -8,4 +8,5 @@ edition = "2018"
 core = { path = "../core" }
 loader = { path = "../loader" }
 cfg = { path = "../cfg" }
+dot = { path = "../dot" }
 json = "0.11.14"

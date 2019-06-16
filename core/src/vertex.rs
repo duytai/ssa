@@ -9,9 +9,9 @@ pub enum Shape {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Vertex {
-    pub id: u32,
-    pub source: String,
-    pub shape: Shape,
+    id: u32,
+    source: String,
+    shape: Shape,
 }
 
 impl Vertex {
@@ -21,5 +21,16 @@ impl Vertex {
             shape,
             source: source.to_string(),
         }
+    }
+
+    pub fn to_tuple(&self) -> (u32, String, String) {
+        let shape = match self.shape {
+            Shape::Point => "point",
+            Shape::Box => "box",
+            Shape::Diamond => "diamond",
+            Shape::DoubleCircle => "doublecircle",
+            Shape::Mdiamond => "Mdiamond",
+        }.to_string();
+        (self.id, self.source.clone(), shape)
     }
 }
