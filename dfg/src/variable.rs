@@ -17,11 +17,15 @@ pub enum VariableComparison {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Variable {
-    pub members: Vec<Member>,
-    pub source: String,
+    members: Vec<Member>,
+    source: String,
 }
 
 impl Variable {
+    pub fn to_tuple(&self) -> (&Vec<Member>, &String) {
+        (&self.members, &self.source)
+    }
+
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
         let mut ret = HashSet::new();
         let variable = Variable::parse_one(&walker, dict);

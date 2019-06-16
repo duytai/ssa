@@ -118,7 +118,9 @@ impl<'a> DataFlowGraph<'a> {
                                                 false
                                             },
                                             VariableComparison::Partial => {
-                                                if kill_var.members.len() > variable.members.len() {
+                                                let (kill_var_members, _) = kill_var.to_tuple();
+                                                let (variable_members, _) = variable.to_tuple(); 
+                                                if kill_var_members.len() > variable_members.len() {
                                                     let data_link = DataLink::new(*id, kill_id, kill_var.clone());
                                                     links.insert(data_link);
                                                 } else {
