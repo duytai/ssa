@@ -7,6 +7,13 @@ edition = "2018"
 repository = "https://github.com/duytai/ssa"
 license = "GPL-3.0"
 
+[dependencies]
+cfg = { path = "./cfg" }
+core = { path = "./core" }
+dot = { path = "./dot" }
+dfg = { path = "./dfg" }
+loader = { path = "./loader" }
+
 [workspace]
 members = [
   "core",
@@ -15,5 +22,4 @@ members = [
   "dfg",
   "loader",
   "samples",
-  "utils",
 ]
