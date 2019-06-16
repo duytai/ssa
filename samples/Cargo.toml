@@ -1,0 +1,10 @@
+[package]
+name = "samples"
+version = "0.1.0"
+authors = ["Tai Duy Nguyen <duytai.cse@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+core = { path = "../core" }
+loader = { path = "../loader" }
+json = "0.11.14"
