@@ -37,26 +37,30 @@ fn main() -> Result<()> {
         SolidityOutput::AST(SolidityASTOutput { ast, sources }) => {
             let ast_json = json::parse(&ast).expect("Invalid json format");
             let dict = Dictionary::new(&ast_json, &sources);
+            // Create control flow graph
             let mut control_flow = ControlFlowGraph::new(&dict);
             let state = control_flow.start_at(19).unwrap();
-            let State { vertices, edges, .. } = state;
+            // Create data flow graph
             let data_flow = DataFlowGraph::new(&state);
             let links = data_flow.find_links();
+            // Render in dot language
             let mut dot = Dot::new();
-            for vertex in vertices {
-                let dot_vertex: DotVertex = vertex.to_tuple().into();
-                dot.add_vertex(dot_vertex);
-            }
-            for edge in edges {
-                let dot_edge: DotEdge = edge.to_tuple().into();
-                dot.add_edge(dot_edge);
-            }
-            for link in links {
-                let (from, to, var) = link.to_tuple();
-                let (_, source) = var.to_tuple();
-                let dot_edge: DotEdge = (from, to, source.clone()).into();
-                dot.add_edge(dot_edge);
-            }
+            let dot_vertices: Vec<DotVertex> = state.vertices.iter()
+                .map(|vertex| vertex.to_tuple().into())
+                .collect();
+            let dot_edges: Vec<DotEdge> = state.edges.iter()
+                .map(|edge| edge.to_tuple().into())
+                .collect();
+            let dot_links: Vec<DotEdge> = links.iter()
+                .map(|link| {
+                    let (from, to, var) = link.to_tuple();
+                    let (_, source) = var.to_tuple();
+                    (from, to, source.clone()).into()
+                })
+                .collect();
+            dot.append_edges(dot_edges);
+            dot.append_edges(dot_links);
+            dot.append_vertices(dot_vertices);
             println!("{}", dot.format());
         }
     }
