@@ -2,21 +2,58 @@ use std::collections::{ HashSet, HashMap };
 use crate::core::{ Shape, State };
 use crate::{
     variable::{ VariableComparison },
-    assignment::{ Assignment, Operator },
+    assignment::Operator,
 };
 use crate::action::Action;
 use crate::link::DataLink;
 use crate::utils;
 
+/// Data flow graph
+///
+/// It takes edges and vertices from the cfg to find assignments 
+/// and build data flow
 pub struct DataFlowGraph<'a> {
     state: &'a State<'a>,
 }
 
 impl<'a> DataFlowGraph<'a> {
+    /// Create new flow graph by importing `State` from cfg
     pub fn new(state: &'a State) -> Self {
         DataFlowGraph { state }
     }
 
+    /// Find data dependency links
+    ///
+    /// Start at stop point and go bottom up. Whenever a node is visited:
+    /// - If the node is a function call (Mdiamond, DoubleCircle) then we find all parameters of
+    /// the function
+    /// - If the node is a comparison then we find all variables in the comparison
+    /// - If the node is an assignment then we find all variables in the assignment
+    ///
+    /// It should be noted that we ignore nested functions because each nested function takes a node in CFG.
+    /// For example:
+    ///
+    /// ```
+    /// this.add(this.add(x, 1), this.add(y, 1));
+    ///
+    /// ```
+    /// The CFG of the function call above should be: `this.add(y, 1) => this.add(x, 1) =>
+    /// this.add(this.add(x, 1), this.add(y, 1))`
+    /// 
+    /// For each node, we build a sequence of `USING(X)` or `KILL(Y)` where X, Y are variable. For
+    /// example:
+    /// ```
+    /// uint x = y + 10; // (1)
+    /// x += 20; // (2)
+    /// ```
+    /// (1) has the sequence: `USE(Y), KILL(X)` and (2) has the sequence: `USE(X), KILL(X)`
+    ///
+    /// Whenever a node is visited, we try to generate the sequence for current node and merge with
+    /// the sequence of previous nodes. If the pattern `USE(X),...,KILL(X)` is discovered then
+    /// all uses of variable X `USE(X)` depend on `KILL(X)`, one data dependency link is created.
+    /// All elements in that pattern will be removed from the sequence.
+    ///
+    /// The loop will stop if no sequence changes happen
     pub fn find_links(&self) -> HashSet<DataLink> {
         let State { vertices, edges, dict, stop, .. } = self.state;
         let mut visited: HashSet<u32> = HashSet::new();

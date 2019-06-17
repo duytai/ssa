@@ -1,20 +1,35 @@
 use std::collections::HashSet;
 use crate::core::{ Walker, Dictionary };
 
+/// Variable access
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub enum Member {
+    /// Link to node that defines current variable
     Reference(u32),
+    /// Contains name of a global variable or function
     Global(String),
+    /// Accesses a member in an array
     IndexAccess,
 }
 
+/// Relationship between two variables
 #[derive(Debug, PartialEq, Eq)]
 pub enum VariableComparison {
+    /// Completely the same
     Equal,
+    /// Completely different
     NotEqual,
+    /// One variable contains other variable
     Partial,
 }
 
+/// Variable in solidity program
+/// 
+/// The variable can be `Array`, `Array Access`, `Struct`, `Struct Access`, `Primitive Type`,
+/// `Global Access`. We use the `members` field to describe the different among them.
+/// - `Array`, `Struct`, `Primitive`: `members` contains only one `Member::Reference`
+/// - `Array Access`: `members` contains one `Member::Reference` and one `Member::IndexAccess`
+/// - `Global Access`: `members` will contains at least one `Member::Global`
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Variable {
     members: Vec<Member>,
@@ -22,10 +37,13 @@ pub struct Variable {
 }
 
 impl Variable {
+    /// Export data to tuple format
     pub fn to_tuple(&self) -> (&Vec<Member>, &String) {
         (&self.members, &self.source)
     }
 
+    /// Find all variables of the walker, we need the dictionary to identify `Member::Global`
+    /// member
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
         let mut ret = HashSet::new();
         let variable = Variable::parse_one(&walker, dict);
@@ -66,6 +84,10 @@ impl Variable {
         }
     }
 
+    /// Use this to find the relationship between two variables
+    /// The relationship is:
+    /// - `Equal`: if all members fields are the same
+    /// - `PartialEq`: if the intersection of two members fields are equal to one of them
     pub fn contains(&self, other: &Variable) -> VariableComparison {
         if other.members.len() > self.members.len() {
             let offset = other.members.len() - self.members.len();
