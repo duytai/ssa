@@ -1,7 +1,7 @@
 [package]
 name = "ssa"
 description = "Solidty Static Analysis"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Duy Tai Nguyen duytai.cse@gmail.com"]
 edition = "2018"
 repository = "https://github.com/duytai/ssa"
@@ -20,6 +20,5 @@ members = [
   "cfg",
   "dot",
   "dfg",
-  "loader",
-  "samples",
+  "loader"
 ]
