@@ -1,10 +1,7 @@
 use std::io::*;
 use std::path::Path;
 use ssa:: {
-    core::{
-        dict::Dictionary,
-    },
-    core::{ Dictionary, State },
+    core::{ Dictionary },
     cfg::{ ControlFlowGraph },
     dfg::{ DataFlowGraph },
     dot::{
