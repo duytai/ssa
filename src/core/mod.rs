@@ -1,3 +1,5 @@
+//! A collections of shared objects 
+//!
 pub mod dict;
 pub mod walker;
 pub mod vertex;

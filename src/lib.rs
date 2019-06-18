@@ -5,8 +5,8 @@
 //!
 //!
 
-mod cfg;
-mod core;
-mod dfg;
-mod dot;
-mod loader;
+pub mod cfg;
+pub mod core;
+pub mod dfg;
+pub mod dot;
+pub mod loader;
