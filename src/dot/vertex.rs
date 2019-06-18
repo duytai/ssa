@@ -1,4 +1,4 @@
-use crate::core::Shape;
+use crate::core::vertex::Shape;
 
 pub enum DotVertex {
     Basic((u32, String, String))

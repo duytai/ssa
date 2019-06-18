@@ -1,4 +1,4 @@
-use crate::variable::Variable;
+use crate::dfg::variable::Variable;
 
 /// The behaviour of a variable
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

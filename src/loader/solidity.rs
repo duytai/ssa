@@ -3,7 +3,7 @@ use std::fs;
 use std::process::{ Command, Output };
 use std::collections::HashMap;
 use std::os::unix::fs::OpenOptionsExt;
-use crate::option::{
+use crate::loader::option::{
     SolidityOption,
     SolidityOutput,
     SolidityOutputKind,

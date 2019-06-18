@@ -1,5 +1,8 @@
 use std::collections::HashSet;
-use crate::core::{ Walker, Dictionary };
+use crate::core::{
+    walker::Walker,
+    dict::Dictionary,
+};
 
 /// Variable access
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]

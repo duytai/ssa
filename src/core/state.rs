@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::{
+use crate::core::{
     edge::Edge,
     vertex::{ Vertex },
     dict::{ Dictionary },

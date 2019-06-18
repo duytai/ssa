@@ -1,17 +1,20 @@
 use std::collections::HashSet;
-use crate::variable::{ Variable };
-use crate::core::{ Walker, Dictionary };
+use crate::dfg::variable::Variable;
+use crate::core::{
+    walker::Walker,
+    dict::Dictionary,
+};
 
 /// Operator in an assignment statement
 ///
 /// - `Operator::Equal` : the variable in LHS clears it own value and create a data dependency on all variables in RHS
-/// ```
+/// ```javascript
 /// x = y;
 /// KILL(x), USE(Y)
-/// ```
+/// ```javascript
 /// - `Operator::Other` : the variable in LHS is modified by using both its value and
 /// RHS
-/// ```
+/// ```javascript
 /// x += y;
 /// USE(x), USE(y)
 /// ```
@@ -31,13 +34,13 @@ pub enum Operator {
 ///
 /// 1. __Assignment__ : a standard assignment inside body of a function.
 ///
-/// ```
+/// ```javacript
 /// x = y + 20;
 /// ```
 ///
 /// 2. __VariableDeclaration__: a state variable declaration in a contract
 ///
-/// ```
+/// ```javacript
 /// contract Sample {
 ///   uint totalSupply = 0;
 /// }
@@ -45,14 +48,14 @@ pub enum Operator {
 ///
 /// 3. __ParameterList__: a list of parameters of a function
 ///
-/// ```
+/// ```javascript
 /// contract Sample {
 ///   function add(uint x, uint y) returns(uint) {}
 /// }
 /// ```
 /// 4. __VariableDeclarationStatement__: local variable declaration
 ///
-/// ```
+/// ```javascript
 /// uint x = y + 10;
 /// ```
 

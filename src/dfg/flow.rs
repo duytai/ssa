@@ -1,12 +1,15 @@
 use std::collections::{ HashSet, HashMap };
-use crate::core::{ Shape, State };
-use crate::{
-    variable::{ VariableComparison },
+use crate::core::{
+    state::State,
+    vertex::Shape,
+};
+use crate::dfg::{
+    variable::VariableComparison,
     assignment::Operator,
 };
-use crate::action::Action;
-use crate::link::DataLink;
-use crate::utils;
+use crate::dfg::action::Action;
+use crate::dfg::link::DataLink;
+use crate::dfg::utils;
 
 /// Data flow graph
 ///
@@ -33,7 +36,7 @@ impl<'a> DataFlowGraph<'a> {
     /// It should be noted that we ignore nested functions because each nested function takes a node in CFG.
     /// For example:
     ///
-    /// ```
+    /// ```javascript
     /// this.add(this.add(x, 1), this.add(y, 1));
     ///
     /// ```
@@ -42,7 +45,7 @@ impl<'a> DataFlowGraph<'a> {
     /// 
     /// For each node, we build a sequence of `USING(X)` or `KILL(Y)` where X, Y are variable. For
     /// example:
-    /// ```
+    /// ```javascript
     /// uint x = y + 10; // (1)
     /// x += 20; // (2)
     /// ```

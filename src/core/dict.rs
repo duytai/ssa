@@ -1,4 +1,4 @@
-use crate::walker::Walker;
+use crate::core::walker::Walker;
 use std::collections::HashMap;
 
 /// Keep inheritance tree and function entry

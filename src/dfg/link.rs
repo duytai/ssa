@@ -1,4 +1,4 @@
-use crate::variable::Variable;
+use crate::dfg::variable::Variable;
 
 /// Data dependency link between to node
 ///

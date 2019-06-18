@@ -8,17 +8,5 @@ repository = "https://github.com/duytai/ssa"
 license = "GPL-3.0"
 
 [dependencies]
-cfg = { path = "./cfg" }
-core = { path = "./core" }
-dot = { path = "./dot" }
-dfg = { path = "./dfg" }
-loader = { path = "./loader" }
-
-[workspace]
-members = [
-  "core",
-  "cfg",
-  "dot",
-  "dfg",
-  "loader"
-]
+json = "0.11.13"
+reqwest = "0.9.18"

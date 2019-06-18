@@ -1,4 +1,4 @@
-use crate::core::Walker;
+use crate::core::walker::Walker;
 
 /// Block of source code
 #[derive(Debug)]

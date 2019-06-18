@@ -1,5 +1,5 @@
-use crate::edge::DotEdge;
-use crate::vertex::DotVertex;
+use crate::dot::edge::DotEdge;
+use crate::dot::vertex::DotVertex;
 
 pub struct Dot {
     edges: Vec<DotEdge>,
