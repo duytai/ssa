@@ -1,7 +1,6 @@
 use std::collections::HashSet;
-use crate::core::dict::Dictionary;
-use crate::dfg::variable::Variable;
-use crate::dfg::assignment::Assignment;
+use crate::core::Dictionary;
+use crate::dfg::{ Variable, Assignment };
 
 pub fn find_assignments(id: u32, dict: &Dictionary) -> Vec<Assignment> {
     match dict.lookup(id) {

@@ -1,8 +1,8 @@
 use std::collections::HashSet;
-use crate::dfg::variable::Variable;
+use crate::dfg::Variable;
 use crate::core::{
-    walker::Walker,
-    dict::Dictionary,
+    Walker,
+    Dictionary,
 };
 
 /// Operator in an assignment statement

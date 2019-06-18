@@ -1,4 +1,7 @@
 //! Solidity compiler
 //!
-pub mod solidity; 
-pub mod option;
+mod solidity; 
+mod option;
+
+pub use solidity::*;
+pub use option::*;

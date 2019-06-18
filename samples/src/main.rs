@@ -1,25 +1,24 @@
-extern crate loader;
-extern crate json;
-extern crate core;
-extern crate cfg;
-extern crate dot;
-
 use std::io::*;
 use std::path::Path;
-use core::{ Dictionary, State };
-use cfg::{ ControlFlowGraph };
-use dfg::{ DataFlowGraph };
-use dot::{
-    Dot,
-    DotVertex,
-    DotEdge,
-};
-use loader::{
-    Solidity,
-    SolidityOption,
-    SolidityOutputKind,
-    SolidityOutput,
-    SolidityASTOutput,
+use ssa:: {
+    core::{
+        dict::Dictionary,
+    },
+    core::{ Dictionary, State },
+    cfg::{ ControlFlowGraph },
+    dfg::{ DataFlowGraph },
+    dot::{
+        Dot,
+        DotVertex,
+        DotEdge,
+    },
+    loader::{
+        Solidity,
+        SolidityOption,
+        SolidityOutputKind,
+        SolidityOutput,
+        SolidityASTOutput,
+    },
 };
 
 fn main() -> Result<()> {

@@ -1,8 +1,15 @@
 //! A collections of data flow graph utilities
 //!
-pub mod flow;
-pub mod assignment;
-pub mod variable;
-pub mod link;
-pub mod action;
-pub mod utils;
+mod flow;
+mod assignment;
+mod variable;
+mod link;
+mod action;
+mod utils;
+
+pub use flow::*;
+pub use assignment::*;
+pub use variable::*;
+pub use link::*;
+pub use action::*;
+pub use utils::*;

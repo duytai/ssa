@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use crate::core::{
-    walker::Walker,
-    dict::Dictionary,
+    Walker,
+    Dictionary,
 };
 
 /// Variable access

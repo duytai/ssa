@@ -1,5 +1,9 @@
 //! A collections of dot lang utilities 
 //!
-pub mod edge;
-pub mod vertex;
-pub mod lang;
+mod edge;
+mod vertex;
+mod lang;
+
+pub use edge::*;
+pub use vertex::*;
+pub use lang::*;

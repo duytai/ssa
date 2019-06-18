@@ -1,15 +1,15 @@
 use std::collections::{ HashSet, HashMap };
 use crate::core::{
-    state::State,
-    vertex::Shape,
+    State,
+    Shape,
 };
 use crate::dfg::{
-    variable::VariableComparison,
-    assignment::Operator,
+    VariableComparison,
+    Operator,
+    Action,
+    DataLink,
+    utils,
 };
-use crate::dfg::action::Action;
-use crate::dfg::link::DataLink;
-use crate::dfg::utils;
 
 /// Data flow graph
 ///

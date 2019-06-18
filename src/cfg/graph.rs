@@ -1,5 +1,5 @@
-use crate::core::walker::Walker;
-use crate::cfg::block::{
+use crate::core::Walker;
+use crate::cfg::{
     CodeBlock,
     BlockNode,
     SimpleBlockNode,

@@ -1,22 +1,21 @@
 use std::collections::HashSet;
 use crate::cfg::{
-    graph::Graph,
-    block::{
-        BlockNode,
-        SimpleBlockNode,
-        CodeBlock,
-        IfStatement,
-        WhileStatement,
-        DoWhileStatement,
-        ForStatement,
-    },
+    Graph,
+    BlockNode,
+    SimpleBlockNode,
+    CodeBlock,
+    IfStatement,
+    WhileStatement,
+    DoWhileStatement,
+    ForStatement,
 };
 use crate::core::{
-    dict::Dictionary,
-    walker::Node,
-    vertex::{ Vertex, Shape },
-    state::State,
-    edge::Edge,
+    Dictionary,
+    Node,
+    Vertex,
+    Shape,
+    State,
+    Edge,
 };
 
 /// Control Flow Graph
