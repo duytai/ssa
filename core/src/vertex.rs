@@ -1,3 +1,4 @@
+/// Shape represents function of a node in CFG 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Shape {
     Point,
@@ -7,6 +8,7 @@ pub enum Shape {
     Mdiamond,
 }
 
+/// Vertex in CFG
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Vertex {
     id: u32,

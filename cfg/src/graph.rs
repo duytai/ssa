@@ -9,24 +9,47 @@ use crate::block::{
     ForStatement,
 };
 
+/// Process AST tree
+///
+/// This module reads AST tree and preprocess data for ControlFlowGraph, Graph separates a function
+/// call to 2 blocks by calling `build_block`.
+///
+/// - Param 
+/// - Body
+///
+/// For body, Graph calls `build_items` to find control flow tokens. For each token, Graph calls
+/// `build_node` to find its components
+///
+/// It is noted that, Graph start at `build_node` with NodeKind::Root
 #[derive(Debug)]
 pub struct Graph<'a> {
     walker: Walker<'a>,
     root: BlockNode<'a>,
 }
 
+/// Kind of a graph node
 #[derive(Debug)]
 pub enum BlockKind {
+    /// Parameter list of a function
     Param,
+    /// Body of a function
     Body,
 }
 
+/// Kind of node in graph
+///
+/// It is detected based on token kind of AST
 #[derive(Debug)]
 pub enum NodeKind {
+    /// Root of a function
     Root,
+    /// IfStatement token
     IfStatement,
+    /// WhileStatement token
     WhileStatement,
+    /// ForStatement token
     ForStatement,
+    /// DoWhileStatement token
     DoWhileStatement,
 }
 
@@ -35,6 +58,9 @@ impl<'a> Graph<'a> {
         Graph { walker, root: BlockNode::None }
     }
 
+    /// Find all nested function_calls and try to create a single node for each
+    ///
+    /// Some functions directly affect to control flow will be collected to precisely build cfg
     pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
         let mut last_source = None;
@@ -100,6 +126,8 @@ impl<'a> Graph<'a> {
         function_calls
     }
 
+    /// Traverse the body of a function based on token kind, for some special token call build_node
+    /// to find it's components
     pub fn build_items(&mut self, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
         match walker.node.name {
             "IfStatement" => {
@@ -143,6 +171,8 @@ impl<'a> Graph<'a> {
         }
     }
 
+    /// Traverse parameter list and modifier invocations, call build_items to traverse body of a
+    /// function
     pub fn build_block(&mut self, kind: BlockKind, walker: Walker<'a>) -> Vec<CodeBlock<'a>> {
         let mut blocks = vec![];
         match kind {
@@ -172,6 +202,7 @@ impl<'a> Graph<'a> {
         blocks
     } 
 
+    /// For each node, try to detect it's components
     pub fn build_node(&mut self, kind: NodeKind, walker: Walker<'a>) -> BlockNode<'a> {
         match kind {
             NodeKind::Root => {

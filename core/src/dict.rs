@@ -1,6 +1,7 @@
 use crate::walker::Walker;
 use std::collections::HashMap;
 
+/// Keep inheritance tree and function entry
 #[derive(Debug)]
 pub struct ContractProp {
     states: Vec<u32>,
@@ -8,6 +9,7 @@ pub struct ContractProp {
     parents: Vec<u32>,
 }
 
+/// Allow searching by node id 
 #[derive(Debug)]
 pub struct Dictionary<'a> {
     entries: HashMap<u32, Walker<'a>>,
@@ -15,6 +17,7 @@ pub struct Dictionary<'a> {
 }
 
 impl<'a> Dictionary<'a> {
+    /// Create new dictionary
     pub fn new(value: &'a json::JsonValue, sources: &'a HashMap<String, String>) -> Self {
         let mut dict = Dictionary {
             entries: HashMap::new(),
@@ -28,6 +31,7 @@ impl<'a> Dictionary<'a> {
         dict
     }
 
+    /// Traverse AST and save data for later searches
     pub fn traverse(&mut self, walker: &Walker<'a>) {
         if walker.node.name == "ContractDefinition" {
             let mut prop = ContractProp {
@@ -61,10 +65,12 @@ impl<'a> Dictionary<'a> {
         });
     }
 
+    /// Find walker by node id
     pub fn lookup(&self, id: u32) -> Option<&Walker> {
         self.entries.get(&id)
     }
 
+    /// Find a list of functions by node id, the list includes inherited functions
     pub fn lookup_states(&self, id: u32) -> Vec<&Walker> {
         let mut ret = vec![];
         for (_, prop) in self.contracts.iter() {

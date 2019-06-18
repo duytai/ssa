@@ -1,5 +1,6 @@
 use json;
 
+/// AST node
 #[derive(Debug, Clone)]
 pub struct Node<'a> {
     pub id: u32,
@@ -9,6 +10,7 @@ pub struct Node<'a> {
     children: Vec<&'a json::JsonValue>,
 }
 
+/// A pointer to a node of AST tree 
 #[derive(Debug, Clone)]
 pub struct Walker<'a> {
     pub node: Node<'a>,
@@ -39,6 +41,7 @@ impl<'a> Walker<'a> {
         Walker { node, source }
     }
 
+    /// Find all direct childrens of current walker and invoke callback one by one 
     pub fn for_each<Callback>(&self, mut cb: Callback) where Callback: FnMut(Walker<'a>, usize) {
         for (index, child) in self.node.children.iter().enumerate() {
             cb(Walker::new(child, self.source), index);
@@ -46,6 +49,7 @@ impl<'a> Walker<'a> {
     }
 
 
+    /// Find all direct childrens passing filter and invoke callback one time
     pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
         where
             Callback: FnMut(Vec<Walker<'a>>),
@@ -61,6 +65,8 @@ impl<'a> Walker<'a> {
         cb(walkers);
     }
 
+    /// Find all childrens, if children is discovered then stop discovering that path and invoke
+    /// callback 
     pub fn all_break<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
         where 
             Callback: FnMut(Vec<Walker<'a>>),
@@ -86,6 +92,7 @@ impl<'a> Walker<'a> {
         cb(walkers);
     }
 
+    /// Same as all_break but does ignore any path 
     pub fn all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
         where
             Callback: FnMut(Vec<Walker<'a>>),

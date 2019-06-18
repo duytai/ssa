@@ -18,6 +18,7 @@ use crate::core:: {
     Edge,
 };
 
+/// Control Flow Graph
 pub struct ControlFlowGraph<'a> {
     edges: HashSet<Edge>,
     vertices: HashSet<Vertex>,
@@ -26,12 +27,14 @@ pub struct ControlFlowGraph<'a> {
     stop: u32,
 }
 
+/// The type of breaking loop statement
 #[derive(Debug, PartialEq)]
 pub enum BreakerType {
     Continue,
     Break,
 }
 
+/// Type and position of `LoopBreaker`
 #[derive(Debug)]
 pub struct LoopBreaker {
     kind: BreakerType,
@@ -39,6 +42,7 @@ pub struct LoopBreaker {
 }
 
 impl<'a> ControlFlowGraph<'a> {
+    /// Create a new cfg from dictionary
     pub fn new(dict: &'a Dictionary) -> Self {
         ControlFlowGraph {
             edges: HashSet::new(),
@@ -49,6 +53,9 @@ impl<'a> ControlFlowGraph<'a> {
         }
     }
 
+    /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
+    ///
+    /// Build a list of nested function calls and connect them toghether
     pub fn condition_traverse(&mut self, blocks: &Vec<SimpleBlockNode>) -> Vec<u32> {
         let mut chains = vec![];
         for (index, block) in blocks.iter().enumerate() {
@@ -80,6 +87,7 @@ impl<'a> ControlFlowGraph<'a> {
         chains
     }
 
+    /// Traverse a list of SimpleBlockNode
     pub fn simple_traverse(&mut self, blocks: &Vec<SimpleBlockNode>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
         for block in blocks.iter() {
             if predecessors.is_empty() { return vec![]; }
@@ -182,6 +190,7 @@ impl<'a> ControlFlowGraph<'a> {
         return predecessors;
     }
 
+    /// Traverse the whole graph
     pub fn traverse(&mut self, blocks: &Vec<CodeBlock>, mut predecessors: Vec<u32>, breakers: &mut Vec<LoopBreaker>) -> Vec<u32> {
         for block in blocks {
             if predecessors.is_empty() { return vec![]; }
@@ -328,6 +337,7 @@ impl<'a> ControlFlowGraph<'a> {
         return predecessors;
     }
 
+    /// Build a cfg, the cfg starts at FunctionDefinition `entry_id`
     pub fn start_at(&mut self, entry_id: u32) -> Option<State> {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
         let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];

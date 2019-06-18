@@ -1,3 +1,4 @@
+/// Edge of CFG
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Edge {
     from: u32,

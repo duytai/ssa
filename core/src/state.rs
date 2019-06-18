@@ -5,6 +5,7 @@ use crate::{
     dict::{ Dictionary },
 };
 
+/// Result of CFG
 #[derive(Debug)]
 pub struct State<'a> {
     pub stop: u32,
