@@ -42,16 +42,22 @@ fn main() -> Result<()> {
             // Render in dot language
             let mut dot = Dot::new();
             let dot_vertices: Vec<DotVertex> = state.vertices.iter()
-                .map(|vertex| vertex.to_tuple().into())
+                .map(|vertex| {
+                    let id = vertex.get_id();
+                    let source = vertex.get_source();
+                    let shape = vertex.get_shape();
+                    (id, source, shape).into()
+                })
                 .collect();
             let dot_edges: Vec<DotEdge> = state.edges.iter()
-                .map(|edge| edge.to_tuple().into())
+                .map(|edge| (edge.get_from(), edge.get_to()).into())
                 .collect();
             let dot_links: Vec<DotEdge> = links.iter()
                 .map(|link| {
-                    let (from, to, var) = link.to_tuple();
-                    let (_, source) = var.to_tuple();
-                    (from, to, source.clone()).into()
+                    let from = link.get_from();
+                    let to = link.get_to();
+                    let source = link.get_var().get_source();
+                    (from, to, source).into()
                 })
                 .collect();
             dot.append_edges(dot_edges);

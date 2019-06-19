@@ -4,8 +4,8 @@ pub enum DotVertex {
     Basic((u32, String, String))
 }
 
-impl From<(u32, &String, &Shape)> for DotVertex {
-    fn from(item: (u32, &String, &Shape)) -> Self {
+impl From<(u32, &str, &Shape)> for DotVertex {
+    fn from(item: (u32, &str, &Shape)) -> Self {
         let shape = match item.2 {
             Shape::Point => "point",
             Shape::Box => "box",
@@ -13,7 +13,7 @@ impl From<(u32, &String, &Shape)> for DotVertex {
             Shape::DoubleCircle => "doublecircle",
             Shape::Mdiamond => "Mdiamond",
         };
-        DotVertex::Basic((item.0, item.1.clone(), shape.to_string()))
+        DotVertex::Basic((item.0, item.1.to_string(), shape.to_string()))
     }
 }
 

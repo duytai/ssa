@@ -18,15 +18,15 @@ impl DataLink {
         DataLink { from, to, var }
     }
 
-    fn get_from(&self) -> u32 {
+    pub fn get_from(&self) -> u32 {
         self.from
     }
 
-    fn get_to(&self) -> u32 {
+    pub fn get_to(&self) -> u32 {
         self.to
     }
 
-    fn get_var(&self) -> &Variable {
+    pub fn get_var(&self) -> &Variable {
         &self.var
     }
 }

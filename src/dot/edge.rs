@@ -3,9 +3,9 @@ pub enum DotEdge {
     Labeled((u32, u32, String)),
 }
 
-impl From<(u32, u32, String)> for DotEdge {
-    fn from(item: (u32, u32, String)) -> Self {
-        DotEdge::Labeled(item)
+impl From<(u32, u32, &str)> for DotEdge {
+    fn from(item: (u32, u32, &str)) -> Self {
+        DotEdge::Labeled((item.0, item.1, item.2.to_string()))
     }
 }
 
