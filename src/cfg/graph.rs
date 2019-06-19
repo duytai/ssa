@@ -68,12 +68,8 @@ impl<'a> Graph<'a> {
             walker.node.name == "FunctionCall"
         }, |walkers| {
             for walker in walkers {
-                let mut function_name = None;
-                walker.for_each(|w, index| {
-                    if index == 0 {
-                        function_name = w.node.attributes["value"].as_str();
-                    }
-                });
+                let child_walkers = walker.direct_childs(|_| true);
+                let function_name = child_walkers[0].node.attributes["value"].as_str();
                 last_source = Some(walker.node.source);
                 match function_name {
                     Some(function_name) => match function_name {
@@ -177,12 +173,12 @@ impl<'a> Graph<'a> {
         let mut blocks = vec![];
         match kind {
             BlockKind::Body => {
-                walker.for_each(|walker, _| {
+                for walker in walker.direct_childs(|_| true) {
                     blocks.append(&mut self.build_items(walker));
-                })
+                }
             },
             BlockKind::Param => {
-                walker.for_each(|walker, index| {
+                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                     match walker.node.name {
                         "ParameterList" => {
                             if index == 0 {
@@ -196,7 +192,7 @@ impl<'a> Graph<'a> {
                         "ModifierInvocation" => panic!(),
                         _ => {},
                     }
-                })
+                }
             },
         }
         blocks
@@ -220,7 +216,7 @@ impl<'a> Graph<'a> {
                         Some(*x)
                     }).collect();
                 }
-                walker.for_each(|walker, index| {
+                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                     match props[index] {
                         "initializationExpression" => {
                             init = CodeBlock::Block(walker);
@@ -239,7 +235,7 @@ impl<'a> Graph<'a> {
                             }
                         },
                     }
-                });
+                }
                 BlockNode::ForStatement(ForStatement { condition, init, expression, blocks })
             },
             NodeKind::DoWhileStatement => {

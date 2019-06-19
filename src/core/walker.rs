@@ -41,13 +41,17 @@ impl<'a> Walker<'a> {
         Walker { node, source }
     }
 
-    /// Find all direct childrens of current walker and invoke callback one by one 
-    pub fn for_each<Callback>(&self, mut cb: Callback) where Callback: FnMut(Walker<'a>, usize) {
-        for (index, child) in self.node.children.iter().enumerate() {
-            cb(Walker::new(child, self.source), index);
+    /// Find all direct childrens
+    pub fn direct_childs<Filter> (&self, fi: Filter) -> Vec<Walker<'a>> where Filter: Fn(&Walker) -> bool {
+        let mut walkers = vec![];
+        for child in self.node.children.iter() {
+            let walker = Walker::new(child, self.source);
+            if fi(&walker) {
+                walkers.push(walker);
+            }
         }
+        walkers
     }
-
 
     /// Find all direct childrens passing filter and invoke callback one time
     pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)

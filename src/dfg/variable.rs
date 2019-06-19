@@ -152,20 +152,20 @@ impl Variable {
                         ret.push(Member::Global(member_name.to_string()));
                     }
                 }
-                walker.for_each(|walker, _| {
+                for walker in walker.direct_childs(|_| true).into_iter() {
                     ret.append(&mut Variable::find_variable(&walker, dict));
-                });
+                }
                 ret
             },
             "IndexAccess" => {
                 let mut ret = vec![];
-                walker.for_each(|walker, index| {
+                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                     if index == 0 {
                         ret.append(&mut Variable::find_variable(&walker, dict));
                     } else if index == 1 {
                         ret.insert(0, Member::IndexAccess);
                     }
-                });
+                }
                 ret
             },
             _ => vec![],

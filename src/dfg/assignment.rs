@@ -88,12 +88,12 @@ impl Assignment {
             },
             // variables from parameters
             "ParameterList" => {
-                walker.for_each(|walker, _| {
+                for walker in walker.direct_childs(|_| true).into_iter() {
                     let op = Operator::Equal;
                     let lhs = Variable::parse(&walker, dict);
                     let rhs = HashSet::new();
                     assignments.push(Assignment { lhs, rhs, op });
-                });
+                }
             },
             // local variable definitions
             "VariableDeclarationStatement" => {

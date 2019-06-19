@@ -46,7 +46,7 @@ impl<'a> Dictionary<'a> {
                     }
                 }
             }
-            walker.for_each(|walker, _| {
+            for walker in walker.direct_childs(|_| true).into_iter() {
                 match walker.node.name {
                     "FunctionDefinition" => {
                         prop.functions.push(walker.node.id);
@@ -56,13 +56,13 @@ impl<'a> Dictionary<'a> {
                     },
                     _ => {},
                 }
-            });
+            }
             self.contracts.insert(walker.node.id, prop);
         }
-        walker.for_each(|walker, _| {
+        for walker in walker.direct_childs(|_| true).into_iter() {
             self.traverse(&walker);
             self.entries.insert(walker.node.id, walker);
-        });
+        }
     }
 
     /// Find walker by node id
