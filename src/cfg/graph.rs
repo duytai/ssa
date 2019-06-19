@@ -241,79 +241,73 @@ impl<'a> Graph<'a> {
             NodeKind::DoWhileStatement => {
                 let mut condition = CodeBlock::None; 
                 let mut blocks = vec![];
-                walker.for_all(|_| true, |walkers| {
-                    for (index, walker) in walkers.into_iter().enumerate() {
-                        match index {
-                            0 => {
-                                condition = CodeBlock::Block(walker);
+                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
+                    match index {
+                        0 => {
+                            condition = CodeBlock::Block(walker);
+                        },
+                        1 => match walker.node.name {
+                            "Block" => {
+                                blocks = self.build_block(BlockKind::Body, walker);
                             },
-                            1 => match walker.node.name {
-                                "Block" => {
-                                    blocks = self.build_block(BlockKind::Body, walker);
-                                },
-                                _ => {
-                                    blocks.append(&mut self.build_items(walker));
-                                }
-                            },
-                            _ => unimplemented!(),
-                        }
+                            _ => {
+                                blocks.append(&mut self.build_items(walker));
+                            }
+                        },
+                        _ => unimplemented!(),
                     }
-                });
+                }
                 BlockNode::DoWhileStatement(DoWhileStatement { condition, blocks })
             },
             NodeKind::WhileStatement => {
                 let mut condition = CodeBlock::None; 
                 let mut blocks = vec![];
-                walker.for_all(|_| true, |walkers| {
-                    for (index, walker) in walkers.into_iter().enumerate() {
-                        match index {
-                            0 => {
-                                condition = CodeBlock::Block(walker);
+                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
+                    match index {
+                        0 => {
+                            condition = CodeBlock::Block(walker);
+                        },
+                        1 => match walker.node.name {
+                            "Block" => {
+                                blocks = self.build_block(BlockKind::Body, walker);
                             },
-                            1 => match walker.node.name {
-                                "Block" => {
-                                    blocks = self.build_block(BlockKind::Body, walker);
-                                },
-                                _ => {
-                                    blocks.append(&mut self.build_items(walker));
-                                }
-                            },
-                            _ => unimplemented!(),
-                        }
+                            _ => {
+                                blocks.append(&mut self.build_items(walker));
+                            }
+                        },
+                        _ => unimplemented!(),
                     }
-                });
+                }
                 BlockNode::WhileStatement(WhileStatement { condition, blocks })
             },
             NodeKind::IfStatement => {
                 let mut condition = CodeBlock::None; 
                 let mut tblocks = vec![];
                 let mut fblocks = vec![];
-                walker.for_all(|_| true, |walkers| {
-                    for (index, walker) in walkers.into_iter().enumerate() {
-                        match index {
-                            0 => {
-                                condition = CodeBlock::Block(walker);
+                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
+                    match index {
+                        0 => {
+                            condition = CodeBlock::Block(walker);
+                        },
+                        1 => match walker.node.name {
+                            "Block" => {
+                                tblocks = self.build_block(BlockKind::Body, walker);
                             },
-                            1 => match walker.node.name {
-                                "Block" => {
-                                    tblocks = self.build_block(BlockKind::Body, walker);
-                                },
-                                _ => {
-                                    tblocks.append(&mut self.build_items(walker));
-                                }
+                            _ => {
+                                tblocks.append(&mut self.build_items(walker));
+                            }
+                        },
+                        2 => match walker.node.name {
+                            "Block" => {
+                                fblocks = self.build_block(BlockKind::Body, walker);
                             },
-                            2 => match walker.node.name {
-                                "Block" => {
-                                    fblocks = self.build_block(BlockKind::Body, walker);
-                                },
-                                _ => {
-                                    fblocks.append(&mut self.build_items(walker));
-                                }
-                            },
-                            _ => unimplemented!(),
-                        }
+                            _ => {
+                                fblocks.append(&mut self.build_items(walker));
+                            }
+                        },
+                        _ => unimplemented!(),
                     }
-                });
+                }
                 BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks })
             },
         } 

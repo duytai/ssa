@@ -101,13 +101,10 @@ impl Assignment {
             },
             // variable assignments
             _ => {
-                walker.for_all(|walker| {
-                    walker.node.name == "Assignment"
-                }, |walkers| {
-                    for walker in walkers {
-                        assignments.push(Assignment::parse_one(&walker, dict));
-                    }
-                });
+                let fi = |walker: &Walker| walker.node.name == "Assignment";
+                for walker in walker.direct_childs(fi).into_iter() {
+                    assignments.push(Assignment::parse_one(&walker, dict));
+                }
             },
         }
         assignments
@@ -122,12 +119,11 @@ impl Assignment {
         };
         let mut lhs = HashSet::new();
         let mut rhs = HashSet::new();
-        walker.for_all(|_| { true }, |walkers| {
-            lhs.extend(Variable::parse(&walkers[0], dict));
-            if walkers.len() >= 2 {
-                rhs.extend(Variable::parse(&walkers[1], dict));
-            }
-        });
+        let walkers = walker.direct_childs(|_| true);
+        lhs.extend(Variable::parse(&walkers[0], dict));
+        if walkers.len() >= 2 {
+            rhs.extend(Variable::parse(&walkers[1], dict));
+        }
         Assignment { lhs, rhs, op }
     }
 }

@@ -53,22 +53,6 @@ impl<'a> Walker<'a> {
         walkers
     }
 
-    /// Find all direct childrens passing filter and invoke callback one time
-    pub fn for_all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
-        where
-            Callback: FnMut(Vec<Walker<'a>>),
-            Filter: FnMut(&Walker) -> bool 
-    {
-        let mut walkers = vec![];
-        for child in self.node.children.iter() {
-            let walker = Walker::new(child, self.source);
-            if fi(&walker) {
-                walkers.push(walker);
-            }
-        }
-        cb(walkers);
-    }
-
     /// Find all childrens, if children is discovered then stop discovering that path and invoke
     /// callback 
     pub fn all_break<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
