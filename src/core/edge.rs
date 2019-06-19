@@ -10,8 +10,12 @@ impl Edge {
         Edge { from, to }
     }
 
-    pub fn to_tuple(&self) -> (u32, u32) {
-        (self.from, self.to)
+    pub fn get_from(&self) -> u32 {
+        self.from
+    }
+
+    pub fn get_to(&self) -> u32 {
+        self.to
     }
 }
 

@@ -25,7 +25,15 @@ impl Vertex {
         }
     }
 
-    pub fn to_tuple(&self) -> (u32, &String, &Shape) {
-        (self.id, &self.source, &self.shape)
+    pub fn get_id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn get_source(&self) -> &str {
+        &self.source
+    }
+
+    pub fn get_shape(&self) -> &Shape {
+        &self.shape
     }
 }

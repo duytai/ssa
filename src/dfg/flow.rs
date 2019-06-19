@@ -66,11 +66,11 @@ impl<'a> DataFlowGraph<'a> {
         let mut links: HashSet<DataLink> = HashSet::new(); 
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices.iter() {
-            let (id, _, _) = vertex.to_tuple();
-            tables.insert(id, HashSet::new());
+            tables.insert(vertex.get_id(), HashSet::new());
         }
         for edge in edges.iter() {
-            let (from, to) = edge.to_tuple();
+            let from = edge.get_from();
+            let to = edge.get_to();
             match parents.get_mut(&to) {
                 Some(v) => { v.push(from); },
                 None => { parents.insert(to, vec![from]); },
@@ -84,15 +84,13 @@ impl<'a> DataFlowGraph<'a> {
         while stack.len() > 0 {
             let (from, id, mut actions) = stack.pop().unwrap();
             let vertex = vertices.iter().find(|v| {
-                let (vertex_id, _, _) = v.to_tuple();
-                vertex_id == id
+                v.get_id() == id
             }).unwrap();
             let pre_table = tables.get(&from).unwrap().clone();
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
-            let (_, _, shape) = vertex.to_tuple();
-            match shape {
+            match vertex.get_shape() {
                 Shape::DoubleCircle | Shape::Mdiamond => {
                     for var in utils::find_parameters(id, dict) {
                         new_actions.push(Action::Use(var, id));

@@ -11,8 +11,7 @@ fn complex_block() -> io::Result<()> {
         assert_eq!(edges.len(), 9);
         let function_calls = vertices.iter()
             .filter(|v| {
-                let (_, _, shape) = v.to_tuple();
-                shape == &Shape::DoubleCircle
+                v.get_shape() == &Shape::DoubleCircle
             })
             .collect::<Vec<&Vertex>>();
         assert_eq!(function_calls.len(), 4);

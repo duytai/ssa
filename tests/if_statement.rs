@@ -69,11 +69,9 @@ fn both_if_else_body_are_expression() -> io::Result<()> {
 fn condition_is_function() -> io::Result<()> {
     setup_cfg("if_6.sol", 37, |State { vertices, edges, stop, .. }| {
         let condition_vertex = vertices.iter().find(|v| {
-            let (id, _, _) = v.to_tuple();
-            id == 26
+            v.get_id() == 26
         }).unwrap();
-        let (_, _, shape) = condition_vertex.to_tuple(); 
-        assert_eq!(shape, &Shape::Mdiamond);
+        assert_eq!(condition_vertex.get_shape(), &Shape::Mdiamond);
         assert_eq!(vertices.len(), 7);
         assert_eq!(edges.len(), 7);
         assert!(edges.contains(&Edge::new(26, 34)));
@@ -88,11 +86,9 @@ fn condition_is_function() -> io::Result<()> {
 fn condition_is_function_and_expression() -> io::Result<()> {
     setup_cfg("if_7.sol", 39, |State { vertices, edges, stop, .. }| {
         let condition_vertex = vertices.iter().find(|v| {
-            let (id, _, _) = v.to_tuple();
-            id == 28 
+            v.get_id() == 28 
         }).unwrap();
-        let (_, _, shape) = condition_vertex.to_tuple(); 
-        assert_eq!(shape, &Shape::Diamond);
+        assert_eq!(condition_vertex.get_shape(), &Shape::Diamond);
         assert_eq!(vertices.len(), 8);
         assert_eq!(edges.len(), 8);
         assert!(edges.contains(&Edge::new(26, 28)));
