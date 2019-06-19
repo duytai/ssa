@@ -1,3 +1,4 @@
+[![CircleCI](https://circleci.com/gh/duytai/ssa/tree/master.svg?style=svg)](https://circleci.com/gh/duytai/ssa/tree/master)
 # SSA
 A collection of utilities to statically analyze solidity program
 
