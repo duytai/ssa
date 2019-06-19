@@ -74,7 +74,7 @@ fn struct_assignments() -> io::Result<()> {
         assert_eq!(state.vertices.len(), 11);
         assert_eq!(state.edges.len(), 10);
         let links = DataFlowGraph::new(&state).find_links();
-        assert_eq!(links.len(), 9);
+        assert_eq!(links.len(), 8);
         for link in links {
             match link.get_from() {
                 22 => match link.get_to() {
@@ -86,11 +86,56 @@ fn struct_assignments() -> io::Result<()> {
                     _ => assert!(false),
                 },
                 38 => match link.get_to() {
-                    28 | 32 | 7 => {},
+                    32 | 7 => {},
                     _ => assert!(false),
                 }
                 32 => assert_eq!(link.get_to(), 13),
                 28 => assert_eq!(link.get_to(), 16),
+                _ => assert!(false),
+            }
+        }
+    })?;
+    Ok(())
+}
+
+#[test]
+fn array_assignments() -> io::Result<()> {
+    setup_cfg("data_flow_6.sol", 31, |state| {
+        assert_eq!(state.vertices.len(), 7);
+        assert_eq!(state.edges.len(), 6);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 4);
+        for link in links {
+            match link.get_from() {
+                16 => match link.get_to() {
+                    4 | 7 => {},
+                    _ => assert!(false),
+                },
+                29 => match link.get_to() {
+                    7 | 23 => {},
+                    _ => assert!(false),
+                },
+                _ => assert!(false),
+            }
+        }
+    })?;
+    Ok(())
+}
+
+#[test]
+fn variables_in_functioncall() -> io::Result<()> {
+    setup_cfg("data_flow_7.sol", 46, |state| {
+        assert_eq!(state.vertices.len(), 9);
+        assert_eq!(state.edges.len(), 8);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 3);
+        for link in links {
+            match link.get_from() {
+                40 => assert_eq!(26, link.get_to()),
+                44 => match link.get_to() {
+                    30 | 26 => {},
+                    _ => assert!(false),
+                },
                 _ => assert!(false),
             }
         }

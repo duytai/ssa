@@ -161,7 +161,7 @@ impl<'a> DataFlowGraph<'a> {
                                                     links.insert(data_link);
                                                 }
                                                 cur_table.remove(action);
-                                                true
+                                                false
                                             },
                                             VariableComparison::NotEqual => {
                                                 true
