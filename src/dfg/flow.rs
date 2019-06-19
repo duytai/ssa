@@ -100,9 +100,8 @@ impl<'a> DataFlowGraph<'a> {
                     let assignments = utils::find_assignments(id, dict);
                     if assignments.len() > 0 {
                         for assignment in assignments {
-                            let (lhs, rhs, op) = assignment.to_tuple();
-                            for l in lhs.clone() {
-                                match op {
+                            for l in assignment.get_lhs().clone() {
+                                match assignment.get_op() {
                                     Operator::Equal => {
                                         new_actions.push(Action::Kill(l, id));
                                     },
@@ -112,7 +111,7 @@ impl<'a> DataFlowGraph<'a> {
                                     }
                                 }
                             }
-                            for r in rhs.clone() {
+                            for r in assignment.get_rhs().clone() {
                                 new_actions.push(Action::Use(r, id));
                             }
                         }
@@ -156,9 +155,7 @@ impl<'a> DataFlowGraph<'a> {
                                                 false
                                             },
                                             VariableComparison::Partial => {
-                                                let (kill_var_members, _) = kill_var.to_tuple();
-                                                let (variable_members, _) = variable.to_tuple(); 
-                                                if kill_var_members.len() > variable_members.len() {
+                                                if kill_var.get_members().len() > variable.get_members().len() {
                                                     let data_link = DataLink::new(*id, kill_id, kill_var.clone());
                                                     links.insert(data_link);
                                                 } else {

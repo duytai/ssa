@@ -18,8 +18,15 @@ impl DataLink {
         DataLink { from, to, var }
     }
 
-    /// Export data to tuple format
-    pub fn to_tuple(&self) -> (u32, u32, &Variable) {
-        (self.from, self.to, &self.var)
+    fn get_from(&self) -> u32 {
+        self.from
+    }
+
+    fn get_to(&self) -> u32 {
+        self.to
+    }
+
+    fn get_var(&self) -> &Variable {
+        &self.var
     }
 }

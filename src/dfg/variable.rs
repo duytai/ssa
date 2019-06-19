@@ -40,9 +40,13 @@ pub struct Variable {
 }
 
 impl Variable {
-    /// Export data to tuple format
-    pub fn to_tuple(&self) -> (&Vec<Member>, &String) {
-        (&self.members, &self.source)
+
+    pub fn get_members(&self) -> &Vec<Member> {
+        &self.members
+    }
+
+    pub fn get_source(&self) -> &str {
+        &self.source
     }
 
     /// Find all variables of the walker, we need the dictionary to identify `Member::Global`

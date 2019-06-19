@@ -70,9 +70,17 @@ pub struct Assignment {
 }
 
 impl Assignment {
-    /// Export current assignment to a tuple 
-    pub fn to_tuple(&self) -> (&HashSet<Variable>, &HashSet<Variable>, &Operator) {
-        (&self.lhs, &self.rhs, &self.op)
+
+    pub fn get_lhs(&self) -> &HashSet<Variable> {
+        &self.lhs
+    }
+
+    pub fn get_rhs(&self) -> &HashSet<Variable> {
+        &self.rhs
+    }
+
+    pub fn get_op(&self) -> &Operator {
+        &self.op
     }
 
     /// Find all variables in current walker, the dictionary is used to identify global variables 
