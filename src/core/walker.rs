@@ -81,10 +81,7 @@ impl<'a> Walker<'a> {
     }
 
     /// Same as all_break but does ignore any path 
-    pub fn all<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
-        where
-            Callback: FnMut(Vec<Walker<'a>>),
-            Filter: FnMut(&Walker) -> bool
+    pub fn all_childs<Filter>(&self, mut fi: Filter) -> Vec<Walker<'a>> where Filter: FnMut(&Walker) -> bool
     {
         let mut stacks = vec![];
         let mut walkers = vec![];
@@ -102,6 +99,9 @@ impl<'a> Walker<'a> {
                 walkers.insert(0, item);
             }
         }
-        cb(walkers);
+        if fi(self) {
+            walkers.push(self.clone());
+        }
+        walkers
     }
 }

@@ -64,51 +64,43 @@ impl<'a> Graph<'a> {
     pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
         let mut last_source = None;
-        walker.all(|walker| {
-            walker.node.name == "FunctionCall"
-        }, |walkers| {
-            for walker in walkers {
-                let child_walkers = walker.direct_childs(|_| true);
-                let function_name = child_walkers[0].node.attributes["value"].as_str();
-                last_source = Some(walker.node.source);
-                match function_name {
-                    Some(function_name) => match function_name {
-                        "revert" => {
-                            let node = SimpleBlockNode::Revert(walker);
-                            function_calls.push(node);
-                        },
-                        "assert" => {
-                            let node = SimpleBlockNode::Assert(walker);
-                            function_calls.push(node);
-                        },
-                        "require" => {
-                            let node = SimpleBlockNode::Require(walker);
-                            function_calls.push(node);
-                        },
-                        "suicide" => {
-                            let node = SimpleBlockNode::Suicide(walker);
-                            function_calls.push(node);
-                        },
-                        "selfdestruct" => {
-                            let node = SimpleBlockNode::Selfdestruct(walker);
-                            function_calls.push(node);
-                        },
-                        _ => {
-                            let node = SimpleBlockNode::FunctionCall(walker);
-                            function_calls.push(node);
-                        }
+        let fi = |walker: &Walker| walker.node.name == "FunctionCall";
+        for walker in walker.all_childs(fi).into_iter() {
+            let child_walkers = walker.direct_childs(|_| true);
+            let function_name = child_walkers[0].node.attributes["value"].as_str();
+            last_source = Some(walker.node.source);
+            match function_name {
+                Some(function_name) => match function_name {
+                    "revert" => {
+                        let node = SimpleBlockNode::Revert(walker);
+                        function_calls.push(node);
                     },
-                    None => {
+                    "assert" => {
+                        let node = SimpleBlockNode::Assert(walker);
+                        function_calls.push(node);
+                    },
+                    "require" => {
+                        let node = SimpleBlockNode::Require(walker);
+                        function_calls.push(node);
+                    },
+                    "suicide" => {
+                        let node = SimpleBlockNode::Suicide(walker);
+                        function_calls.push(node);
+                    },
+                    "selfdestruct" => {
+                        let node = SimpleBlockNode::Selfdestruct(walker);
+                        function_calls.push(node);
+                    },
+                    _ => {
                         let node = SimpleBlockNode::FunctionCall(walker);
                         function_calls.push(node);
                     }
+                },
+                None => {
+                    let node = SimpleBlockNode::FunctionCall(walker);
+                    function_calls.push(node);
                 }
             }
-        });
-        if walker.node.name == "FunctionCall" {
-            let node = SimpleBlockNode::FunctionCall(walker.clone());
-            function_calls.push(node);
-            last_source = Some(walker.node.source);
         }
         if let Some(last_source) = last_source {
             if last_source.trim() != walker.node.source.trim() {
