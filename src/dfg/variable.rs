@@ -49,26 +49,19 @@ impl Variable {
     /// member
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
         let mut ret = HashSet::new();
-        let variable = Variable::parse_one(&walker, dict);
-        if walker.node.name != "FunctionCall" {
-            if variable.is_some() {
-                ret.insert(variable.unwrap());
-            } else {
-                walker.all_break(|walker| {
-                    walker.node.name == "FunctionCall"
-                    || walker.node.name == "Identifier"
-                    || walker.node.name == "MemberAccess"
-                    || walker.node.name == "IndexAccess"
-                }, |walkers| {
-                    for walker in walkers {
-                        if walker.node.name != "FunctionCall" {
-                            let variable = Variable::parse_one(&walker, dict);
-                            if variable.is_some() {
-                                ret.insert(variable.unwrap());
-                            }
-                        }
-                    }
-                });
+        let fi = |walker: &Walker| {
+            walker.node.name == "FunctionCall"
+            || walker.node.name == "Identifier"
+            || walker.node.name == "MemberAccess"
+            || walker.node.name == "IndexAccess"
+            || walker.node.name == "VariableDeclaration"
+        };
+        for walker in walker.all_childs(true, fi) {
+            if walker.node.name != "FunctionCall" {
+                match Variable::parse_one(&walker, dict) {
+                    Some(variable) => { ret.insert(variable); },
+                    None => {},
+                }
             }
         }
         ret
@@ -79,11 +72,10 @@ impl Variable {
             members: vec![],
             source: walker.node.source.to_string(),
         };
-        variable.members = Variable::find_variable(walker, dict);
-        if variable.members.len() > 0 {
-            Some(variable)
-        } else {
-            None
+        variable.members = Variable::find_members(walker, dict);
+        match variable.members.len() > 0 {
+            true => Some(variable),
+            false => None,
         }
     }
 
@@ -114,7 +106,7 @@ impl Variable {
         }
     }
 
-    fn find_variable(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
+    fn find_members(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
         let reference = walker.node.attributes["referencedDeclaration"].as_u32();
         let member_name = walker.node.attributes["member_name"].as_str().unwrap_or("");
         let value = walker.node.attributes["value"].as_str().unwrap_or("");
@@ -153,7 +145,7 @@ impl Variable {
                     }
                 }
                 for walker in walker.direct_childs(|_| true).into_iter() {
-                    ret.append(&mut Variable::find_variable(&walker, dict));
+                    ret.append(&mut Variable::find_members(&walker, dict));
                 }
                 ret
             },
@@ -161,7 +153,7 @@ impl Variable {
                 let mut ret = vec![];
                 for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                     if index == 0 {
-                        ret.append(&mut Variable::find_variable(&walker, dict));
+                        ret.append(&mut Variable::find_members(&walker, dict));
                     } else if index == 1 {
                         ret.insert(0, Member::IndexAccess);
                     }

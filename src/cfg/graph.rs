@@ -65,7 +65,7 @@ impl<'a> Graph<'a> {
         let mut function_calls = vec![];
         let mut last_source = None;
         let fi = |walker: &Walker| walker.node.name == "FunctionCall";
-        for walker in walker.all_childs(fi).into_iter() {
+        for walker in walker.all_childs(false, fi).into_iter() {
             let child_walkers = walker.direct_childs(|_| true);
             let function_name = child_walkers[0].node.attributes["value"].as_str();
             last_source = Some(walker.node.source);

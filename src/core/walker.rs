@@ -53,54 +53,24 @@ impl<'a> Walker<'a> {
         walkers
     }
 
-    /// Find all childrens, if children is discovered then stop discovering that path and invoke
-    /// callback 
-    pub fn all_break<Callback, Filter>(&self, mut fi: Filter, mut cb: Callback)
-        where 
-            Callback: FnMut(Vec<Walker<'a>>),
-            Filter: FnMut(&Walker) -> bool
-    {
-        let mut stacks = vec![];
+    /// Find all childs including current node
+    ///
+    /// break_found: if walker encounters one node satisfing filter then it decides to continue
+    /// traverse childrens of that node or not
+    pub fn all_childs<Filter>(&self, break_found: bool, mut fi: Filter) -> Vec<Walker<'a>> where Filter: FnMut(&Walker) -> bool {
+        let mut stacks = vec![self.clone()];
         let mut walkers = vec![];
-        for child in self.node.children.iter() {
-            let walker = Walker::new(child, self.source);
-            stacks.push(walker);
-        }
         while !stacks.is_empty() {
             let item = stacks.pop().unwrap();
-            if fi(&item) {
-                walkers.insert(0, item);
-            } else {
+            if !break_found || !fi(&item) {
                 for child in item.node.children.iter() {
                     let walker = Walker::new(child, item.source);
                     stacks.push(walker);
                 }
             }
-        }
-        cb(walkers);
-    }
-
-    /// Same as all_break but does ignore any path 
-    pub fn all_childs<Filter>(&self, mut fi: Filter) -> Vec<Walker<'a>> where Filter: FnMut(&Walker) -> bool
-    {
-        let mut stacks = vec![];
-        let mut walkers = vec![];
-        for child in self.node.children.iter() {
-            let walker = Walker::new(child, self.source);
-            stacks.push(walker);
-        }
-        while !stacks.is_empty() {
-            let item = stacks.pop().unwrap();
-            for child in item.node.children.iter() {
-                let walker = Walker::new(child, item.source);
-                stacks.push(walker);
-            }
             if fi(&item) {
                 walkers.insert(0, item);
             }
-        }
-        if fi(self) {
-            walkers.push(self.clone());
         }
         walkers
     }
