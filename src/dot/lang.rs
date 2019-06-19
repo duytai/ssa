@@ -1,45 +1,38 @@
-use crate::dot::DotEdge;
-use crate::dot::DotVertex;
+use std::collections::HashSet;
+use crate::core::{
+    DataLink,
+    Shape,
+    State,
+};
 
-pub struct Dot {
-    edges: Vec<DotEdge>,
-    vertices: Vec<DotVertex>,
-}
+pub struct Dot {}
 
 impl Dot {
-    pub fn new() -> Self {
-        Dot { edges: vec![], vertices: vec![] }
-    }
-
-    pub fn add_vertex(&mut self, vertex: DotVertex) {
-        self.vertices.push(vertex);
-    }
-
-    pub fn append_vertices(&mut self, vertices: Vec<DotVertex>) {
-        for vertex in vertices {
-            self.vertices.push(vertex);
-        }
-    }
-
-    pub fn add_edge(&mut self, edge: DotEdge) {
-        self.edges.push(edge);
-    }
-
-    pub fn append_edges(&mut self, edges: Vec<DotEdge>) {
-        for edge in edges {
-            self.edges.push(edge);
-        }
-    }
-
-    pub fn format(&self) -> String {
+    pub fn format(state: &State, ls: &HashSet<DataLink>) -> String {
         let mut edges = vec![];
         let mut vertices = vec![];
-        for edge in self.edges.iter() {
-            edges.push(format!("\t{}", edge.format()));
-        } 
-        for vertex in self.vertices.iter() {
-            vertices.push(format!("\t{}", vertex.format()));
+        let mut links = vec![];
+        for link in ls.iter() {
+            let from = link.get_from();
+            let to = link.get_to();
+            let label = link.get_var().get_source();
+            links.push(format!("  {} -> {}[label=\"{}\", style=dotted];", from, to, label));
         }
-        format!("digraph {{\n{0}\n{1}\n}}", edges.join("\n"), vertices.join("\n"))
+        for edge in state.edges.iter() {
+            edges.push(format!("  {} -> {};", edge.get_from(), edge.get_to()));
+        } 
+        for vertex in state.vertices.iter() {
+            let id = vertex.get_id();
+            let source = vertex.get_source();
+            let shape = match vertex.get_shape() {
+                Shape::Point => "point",
+                Shape::Box => "box",
+                Shape::Diamond => "diamond",
+                Shape::DoubleCircle => "doublecircle",
+                Shape::Mdiamond => "Mdiamond",
+            };
+            vertices.push(format!("  {}[label={:?}, shape=\"{}\"];", id, source, shape));
+        }
+        format!("digraph {{\n{0}\n{1}\n{2}\n}}", edges.join("\n"), vertices.join("\n"), links.join("\n"))
     }
 }

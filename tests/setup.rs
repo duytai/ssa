@@ -4,11 +4,6 @@ use ssa:: {
     core::{ Dictionary, State },
     cfg::{ ControlFlowGraph },
     dfg::{ DataFlowGraph },
-    dot::{
-        Dot,
-        DotVertex,
-        DotEdge,
-    },
     loader::{
         Solidity,
         SolidityOption,

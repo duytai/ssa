@@ -4,11 +4,7 @@ use ssa:: {
     core::{ Dictionary },
     cfg::{ ControlFlowGraph },
     dfg::{ DataFlowGraph },
-    dot::{
-        Dot,
-        DotVertex,
-        DotEdge,
-    },
+    dot::Dot,
     loader::{
         Solidity,
         SolidityOption,
@@ -40,30 +36,7 @@ fn main() -> Result<()> {
             let data_flow = DataFlowGraph::new(&state);
             let links = data_flow.find_links();
             // Render in dot language
-            let mut dot = Dot::new();
-            let dot_vertices: Vec<DotVertex> = state.vertices.iter()
-                .map(|vertex| {
-                    let id = vertex.get_id();
-                    let source = vertex.get_source();
-                    let shape = vertex.get_shape();
-                    (id, source, shape).into()
-                })
-                .collect();
-            let dot_edges: Vec<DotEdge> = state.edges.iter()
-                .map(|edge| (edge.get_from(), edge.get_to()).into())
-                .collect();
-            let dot_links: Vec<DotEdge> = links.iter()
-                .map(|link| {
-                    let from = link.get_from();
-                    let to = link.get_to();
-                    let source = link.get_var().get_source();
-                    (from, to, source).into()
-                })
-                .collect();
-            dot.append_edges(dot_edges);
-            dot.append_edges(dot_links);
-            dot.append_vertices(dot_vertices);
-            println!("{}", dot.format());
+            println!("{}", Dot::format(&state, &links));
         }
     }
     Ok(())

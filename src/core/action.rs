@@ -1,4 +1,4 @@
-use crate::dfg::Variable;
+use crate::core::Variable;
 
 /// The behaviour of a variable
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8,4 +8,3 @@ pub enum Action {
     // A variable is completely cleared and store new data 
     Kill(Variable, u32),
 }
-

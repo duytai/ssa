@@ -2,14 +2,12 @@ use std::collections::{ HashSet, HashMap };
 use crate::core::{
     State,
     Shape,
-};
-use crate::dfg::{
     VariableComparison,
     Operator,
     Action,
     DataLink,
-    utils,
 };
+use crate::dfg::utils;
 
 /// Data flow graph
 ///

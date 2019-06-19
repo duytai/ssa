@@ -1,6 +1,6 @@
 use std::collections::HashSet;
-use crate::dfg::Variable;
 use crate::core::{
+    Variable,
     Walker,
     Dictionary,
 };
