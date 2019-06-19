@@ -48,3 +48,52 @@ fn depend_on_local_variables() -> io::Result<()> {
     })?;
     Ok(())
 }
+
+#[test]
+fn find_assignments() -> io::Result<()> {
+    setup_cfg("data_flow_4.sol", 21, |state| {
+        assert_eq!(state.vertices.len(), 7);
+        assert_eq!(state.edges.len(), 6);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 3);
+        for link in links {
+            match link.get_from() {
+                19 => assert_eq!(link.get_to(), 17),
+                17 => assert_eq!(link.get_to(), 6),
+                13 => assert_eq!(link.get_to(), 3),
+                _ => assert!(false),
+            }
+        } 
+    })?;
+    Ok(())
+}
+
+#[test]
+fn struct_assignments() -> io::Result<()> {
+    setup_cfg("data_flow_5.sol", 52, |state| {
+        assert_eq!(state.vertices.len(), 11);
+        assert_eq!(state.edges.len(), 10);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 9);
+        for link in links {
+            match link.get_from() {
+                22 => match link.get_to() {
+                    13 | 7 => {},
+                    _ => assert!(false),
+                },
+                50 => match link.get_to() {
+                    7 | 44 => {},
+                    _ => assert!(false),
+                },
+                38 => match link.get_to() {
+                    28 | 32 | 7 => {},
+                    _ => assert!(false),
+                }
+                32 => assert_eq!(link.get_to(), 13),
+                28 => assert_eq!(link.get_to(), 16),
+                _ => assert!(false),
+            }
+        }
+    })?;
+    Ok(())
+}
