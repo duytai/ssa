@@ -55,6 +55,7 @@ impl Variable {
     pub fn parse(walker: &Walker, dict: &Dictionary, visited_nodes: &mut HashSet<u32>) -> HashSet<Self> {
         let mut ret = HashSet::new();
         let mut new_visited_nodes = HashSet::new();
+        let mut index_acceses = HashSet::new(); 
         let fi = |walker: &Walker| {
             visited_nodes.contains(&walker.node.id)
             || walker.node.name == "FunctionCall"
@@ -65,22 +66,27 @@ impl Variable {
         };
         for walker in walker.all_childs(true, fi) {
             if walker.node.name != "FunctionCall" && !visited_nodes.contains(&walker.node.id) {
-                Variable::parse_one(&walker, dict).map(|variable| {
+                Variable::parse_one(&walker, dict, &mut index_acceses).map(|variable| {
                     ret.insert(variable);
                 });
                 new_visited_nodes.insert(walker.node.id);
             }
         }
+        for index_access in index_acceses {
+            dict.lookup(index_access).map(|walker| {
+                ret.extend(Variable::parse(&walker, dict, &mut HashSet::new()));
+            });
+        }
         visited_nodes.extend(new_visited_nodes);
         ret
     }
 
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
+    fn parse_one(walker: &Walker, dict: &Dictionary, index_acceses: &mut HashSet<u32>) -> Option<Self> {
         let mut variable = Variable {
             members: vec![],
             source: walker.node.source.to_string(),
         };
-        variable.members = Variable::find_members(walker, dict);
+        variable.members = Variable::find_members(walker, dict, index_acceses);
         match variable.members.len() > 0 {
             true => Some(variable),
             false => None,
@@ -117,7 +123,7 @@ impl Variable {
     /// Find members of a variable
     ///
     /// A member is reference to place where it is declared , global index, index access of array 
-    fn find_members(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
+    fn find_members(walker: &Walker, dict: &Dictionary, index_acceses: &mut HashSet<u32>) -> Vec<Member> {
         let reference = walker.node.attributes["referencedDeclaration"].as_u32();
         let member_name = walker.node.attributes["member_name"].as_str().unwrap_or("");
         let value = walker.node.attributes["value"].as_str().unwrap_or("");
@@ -156,7 +162,7 @@ impl Variable {
                     }
                 }
                 for walker in walker.direct_childs(|_| true).into_iter() {
-                    ret.append(&mut Variable::find_members(&walker, dict));
+                    ret.append(&mut Variable::find_members(&walker, dict, index_acceses));
                 }
                 ret
             },
@@ -164,8 +170,9 @@ impl Variable {
                 let mut ret = vec![];
                 for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                     if index == 0 {
-                        ret.append(&mut Variable::find_members(&walker, dict));
+                        ret.append(&mut Variable::find_members(&walker, dict, index_acceses));
                     } else if index == 1 {
+                        index_acceses.insert(walker.node.id);
                         ret.insert(0, Member::IndexAccess);
                     }
                 }

@@ -198,3 +198,25 @@ fn delete_call() -> io::Result<()> {
     })?;
     Ok(())
 }
+
+#[test]
+fn find_variables_in_index_acccess() -> io::Result<()> {
+    setup_cfg("data_flow_11.sol", 43, |state| {
+        assert_eq!(state.vertices.len(), 7);
+        assert_eq!(state.edges.len(), 6);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 5);
+        for link in links {
+            match link.get_from() {
+                39 => match link.get_to() {
+                    24 | 5 => {},
+                    _ => assert!(false),
+                },
+                36 => assert_eq!(24, link.get_to()),
+                41 => assert_eq!(39, link.get_to()),
+                _ => assert!(false),
+            }
+        }
+    })?;
+    Ok(())
+}

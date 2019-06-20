@@ -2,7 +2,7 @@ mod setup;
 
 use std::io;
 use setup::setup_cfg;
-use ssa::core::{ State, Shape, Vertex, Edge };
+use ssa::core::{ State, Edge };
 
 #[test]
 fn while_body_is_expression() -> io::Result<()> {

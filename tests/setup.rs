@@ -3,7 +3,6 @@ use std::path::Path;
 use ssa:: {
     core::{ Dictionary, State },
     cfg::{ ControlFlowGraph },
-    dfg::{ DataFlowGraph },
     loader::{
         Solidity,
         SolidityOption,
