@@ -84,16 +84,24 @@ impl Assignment {
     }
 
     /// Find all variables in current walker, the dictionary is used to identify global variables 
-    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
+    ///
+    /// Ignore node and its childs if it is listed in visited_nodes
+    pub fn parse(walker: &Walker, dict: &Dictionary, visited_nodes: &mut HashSet<u32>) -> Vec<Assignment> {
         let mut assignments = vec![];
+        let mut new_visted_nodes = HashSet::new();
         let fi = |walker: &Walker| {
             walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
+            || visited_nodes.contains(&walker.node.id)
         };
         for walker in walker.all_childs(true, fi).into_iter() {
-            assignments.push(Assignment::parse_one(&walker, dict));
+            if !visited_nodes.contains(&walker.node.id) {
+                assignments.push(Assignment::parse_one(&walker, dict));
+                new_visted_nodes.insert(walker.node.id);
+            }
         }
+        visited_nodes.extend(new_visted_nodes);
         assignments
     }
 
@@ -108,12 +116,12 @@ impl Assignment {
         let mut rhs = HashSet::new();
         let walkers = walker.direct_childs(|_| true);
         if walker.node.name == "VariableDeclaration" {
-            lhs.extend(Variable::parse(walker, dict));
+            lhs.extend(Variable::parse(walker, dict, &mut HashSet::new()));
         } else {
-            lhs.extend(Variable::parse(&walkers[0], dict));
+            lhs.extend(Variable::parse(&walkers[0], dict, &mut HashSet::new()));
         }
         if walkers.len() >= 2 {
-            rhs.extend(Variable::parse(&walkers[1], dict));
+            rhs.extend(Variable::parse(&walkers[1], dict, &mut HashSet::new()));
         }
         Assignment { lhs, rhs, op }
     }

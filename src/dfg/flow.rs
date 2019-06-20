@@ -7,7 +7,7 @@ use crate::core::{
     Action,
     DataLink,
 };
-use crate::dfg::utils;
+use crate::dfg::Splitter;
 
 /// Data flow graph
 ///
@@ -62,6 +62,7 @@ impl<'a> DataFlowGraph<'a> {
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
         let mut links: HashSet<DataLink> = HashSet::new(); 
+        let mut splitter = Splitter::new();
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices.iter() {
             tables.insert(vertex.get_id(), HashSet::new());
@@ -90,37 +91,33 @@ impl<'a> DataFlowGraph<'a> {
             let mut new_actions = vec![];
             match vertex.get_shape() {
                 Shape::DoubleCircle | Shape::Mdiamond => {
-                    for var in utils::find_parameters(id, dict) {
+                    for var in splitter.find_parameters(id, dict) {
                         new_actions.push(Action::Use(var, id));
                     }
                 },
                 Shape::Box => {
-                    let assignments = utils::find_assignments(id, dict);
-                    if assignments.len() > 0 {
-                        for assignment in assignments {
-                            for l in assignment.get_lhs().clone() {
-                                match assignment.get_op() {
-                                    Operator::Equal => {
-                                        new_actions.push(Action::Kill(l, id));
-                                    },
-                                    Operator::Other => {
-                                        new_actions.push(Action::Kill(l.clone(), id));
-                                        new_actions.push(Action::Use(l, id));
-                                    }
+                    for assignment in splitter.find_assignments(id, dict) {
+                        for l in assignment.get_lhs().clone() {
+                            match assignment.get_op() {
+                                Operator::Equal => {
+                                    new_actions.push(Action::Kill(l, id));
+                                },
+                                Operator::Other => {
+                                    new_actions.push(Action::Kill(l.clone(), id));
+                                    new_actions.push(Action::Use(l, id));
                                 }
                             }
-                            for r in assignment.get_rhs().clone() {
-                                new_actions.push(Action::Use(r, id));
-                            }
                         }
-                    } else {
-                        for var in utils::find_variables(id, dict) {
-                            new_actions.push(Action::Use(var, id));
+                        for r in assignment.get_rhs().clone() {
+                            new_actions.push(Action::Use(r, id));
                         }
+                    }
+                    for var in splitter.find_variables(id, dict) {
+                        new_actions.push(Action::Use(var, id));
                     }
                 },
                 Shape::Diamond => {
-                    for var in utils::find_variables(id, dict) {
+                    for var in splitter.find_variables(id, dict) {
                         new_actions.push(Action::Use(var, id));
                     }
                 },

@@ -50,24 +50,28 @@ impl Variable {
     }
 
     /// Find all variables of the walker, we need the dictionary to identify `Member::Global`
-    /// member
-    pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
+    ///
+    /// Ignore node and its childs if it is listed in visited_nodes
+    pub fn parse(walker: &Walker, dict: &Dictionary, visited_nodes: &mut HashSet<u32>) -> HashSet<Self> {
         let mut ret = HashSet::new();
+        let mut new_visited_nodes = HashSet::new();
         let fi = |walker: &Walker| {
-            walker.node.name == "FunctionCall"
+            visited_nodes.contains(&walker.node.id)
+            || walker.node.name == "FunctionCall"
             || walker.node.name == "Identifier"
             || walker.node.name == "MemberAccess"
             || walker.node.name == "IndexAccess"
             || walker.node.name == "VariableDeclaration"
         };
         for walker in walker.all_childs(true, fi) {
-            if walker.node.name != "FunctionCall" {
-                match Variable::parse_one(&walker, dict) {
-                    Some(variable) => { ret.insert(variable); },
-                    None => {},
-                }
+            if walker.node.name != "FunctionCall" && !visited_nodes.contains(&walker.node.id) {
+                Variable::parse_one(&walker, dict).map(|variable| {
+                    ret.insert(variable);
+                });
+                new_visited_nodes.insert(walker.node.id);
             }
         }
+        visited_nodes.extend(new_visited_nodes);
         ret
     }
 
@@ -110,6 +114,9 @@ impl Variable {
         }
     }
 
+    /// Find members of a variable
+    ///
+    /// A member is reference to place where it is declared , global index, index access of array 
     fn find_members(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
         let reference = walker.node.attributes["referencedDeclaration"].as_u32();
         let member_name = walker.node.attributes["member_name"].as_str().unwrap_or("");

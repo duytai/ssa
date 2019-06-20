@@ -1,7 +1,7 @@
 //! A collections of data flow graph utilities
 //!
 mod flow;
-mod utils;
+mod splitter;
 
 pub use flow::*;
-pub use utils::*;
+pub use splitter::*;
