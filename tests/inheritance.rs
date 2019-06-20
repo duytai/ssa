@@ -5,7 +5,7 @@ use setup::setup_cfg;
 use ssa::core::{ State, Edge };
 
 #[test]
-fn complex_block() -> io::Result<()> {
+fn inheritance() -> io::Result<()> {
     setup_cfg("inheritance.sol", 23, |State { vertices, edges, .. }| {
         assert_eq!(vertices.len(), 9);
         assert_eq!(edges.len(), 8);
