@@ -181,3 +181,20 @@ fn unary_in_functioncall() -> io::Result<()> {
     })?;
     Ok(())
 }
+
+#[test]
+fn delete_call() -> io::Result<()> {
+    setup_cfg("data_flow_10.sol", 13, |state| {
+        assert_eq!(state.vertices.len(), 6);
+        assert_eq!(state.edges.len(), 5);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 1);
+        for link in links {
+            match link.get_from() {
+                11 => assert_eq!(9, link.get_to()),
+                _ => assert!(false),
+            }
+        }
+    })?;
+    Ok(())
+}

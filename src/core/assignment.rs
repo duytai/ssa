@@ -97,6 +97,7 @@ impl Assignment {
             || walker.node.name == "Assignment"
             || operator == "++"
             || operator == "--"
+            || operator == "delete"
         };
         for walker in walker.all_childs(true, fi).into_iter() {
             if !visited_nodes.contains(&walker.node.id) {
@@ -113,7 +114,7 @@ impl Assignment {
         let operator = walker.node.attributes["operator"].as_str();
         let op = match operator {
             Some(op) => match op {
-                "=" => Operator::Equal,
+                "=" | "delete" => Operator::Equal,
                 _ => Operator::Other,
             },
             None => Operator::Equal, 
