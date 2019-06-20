@@ -75,13 +75,17 @@ impl<'a> Dictionary<'a> {
         let mut ret = vec![];
         for (_, prop) in self.contracts.iter() {
             if prop.functions.contains(&id) {
-                ret.extend_from_slice(&prop.states[..]);
+                for index in (0..prop.states.len()).rev() {
+                    ret.push(prop.states[index]);
+                }
                 let mut parents = prop.parents.clone();
                 loop {
                     match parents.pop() {
                         Some(contract_id) => {
                             if let Some(prop) = self.contracts.get(&contract_id) {
-                                ret.extend_from_slice(&prop.states[..]);
+                                for index in (0..prop.states.len()).rev() {
+                                    ret.push(prop.states[index]);
+                                }
                                 parents.extend_from_slice(&prop.parents[..]);
                             }
                         },

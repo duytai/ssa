@@ -86,34 +86,13 @@ impl Assignment {
     /// Find all variables in current walker, the dictionary is used to identify global variables 
     pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
         let mut assignments = vec![];
-        match walker.node.name {
-            // state variables
-            "VariableDeclaration" => {
-                let op = Operator::Equal;
-                let lhs = Variable::parse(&walker, dict);
-                let rhs = HashSet::new();
-                assignments.push(Assignment { lhs, rhs, op });
-            },
-            // variables from parameters
-            "ParameterList" => {
-                for walker in walker.direct_childs(|_| true).into_iter() {
-                    let op = Operator::Equal;
-                    let lhs = Variable::parse(&walker, dict);
-                    let rhs = HashSet::new();
-                    assignments.push(Assignment { lhs, rhs, op });
-                }
-            },
-            // local variable definitions
-            "VariableDeclarationStatement" => {
-                assignments.push(Assignment::parse_one(&walker, dict));
-            },
-            // variable assignments
-            _ => {
-                let fi = |walker: &Walker| walker.node.name == "Assignment";
-                for walker in walker.direct_childs(fi).into_iter() {
-                    assignments.push(Assignment::parse_one(&walker, dict));
-                }
-            },
+        let fi = |walker: &Walker| {
+            walker.node.name == "VariableDeclaration"
+            || walker.node.name == "VariableDeclarationStatement"
+            || walker.node.name == "Assignment"
+        };
+        for walker in walker.all_childs(true, fi).into_iter() {
+            assignments.push(Assignment::parse_one(&walker, dict));
         }
         assignments
     }
@@ -128,7 +107,11 @@ impl Assignment {
         let mut lhs = HashSet::new();
         let mut rhs = HashSet::new();
         let walkers = walker.direct_childs(|_| true);
-        lhs.extend(Variable::parse(&walkers[0], dict));
+        if walker.node.name == "VariableDeclaration" {
+            lhs.extend(Variable::parse(walker, dict));
+        } else {
+            lhs.extend(Variable::parse(&walkers[0], dict));
+        }
         if walkers.len() >= 2 {
             rhs.extend(Variable::parse(&walkers[1], dict));
         }
