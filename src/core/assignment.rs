@@ -90,10 +90,13 @@ impl Assignment {
         let mut assignments = vec![];
         let mut new_visted_nodes = HashSet::new();
         let fi = |walker: &Walker| {
-            walker.node.name == "VariableDeclaration"
+            let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
+            visited_nodes.contains(&walker.node.id)
+            || walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
-            || visited_nodes.contains(&walker.node.id)
+            || operator == "++"
+            || operator == "--"
         };
         for walker in walker.all_childs(true, fi).into_iter() {
             if !visited_nodes.contains(&walker.node.id) {
@@ -107,10 +110,13 @@ impl Assignment {
 
     /// Find a assignment of current walker
     fn parse_one(walker: &Walker, dict: &Dictionary) -> Assignment {
-        let operator = walker.node.attributes["operator"].as_str().unwrap_or("=");
+        let operator = walker.node.attributes["operator"].as_str();
         let op = match operator {
-            "=" => Operator::Equal,
-            _ => Operator::Other, 
+            Some(op) => match op {
+                "=" => Operator::Equal,
+                _ => Operator::Other,
+            },
+            None => Operator::Equal, 
         };
         let mut lhs = HashSet::new();
         let mut rhs = HashSet::new();

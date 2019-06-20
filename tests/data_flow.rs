@@ -142,3 +142,24 @@ fn variables_in_functioncall() -> io::Result<()> {
     })?;
     Ok(())
 }
+
+#[test]
+fn unary_operator() -> io::Result<()> {
+    setup_cfg("data_flow_8.sol", 33, |state| {
+        assert_eq!(state.vertices.len(), 9);
+        assert_eq!(state.edges.len(), 8);
+        let links = DataFlowGraph::new(&state).find_links();
+        assert_eq!(links.len(), 5);
+        for link in links {
+            match link.get_from() {
+                31 => assert_eq!(27, link.get_to()),
+                27 => assert_eq!(22, link.get_to()),
+                22 => assert_eq!(17, link.get_to()),
+                17 => assert_eq!(12, link.get_to()),
+                12 => assert_eq!(7, link.get_to()),
+                _ => assert!(false),
+            }
+        }
+    })?;
+    Ok(())
+}
