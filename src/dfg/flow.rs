@@ -7,7 +7,7 @@ use crate::core::{
     Action,
     DataLink,
 };
-use crate::dfg::Splitter;
+use crate::dfg::utils;
 
 /// Data flow graph
 ///
@@ -62,7 +62,6 @@ impl<'a> DataFlowGraph<'a> {
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
         let mut links: HashSet<DataLink> = HashSet::new(); 
-        let mut splitter = Splitter::new();
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices.iter() {
             tables.insert(vertex.get_id(), HashSet::new());
@@ -100,7 +99,7 @@ impl<'a> DataFlowGraph<'a> {
                 _ => {},
             }
             for split_at in split_ats {
-                for assignment in splitter.find_assignments(split_at, dict) {
+                for assignment in utils::find_assignments(split_at, dict) {
                     for l in assignment.get_lhs().clone() {
                         match assignment.get_op() {
                             Operator::Equal => {
@@ -116,7 +115,7 @@ impl<'a> DataFlowGraph<'a> {
                         new_actions.push(Action::Use(r, id));
                     }
                 }
-                for var in splitter.find_variables(split_at, dict) {
+                for var in utils::find_variables(split_at, dict) {
                     new_actions.push(Action::Use(var, id));
                 }
             }
