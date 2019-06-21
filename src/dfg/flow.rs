@@ -99,6 +99,22 @@ impl<'a> DataFlowGraph<'a> {
                 _ => {},
             }
             for split_at in split_ats {
+                for declaration in utils::find_declarations(split_at, dict) {
+                    for l in declaration.get_lhs().clone() {
+                        match declaration.get_op() {
+                            Operator::Equal => {
+                                new_actions.push(Action::Kill(l, id));
+                            },
+                            Operator::Other => {
+                                new_actions.push(Action::Kill(l.clone(), id));
+                                new_actions.push(Action::Use(l, id));
+                            }
+                        }
+                    }
+                    for r in declaration.get_rhs().clone() {
+                        new_actions.push(Action::Use(r, id));
+                    }
+                }
                 for assignment in utils::find_assignments(split_at, dict) {
                     for l in assignment.get_lhs().clone() {
                         match assignment.get_op() {

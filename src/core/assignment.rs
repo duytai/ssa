@@ -3,28 +3,9 @@ use crate::core::{
     Variable,
     Walker,
     Dictionary,
+    Operator,
 };
 
-/// Operator in an assignment statement
-///
-/// - `Operator::Equal` : the variable in LHS clears it own value and create a data dependency on all variables in RHS
-/// ```javascript
-/// x = y;
-/// KILL(x), USE(Y)
-/// ```javascript
-/// - `Operator::Other` : the variable in LHS is modified by using both its value and
-/// RHS
-/// ```javascript
-/// x += y;
-/// USE(x), USE(y)
-/// ```
-#[derive(Debug, PartialEq, Eq)]
-pub enum Operator {
-    /// Operator =
-    Equal,
-    /// Other operators: |=, ^=, &=, <<=, >>=, +=, -=, *=, /=, %=
-    Other,
-}
 
 /// The statement edits the flow of data in a solidity program 
 ///
@@ -86,19 +67,20 @@ impl Assignment {
     /// Find all variables in current walker, the dictionary is used to identify global variables 
     pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
         let mut assignments = vec![];
-        let fi = |walker: &Walker, path: &Vec<Walker>| {
+        let fi = |walker: &Walker, _: &Vec<Walker>| {
             let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "Assignment"
             || operator == "++"
             || operator == "--"
             || operator == "delete"
         };
-        let ig = |walker: &Walker, path: &Vec<Walker>| {
+        let ig = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall"
             || walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
+            || walker.node.name == "IndexAccess"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
             assignments.push(Assignment::parse_one(&walker, dict));

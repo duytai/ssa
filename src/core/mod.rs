@@ -9,6 +9,10 @@ mod variable;
 mod action;
 mod assignment;
 mod link;
+mod member;
+mod comparison;
+mod operator;
+mod declaration;
 
 pub use dict::*;
 pub use walker::*;
@@ -19,3 +23,7 @@ pub use variable::*;
 pub use action::*;
 pub use assignment::*;
 pub use link::*;
+pub use member::*;
+pub use comparison::*;
+pub use operator::*;
+pub use declaration::*;

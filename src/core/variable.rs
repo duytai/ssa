@@ -2,29 +2,9 @@ use std::collections::HashSet;
 use crate::core::{
     Walker,
     Dictionary,
+    Member,
+    VariableComparison,
 };
-
-/// Variable access
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub enum Member {
-    /// Link to node that defines current variable
-    Reference(u32),
-    /// Contains name of a global variable or function
-    Global(String),
-    /// Accesses a member in an array
-    IndexAccess,
-}
-
-/// Relationship between two variables
-#[derive(Debug, PartialEq, Eq)]
-pub enum VariableComparison {
-    /// Completely the same
-    Equal,
-    /// Completely different
-    NotEqual,
-    /// One variable contains other variable
-    Partial,
-}
 
 /// Variable in solidity program
 /// 
@@ -41,6 +21,10 @@ pub struct Variable {
 
 impl Variable {
 
+    pub fn new(members: Vec<Member>, source: String) -> Self {
+        Variable { members, source }
+    }
+
     pub fn get_members(&self) -> &Vec<Member> {
         &self.members
     }
@@ -54,12 +38,12 @@ impl Variable {
     /// Ignore node and its childs if it is listed in visited_nodes
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
         let mut ret = HashSet::new();
-        let fi = |walker: &Walker, path: &Vec<Walker>| {
+        let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "IndexAccess"
             || walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
         };
-        let ig = |walker: &Walker, path: &Vec<Walker>| {
+        let ig = |walker: &Walker, _: &Vec<Walker>| {
             let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "FunctionCall"
             || walker.node.name == "VariableDeclaration"
