@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use json;
 
 /// AST node
@@ -53,22 +54,29 @@ impl<'a> Walker<'a> {
         walkers
     }
 
-    /// Find all childs including current node
-    ///
-    /// break_found: if walker encounters one node satisfing filter then it decides to continue
-    /// traverse childrens of that node or not
-    pub fn all_childs<Filter>(&self, break_found: bool, mut fi: Filter) -> Vec<Walker<'a>> where Filter: FnMut(&Walker) -> bool {
+    pub fn walk<F, I>(&self, bf: bool, ig: I, fi: F) -> Vec<Walker<'a>>
+        where
+            F: Fn(&Walker, &Vec<Walker>) -> bool,
+            I: Fn(&Walker, &Vec<Walker>) -> bool
+    {
         let mut stacks = vec![self.clone()];
         let mut walkers = vec![];
+        let mut paths = HashMap::new(); 
+        paths.insert(self.node.id, vec![self.clone()]);
         while !stacks.is_empty() {
             let item = stacks.pop().unwrap();
-            if !break_found || !fi(&item) {
-                for child in item.node.children.iter() {
-                    let walker = Walker::new(child, item.source);
-                    stacks.push(walker);
+            if !ig(&item, &paths[&item.node.id]) {
+                if !(fi(&item, &paths[&item.node.id]) && bf) {
+                    for child in item.node.children.iter() {
+                        let mut path = paths[&item.node.id].clone();
+                        let walker = Walker::new(child, item.source);
+                        path.push(walker.clone());
+                        paths.insert(walker.node.id, path);
+                        stacks.push(walker);
+                    }
                 }
             }
-            if fi(&item) {
+            if fi(&item, &paths[&item.node.id]) {
                 walkers.insert(0, item);
             }
         }

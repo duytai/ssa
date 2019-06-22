@@ -1,13 +1,12 @@
 use std::collections::{ HashSet, HashMap };
 use crate::core::{
     State,
-    Shape,
     VariableComparison,
     Operator,
     Action,
     DataLink,
 };
-use crate::dfg::Splitter;
+use crate::dfg::utils;
 
 /// Data flow graph
 ///
@@ -62,7 +61,6 @@ impl<'a> DataFlowGraph<'a> {
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
         let mut links: HashSet<DataLink> = HashSet::new(); 
-        let mut splitter = Splitter::new();
         let actions: Vec<Action> = vec![]; 
         for vertex in vertices.iter() {
             tables.insert(vertex.get_id(), HashSet::new());
@@ -82,43 +80,47 @@ impl<'a> DataFlowGraph<'a> {
         } 
         while stack.len() > 0 {
             let (from, id, mut actions) = stack.pop().unwrap();
-            let vertex = vertices.iter().find(|v| v.get_id() == id).unwrap();
             let pre_table = tables.get(&from).unwrap().clone();
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
-            let mut split_ats = vec![id];
-            // FunctionCall => have to jump to parameters because Variable::parse ignores functionCall 
-            match vertex.get_shape() {
-                Shape::DoubleCircle | Shape::Mdiamond => {
-                    dict.lookup(id).map(|walker| {
-                        for walker in &walker.direct_childs(|_| true)[1..] {
-                            split_ats.push(walker.node.id);
-                        }
-                    });
-                },
-                _ => {},
+            let mut assignments = vec![];
+            let mut variables = HashSet::new();
+            variables.extend(utils::find_variables(id, dict));
+            assignments.append(&mut utils::find_assignments(id, dict));
+            for declaration in utils::find_declarations(id, dict) {
+                assignments.push(declaration.get_assignment().clone());
             }
-            for split_at in split_ats {
-                for assignment in splitter.find_assignments(split_at, dict) {
-                    for l in assignment.get_lhs().clone() {
-                        match assignment.get_op() {
-                            Operator::Equal => {
-                                new_actions.push(Action::Kill(l, id));
-                            },
-                            Operator::Other => {
-                                new_actions.push(Action::Kill(l.clone(), id));
-                                new_actions.push(Action::Use(l, id));
-                            }
+            for index_access in utils::find_index_accesses(id, dict) {
+                let mut agns = index_access.get_assignments().clone();
+                let vars = index_access.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
+            }
+            for parameter in utils::find_parameters(id, dict) {
+                let mut agns = parameter.get_assignments().clone();
+                let vars = parameter.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
+            }
+            for assignment in assignments {
+                for l in assignment.get_lhs().clone() {
+                    match assignment.get_op() {
+                        Operator::Equal => {
+                            new_actions.push(Action::Kill(l, id));
+                        },
+                        Operator::Other => {
+                            new_actions.push(Action::Kill(l.clone(), id));
+                            new_actions.push(Action::Use(l, id));
                         }
                     }
-                    for r in assignment.get_rhs().clone() {
-                        new_actions.push(Action::Use(r, id));
-                    }
                 }
-                for var in splitter.find_variables(split_at, dict) {
-                    new_actions.push(Action::Use(var, id));
+                for r in assignment.get_rhs().clone() {
+                    new_actions.push(Action::Use(r, id));
                 }
+            }
+            for var in variables {
+                new_actions.push(Action::Use(var, id));
             }
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
