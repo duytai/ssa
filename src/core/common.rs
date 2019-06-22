@@ -44,7 +44,7 @@ pub enum Member {
 /// x += y;
 /// USE(x), USE(y)
 /// ```
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Operator {
     /// Operator =
     Equal,

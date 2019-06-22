@@ -40,7 +40,7 @@ use crate::core::{
 /// uint x = y + 10;
 /// ```
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Assignment {
     /// a list of variables in LHS of a assignment
     lhs: HashSet<Variable>,

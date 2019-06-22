@@ -86,12 +86,22 @@ impl<'a> DataFlowGraph<'a> {
             let mut new_actions = vec![];
             let mut assignments = vec![];
             let mut variables = HashSet::new();
-            assignments.append(&mut utils::find_declarations(id, dict));
-            assignments.append(&mut utils::find_assignments(id, dict));
             variables.extend(utils::find_variables(id, dict));
+            assignments.append(&mut utils::find_assignments(id, dict));
+            for declaration in utils::find_declarations(id, dict) {
+                assignments.push(declaration.get_assignment().clone());
+            }
+            for index_access in utils::find_index_accesses(id, dict) {
+                let mut agns = index_access.get_assignments().clone();
+                let vars = index_access.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
+            }
             for parameter in utils::find_parameters(id, dict) {
-                variables.extend(parameter.get_variables().clone());
-                // assignments.append(&mut parameter.get_assignments());
+                let mut agns = parameter.get_assignments().clone();
+                let vars = parameter.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
             }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {

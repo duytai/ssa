@@ -10,7 +10,7 @@ mod assignment;
 mod link;
 mod declaration;
 mod common;
-mod access;
+mod index_access;
 mod parameter;
 
 pub use dict::*;
@@ -23,5 +23,5 @@ pub use assignment::*;
 pub use link::*;
 pub use declaration::*;
 pub use common::*;
-pub use access::*;
+pub use index_access::*;
 pub use parameter::*;

@@ -4,10 +4,11 @@ use crate::core::{
     Assignment,
     Dictionary,
     Declaration,
-    Parameter
+    Parameter,
+    IndexAccess,
 };
 
-pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Assignment> {
+pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Declaration> {
     dict.lookup(id)
         .map(|walker| Declaration::parse(walker, dict))
         .unwrap_or(vec![])
@@ -28,6 +29,12 @@ pub fn find_variables(id: u32, dict: &Dictionary) -> HashSet<Variable> {
 pub fn find_parameters(id: u32, dict: &Dictionary) -> Vec<Parameter> {
     dict.lookup(id)
         .map(|walker| Parameter::parse(walker, dict))
+        .unwrap_or(vec![])
+}
+
+pub fn find_index_accesses(id: u32, dict: &Dictionary) -> Vec<IndexAccess> {
+    dict.lookup(id)
+        .map(|walker| IndexAccess::parse(walker, dict))
         .unwrap_or(vec![])
 }
 
