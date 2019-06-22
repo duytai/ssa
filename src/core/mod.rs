@@ -10,6 +10,8 @@ mod assignment;
 mod link;
 mod declaration;
 mod common;
+mod access;
+mod parameter;
 
 pub use dict::*;
 pub use walker::*;
@@ -21,3 +23,5 @@ pub use assignment::*;
 pub use link::*;
 pub use declaration::*;
 pub use common::*;
+pub use access::*;
+pub use parameter::*;

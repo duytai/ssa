@@ -1,7 +1,6 @@
 use std::collections::{ HashSet, HashMap };
 use crate::core::{
     State,
-    Shape,
     VariableComparison,
     Operator,
     Action,
@@ -81,59 +80,44 @@ impl<'a> DataFlowGraph<'a> {
         } 
         while stack.len() > 0 {
             let (from, id, mut actions) = stack.pop().unwrap();
-            let vertex = vertices.iter().find(|v| v.get_id() == id).unwrap();
             let pre_table = tables.get(&from).unwrap().clone();
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
-            let mut split_ats = vec![id];
-            // FunctionCall => have to jump to parameters because Variable::parse ignores functionCall 
-            match vertex.get_shape() {
-                Shape::DoubleCircle | Shape::Mdiamond => {
-                    dict.lookup(id).map(|walker| {
-                        for walker in &walker.direct_childs(|_| true)[1..] {
-                            split_ats.push(walker.node.id);
+            for declaration in utils::find_declarations(id, dict) {
+                for l in declaration.get_lhs().clone() {
+                    match declaration.get_op() {
+                        Operator::Equal => {
+                            new_actions.push(Action::Kill(l, id));
+                        },
+                        Operator::Other => {
+                            new_actions.push(Action::Kill(l.clone(), id));
+                            new_actions.push(Action::Use(l, id));
                         }
-                    });
-                },
-                _ => {},
+                    }
+                }
+                for r in declaration.get_rhs().clone() {
+                    new_actions.push(Action::Use(r, id));
+                }
             }
-            for split_at in split_ats {
-                for declaration in utils::find_declarations(split_at, dict) {
-                    for l in declaration.get_lhs().clone() {
-                        match declaration.get_op() {
-                            Operator::Equal => {
-                                new_actions.push(Action::Kill(l, id));
-                            },
-                            Operator::Other => {
-                                new_actions.push(Action::Kill(l.clone(), id));
-                                new_actions.push(Action::Use(l, id));
-                            }
+            for assignment in utils::find_assignments(id, dict) {
+                for l in assignment.get_lhs().clone() {
+                    match assignment.get_op() {
+                        Operator::Equal => {
+                            new_actions.push(Action::Kill(l, id));
+                        },
+                        Operator::Other => {
+                            new_actions.push(Action::Kill(l.clone(), id));
+                            new_actions.push(Action::Use(l, id));
                         }
                     }
-                    for r in declaration.get_rhs().clone() {
-                        new_actions.push(Action::Use(r, id));
-                    }
                 }
-                for assignment in utils::find_assignments(split_at, dict) {
-                    for l in assignment.get_lhs().clone() {
-                        match assignment.get_op() {
-                            Operator::Equal => {
-                                new_actions.push(Action::Kill(l, id));
-                            },
-                            Operator::Other => {
-                                new_actions.push(Action::Kill(l.clone(), id));
-                                new_actions.push(Action::Use(l, id));
-                            }
-                        }
-                    }
-                    for r in assignment.get_rhs().clone() {
-                        new_actions.push(Action::Use(r, id));
-                    }
+                for r in assignment.get_rhs().clone() {
+                    new_actions.push(Action::Use(r, id));
                 }
-                for var in utils::find_variables(split_at, dict) {
-                    new_actions.push(Action::Use(var, id));
-                }
+            }
+            for var in utils::find_variables(id, dict) {
+                new_actions.push(Action::Use(var, id));
             }
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);

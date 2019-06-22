@@ -1,5 +1,11 @@
 use std::collections::HashSet;
-use crate::core::{ Variable, Assignment, Dictionary, Declaration };
+use crate::core::{
+    Variable,
+    Assignment,
+    Dictionary,
+    Declaration,
+    Parameter
+};
 
 pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Declaration> {
     dict.lookup(id)
@@ -18,3 +24,10 @@ pub fn find_variables(id: u32, dict: &Dictionary) -> HashSet<Variable> {
         .map(|walker| Variable::parse(walker, dict))
         .unwrap_or(HashSet::new())
 }
+
+pub fn find_parameters(id: u32, dict: &Dictionary) -> Vec<Parameter> {
+    dict.lookup(id)
+        .map(|walker| Parameter::parse(walker, dict))
+        .unwrap_or(vec![])
+}
+

@@ -46,7 +46,7 @@ impl Declaration {
                 walker.node.name == "VariableDeclarationStatement"
             }
         };
-        let ig = |walker: &Walker, path: &Vec<Walker>| {
+        let ig = |walker: &Walker, _: &Vec<Walker>| {
             let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "FunctionCall"
             || walker.node.name == "MemberAccess"
@@ -63,12 +63,6 @@ impl Declaration {
         declarations
     }
 
-    fn to_variable(walker: &Walker) -> Variable {
-        let members = vec![Member::Reference(walker.node.id)];
-        let source = walker.node.source.to_string();
-        Variable::new(members, source)
-    }
-
     // Find a assignment of current walker
     fn parse_one(walker: &Walker, dict: &Dictionary) -> Declaration {
         let op = Operator::Equal;
@@ -76,9 +70,15 @@ impl Declaration {
         let mut rhs = HashSet::new();
         let walkers = walker.direct_childs(|_| true);
         if walker.node.name == "VariableDeclaration" {
-            lhs.insert(Declaration::to_variable(walker));
+            let members = vec![Member::Reference(walker.node.id)];
+            let source = walker.node.source.to_string();
+            let variable = Variable::new(members, source);
+            lhs.insert(variable);
         } else {
-            lhs.insert(Declaration::to_variable(&walkers[0]));
+            let members = vec![Member::Reference(walkers[0].node.id)];
+            let source = walkers[0].node.source.to_string();
+            let variable = Variable::new(members, source);
+            lhs.insert(variable);
         }
         if walkers.len() >= 2 {
             rhs.extend(Variable::parse(&walkers[1], dict));

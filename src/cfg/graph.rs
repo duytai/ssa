@@ -64,8 +64,8 @@ impl<'a> Graph<'a> {
     pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
         let mut last_source = None;
-        let ig = |walker: &Walker, path: &Vec<Walker>| false;
-        let fi = |walker: &Walker, path: &Vec<Walker>| {
+        let ig = |_: &Walker, _: &Vec<Walker>| false;
+        let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
