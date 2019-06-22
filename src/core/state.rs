@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use crate::core::{
-    edge::Edge,
-    vertex::{ Vertex },
-    dict::{ Dictionary },
+    Edge,
+    Vertex,
+    Dictionary,
 };
 
 /// Result of CFG
