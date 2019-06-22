@@ -52,6 +52,10 @@ pub struct Assignment {
 
 impl Assignment {
 
+    pub fn new(lhs: HashSet<Variable>, rhs: HashSet<Variable>, op: Operator) -> Self {
+        Assignment { lhs, rhs, op }
+    }
+
     pub fn get_lhs(&self) -> &HashSet<Variable> {
         &self.lhs
     }

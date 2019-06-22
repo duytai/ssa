@@ -5,35 +5,16 @@ use crate::core::{
     Dictionary,
     Operator,
     Member,
+    Assignment,
 };
 
 #[derive(Debug)]
-pub struct Declaration {
-    /// a list of variables in LHS of a assignment
-    lhs: HashSet<Variable>,
-    /// a list of variables in RHS of a assignment
-    rhs: HashSet<Variable>,
-    /// the operator in a assignment
-    op: Operator,
-}
+pub struct Declaration {}
 
 impl Declaration {
-
-    pub fn get_lhs(&self) -> &HashSet<Variable> {
-        &self.lhs
-    }
-
-    pub fn get_rhs(&self) -> &HashSet<Variable> {
-        &self.rhs
-    }
-
-    pub fn get_op(&self) -> &Operator {
-        &self.op
-    }
-
     /// Find all variables in current walker, the dictionary is used to identify global variables 
-    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Declaration> {
-        let mut declarations = vec![];
+    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
+        let mut assignments = vec![];
         let fi = |walker: &Walker, path: &Vec<Walker>| {
             if walker.node.name == "VariableDeclaration" {
                 if path.len() >= 2 {
@@ -58,13 +39,13 @@ impl Declaration {
             || operator == "delete"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
-            declarations.push(Declaration::parse_one(&walker, dict));
+            assignments.push(Declaration::parse_one(&walker, dict));
         }
-        declarations
+        assignments
     }
 
     // Find a assignment of current walker
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Declaration {
+    fn parse_one(walker: &Walker, dict: &Dictionary) -> Assignment {
         let op = Operator::Equal;
         let mut lhs = HashSet::new();
         let mut rhs = HashSet::new();
@@ -83,6 +64,6 @@ impl Declaration {
         if walkers.len() >= 2 {
             rhs.extend(Variable::parse(&walkers[1], dict));
         }
-        Declaration { lhs, rhs, op }
+        Assignment::new(lhs, rhs, op)
     }
 }

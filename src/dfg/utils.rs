@@ -7,7 +7,7 @@ use crate::core::{
     Parameter
 };
 
-pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Declaration> {
+pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Assignment> {
     dict.lookup(id)
         .map(|walker| Declaration::parse(walker, dict))
         .unwrap_or(vec![])

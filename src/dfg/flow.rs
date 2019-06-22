@@ -84,23 +84,16 @@ impl<'a> DataFlowGraph<'a> {
             let cur_table = tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
-            for declaration in utils::find_declarations(id, dict) {
-                for l in declaration.get_lhs().clone() {
-                    match declaration.get_op() {
-                        Operator::Equal => {
-                            new_actions.push(Action::Kill(l, id));
-                        },
-                        Operator::Other => {
-                            new_actions.push(Action::Kill(l.clone(), id));
-                            new_actions.push(Action::Use(l, id));
-                        }
-                    }
-                }
-                for r in declaration.get_rhs().clone() {
-                    new_actions.push(Action::Use(r, id));
-                }
+            let mut assignments = vec![];
+            let mut variables = HashSet::new();
+            assignments.append(&mut utils::find_declarations(id, dict));
+            assignments.append(&mut utils::find_assignments(id, dict));
+            variables.extend(utils::find_variables(id, dict));
+            for parameter in utils::find_parameters(id, dict) {
+                variables.extend(parameter.get_variables().clone());
+                // assignments.append(&mut parameter.get_assignments());
             }
-            for assignment in utils::find_assignments(id, dict) {
+            for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
@@ -116,7 +109,7 @@ impl<'a> DataFlowGraph<'a> {
                     new_actions.push(Action::Use(r, id));
                 }
             }
-            for var in utils::find_variables(id, dict) {
+            for var in variables {
                 new_actions.push(Action::Use(var, id));
             }
             actions.extend(new_actions.clone());
