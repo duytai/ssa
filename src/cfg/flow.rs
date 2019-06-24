@@ -114,7 +114,9 @@ impl<'a> ControlFlowGraph<'a> {
                     breakers.push(LoopBreaker { kind: BreakerType::Continue, id });
                     predecessors = vec![];
                 },
-                SimpleBlockNode::Require(walker) | SimpleBlockNode::Assert(walker) => {
+                SimpleBlockNode::Require(walker)
+                    | SimpleBlockNode::Assert(walker)
+                    | SimpleBlockNode::Transfer(walker) => {
                     let Node { id, source, .. } = walker.node;
                     let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                     self.vertices.insert(vertice);

@@ -22,6 +22,7 @@ pub enum SimpleBlockNode<'a> {
     Require(Walker<'a>),
     Assert(Walker<'a>),
     Revert(Walker<'a>),
+    Transfer(Walker<'a>),
     Suicide(Walker<'a>),
     Selfdestruct(Walker<'a>),
     FunctionCall(Walker<'a>),

@@ -100,8 +100,18 @@ impl<'a> Graph<'a> {
                     }
                 },
                 None => {
-                    let node = SimpleBlockNode::FunctionCall(walker);
-                    function_calls.push(node);
+                    let member_name = child_walkers[0].node.attributes["member_name"].as_str();
+                    let reference = child_walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                    match (member_name, reference) {
+                        (Some("transfer"), None) => {
+                            let node = SimpleBlockNode::Transfer(walker);
+                            function_calls.push(node);
+                        },
+                        (_, _) => {
+                            let node = SimpleBlockNode::FunctionCall(walker);
+                            function_calls.push(node);
+                        },
+                    }
                 }
             }
         }
