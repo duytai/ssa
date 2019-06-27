@@ -33,7 +33,7 @@ fn main() -> Result<()> {
             let mut control_flow = ControlFlowGraph::new(&dict);
             let state = control_flow.start_at(19).unwrap();
             // Create data flow graph
-            let data_flow = DataFlowGraph::new(&state);
+            let mut data_flow = DataFlowGraph::new(&state);
             let links = data_flow.find_links();
             // Render in dot language
             println!("{}", Dot::format(&state, &links));

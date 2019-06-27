@@ -39,15 +39,15 @@ impl<'a> Dictionary<'a> {
                 functions: Vec::new(),
                 parents: Vec::new(),
             };
-            for m in walker.node.attributes["contractDependencies"].members() {
-                if !m.is_null() {
-                    if let Some(m) = m.as_u32() {
-                        prop.parents.push(m);
-                    }
-                }
-            }
             for walker in walker.direct_childs(|_| true).into_iter() {
                 match walker.node.name {
+                    "InheritanceSpecifier" | "UsingForDirective" => {
+                        let walkers = walker.direct_childs(|_| true);
+                        let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                        if let Some(reference) = reference {
+                            prop.parents.push(reference);
+                        }
+                    },
                     "FunctionDefinition" => {
                         prop.functions.push(walker.node.id);
                     },
@@ -68,6 +68,37 @@ impl<'a> Dictionary<'a> {
     /// Find walker by node id
     pub fn lookup(&self, id: u32) -> Option<&Walker> {
         self.entries.get(&id)
+    }
+
+    pub fn lookup_functions(&self, id: u32) -> Vec<&Walker> {
+        let mut ret = vec![];
+        for (_, prop) in self.contracts.iter() {
+            if prop.functions.contains(&id) {
+                for index in (0..prop.functions.len()).rev() {
+                    ret.push(prop.functions[index]);
+                }
+                let mut parents = prop.parents.clone();
+                loop {
+                    match parents.pop() {
+                        Some(contract_id) => {
+                            if let Some(prop) = self.contracts.get(&contract_id) {
+                                for index in (0..prop.functions.len()).rev() {
+                                    ret.push(prop.functions[index]);
+                                }
+                                parents.extend_from_slice(&prop.parents[..]);
+                            }
+                        },
+                        None => { break; }
+                    }
+                }
+                break;
+            }
+        }
+        ret.reverse();
+        ret.iter()
+           .map(|id| { self.lookup(*id)})
+           .filter_map(|w| w)
+           .collect::<Vec<&Walker>>()
     }
 
     /// Find a list of functions by node id, the list includes inherited functions
