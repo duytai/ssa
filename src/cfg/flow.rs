@@ -49,7 +49,7 @@ impl<'a> ControlFlowGraph<'a> {
             vertices: HashSet::new(),
             dict,
             start: 0,
-            stop: 1000000,
+            stop: 0,
         }
     }
 
@@ -343,6 +343,8 @@ impl<'a> ControlFlowGraph<'a> {
     pub fn start_at(&mut self, entry_id: u32) -> Option<State> {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
         let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];
+        self.start = entry_id * 100000;
+        self.stop = self.start + 1;
         if entry_names.contains(&walker.node.name) {
             let mut graph = Graph::new(walker);
             let root = graph.update();
@@ -366,10 +368,11 @@ impl<'a> ControlFlowGraph<'a> {
                 }
             }
             return Some(State {
+                start: self.start,
+                stop: self.stop,
                 edges: &self.edges,
                 vertices: &self.vertices,
                 dict: &self.dict,
-                stop: self.stop,
             });
         }
         return None;
