@@ -14,12 +14,34 @@ use crate::dfg::utils;
 /// and build data flow
 pub struct DataFlowGraph<'a> {
     state: &'a State<'a>,
+    visited: HashSet<u32>,
+    parents: HashMap<u32, Vec<u32>>,
+    tables: HashMap<u32, HashSet<Action>>,
 }
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
     pub fn new(state: &'a State) -> Self {
-        DataFlowGraph { state }
+        let State { vertices, edges, .. } = state;
+        let mut tables = HashMap::new();
+        let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
+        for vertex in vertices.iter() {
+            tables.insert(vertex.get_id(), HashSet::new());
+        }
+        for edge in edges.iter() {
+            let from = edge.get_from();
+            let to = edge.get_to();
+            match parents.get_mut(&to) {
+                Some(v) => { v.push(from); },
+                None => { parents.insert(to, vec![from]); },
+            }
+        }
+        DataFlowGraph {
+            state,
+            parents,
+            tables,
+            visited: HashSet::new(),
+        }
     }
 
     /// Find data dependency links
@@ -54,34 +76,20 @@ impl<'a> DataFlowGraph<'a> {
     /// All elements in that pattern will be removed from the sequence.
     ///
     /// The loop will stop if no sequence changes happen
-    pub fn find_links(&self) -> HashSet<DataLink> {
-        let State { vertices, edges, dict, stop, .. } = self.state;
-        let mut visited: HashSet<u32> = HashSet::new();
+    pub fn find_links(&mut self) -> HashSet<DataLink> {
+        let State { dict, stop, .. } = self.state;
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
-        let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
-        let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
-        let mut links: HashSet<DataLink> = HashSet::new(); 
+        let mut links: HashSet<DataLink> = HashSet::new();
         let actions: Vec<Action> = vec![]; 
-        for vertex in vertices.iter() {
-            tables.insert(vertex.get_id(), HashSet::new());
-        }
-        for edge in edges.iter() {
-            let from = edge.get_from();
-            let to = edge.get_to();
-            match parents.get_mut(&to) {
-                Some(v) => { v.push(from); },
-                None => { parents.insert(to, vec![from]); },
-            }
-        }
-        if let Some(parents) = parents.get(&stop) {
+        if let Some(parents) = self.parents.get(&stop) {
             for parent in parents {
                 stack.push((*stop, *parent, actions.clone()));
             }
         } 
         while stack.len() > 0 {
             let (from, id, mut actions) = stack.pop().unwrap();
-            let pre_table = tables.get(&from).unwrap().clone();
-            let cur_table = tables.get_mut(&id).unwrap();
+            let pre_table = self.tables.get(&from).unwrap().clone();
+            let cur_table = self.tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
             let mut assignments = vec![];
@@ -186,9 +194,9 @@ impl<'a> DataFlowGraph<'a> {
                     break;
                 }
             }
-            if cur_table.len() != cur_table_len || !visited.contains(&id) {
-                visited.insert(id);
-                if let Some(parents) = parents.get(&id) {
+            if cur_table.len() != cur_table_len || !self.visited.contains(&id) {
+                self.visited.insert(id);
+                if let Some(parents) = self.parents.get(&id) {
                     for parent in parents {
                         stack.push((id, *parent, actions.clone()));
                     }

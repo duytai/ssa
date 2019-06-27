@@ -15,7 +15,7 @@ use crate::core::{
 /// this.add(10, this.add(x, this.add(y, 0)))
 /// ```
 /// We convert it to
-/// ```
+/// ```javascript
 /// fake_100 = this.add(y, 0);
 /// fake_101 = this.add(x, fake_100);
 /// fake_102 = this.add(10, fake_101);
