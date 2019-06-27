@@ -103,6 +103,12 @@ impl<'a> DataFlowGraph<'a> {
                 assignments.append(&mut agns);
                 variables.extend(vars);
             }
+            for fake_node in utils::find_fake_nodes(id, dict) {
+                let mut agns = fake_node.get_assignments().clone();
+                let vars = fake_node.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
+            }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
