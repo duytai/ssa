@@ -12,7 +12,7 @@ fn depend_on_state_variable() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 5);
         assert_eq!(edges.len(), 4);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 1);
         for link in links {
             assert_eq!(link.get_from(), 9);
@@ -30,7 +30,7 @@ fn depend_on_parameters() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 4);
         assert_eq!(edges.len(), 3);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 1);
         for link in links {
             assert_eq!(link.get_from(), 9);
@@ -48,7 +48,7 @@ fn depend_on_local_variables() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 5);
         assert_eq!(edges.len(), 4);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 1);
         for link in links {
             assert_eq!(link.get_from(), 10);
@@ -66,7 +66,7 @@ fn find_assignments() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 7);
         assert_eq!(edges.len(), 6);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 3);
         for link in links {
             match link.get_from() {
@@ -88,7 +88,7 @@ fn struct_assignments() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 11);
         assert_eq!(edges.len(), 10);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 8);
         for link in links {
             match link.get_from() {
@@ -121,7 +121,7 @@ fn array_assignments() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 7);
         assert_eq!(edges.len(), 6);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 4);
         for link in links {
             match link.get_from() {
@@ -148,7 +148,7 @@ fn variables_in_functioncall() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 9);
         assert_eq!(edges.len(), 8);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 3);
         for link in links {
             match link.get_from() {
@@ -172,7 +172,7 @@ fn unary_operator() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 9);
         assert_eq!(edges.len(), 8);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 5);
         for link in links {
             match link.get_from() {
@@ -196,7 +196,7 @@ fn unary_in_functioncall() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 6);
         assert_eq!(edges.len(), 5);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 2);
         for link in links {
             match link.get_from() {
@@ -217,7 +217,7 @@ fn delete_call() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 6);
         assert_eq!(edges.len(), 5);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 1);
         for link in links {
             match link.get_from() {
@@ -237,7 +237,7 @@ fn find_variables_in_index_acccess() -> io::Result<()> {
         let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 7);
         assert_eq!(edges.len(), 6);
-        let links = DataFlowGraph::new(&cfg).find_links();
+        let links = DataFlowGraph::new(cfg).find_links();
         assert_eq!(links.len(), 5);
         for link in links {
             match link.get_from() {

@@ -13,7 +13,7 @@ use crate::dfg::utils;
 /// It takes edges and vertices from the cfg to find assignments 
 /// and build data flow
 pub struct DataFlowGraph<'a> {
-    cfg: &'a ControlFlowGraph<'a>,
+    cfg: ControlFlowGraph<'a>,
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
@@ -21,7 +21,7 @@ pub struct DataFlowGraph<'a> {
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(cfg: &'a ControlFlowGraph) -> Self {
+    pub fn new(cfg: ControlFlowGraph<'a>) -> Self {
         let vertices = cfg.get_vertices();
         let edges = cfg.get_edges();
         let mut tables = HashMap::new();
