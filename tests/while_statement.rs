@@ -2,11 +2,14 @@ mod setup;
 
 use std::io;
 use setup::setup_cfg;
-use ssa::core::{ State, Edge };
+use ssa::core::{ Edge };
 
 #[test]
 fn while_body_is_expression() -> io::Result<()> {
-    setup_cfg("while_1.sol", 15, |State { vertices, edges, stop, .. }| {
+    setup_cfg("while_1.sol", 15, |cfg| {
+        let vertices = cfg.get_vertices();
+        let edges = cfg.get_edges();
+        let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 6);
         assert_eq!(edges.len(), 6);
         assert!(edges.contains(&Edge::new(8, 12)));
@@ -18,7 +21,10 @@ fn while_body_is_expression() -> io::Result<()> {
 
 #[test]
 fn while_body_is_block() -> io::Result<()> {
-    setup_cfg("while_2.sol", 16, |State { vertices, edges, stop, .. }| {
+    setup_cfg("while_2.sol", 16, |cfg| {
+        let vertices = cfg.get_vertices();
+        let edges = cfg.get_edges();
+        let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 6);
         assert_eq!(edges.len(), 6);
         assert!(edges.contains(&Edge::new(8, 12)));
@@ -30,7 +36,10 @@ fn while_body_is_block() -> io::Result<()> {
 
 #[test]
 fn break_in_body() -> io::Result<()> {
-    setup_cfg("while_3.sol", 17, |State { vertices, edges, stop, .. }| {
+    setup_cfg("while_3.sol", 17, |cfg| {
+        let vertices = cfg.get_vertices();
+        let edges = cfg.get_edges();
+        let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 6);
         assert_eq!(edges.len(), 6);
         assert!(edges.contains(&Edge::new(8, 9)));
@@ -42,7 +51,10 @@ fn break_in_body() -> io::Result<()> {
 
 #[test]
 fn continue_in_body() -> io::Result<()> {
-    setup_cfg("while_4.sol", 21, |State { vertices, edges, stop, .. }| {
+    setup_cfg("while_4.sol", 21, |cfg| {
+        let vertices = cfg.get_vertices();
+        let edges = cfg.get_edges();
+        let stop = cfg.get_stop();
         assert_eq!(vertices.len(), 7);
         assert_eq!(edges.len(), 7);
         assert!(edges.contains(&Edge::new(8, 12)));

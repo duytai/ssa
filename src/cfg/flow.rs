@@ -14,7 +14,6 @@ use crate::core::{
     Node,
     Vertex,
     Shape,
-    State,
     Edge,
 };
 
@@ -51,6 +50,26 @@ impl<'a> ControlFlowGraph<'a> {
             start: 0,
             stop: 0,
         }
+    }
+
+    pub fn get_start(&self) -> u32 {
+        self.start
+    }
+
+    pub fn get_stop(&self) -> u32 {
+        self.stop
+    }
+
+    pub fn get_dict(&self) -> &Dictionary {
+        self.dict
+    }
+
+    pub fn get_vertices(&self) -> &HashSet<Vertex> {
+        &self.vertices
+    }
+
+    pub fn get_edges(&self) -> &HashSet<Edge> {
+        &self.edges
     }
 
     /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
@@ -340,7 +359,7 @@ impl<'a> ControlFlowGraph<'a> {
     }
 
     /// Build a cfg, the cfg starts at FunctionDefinition `entry_id`
-    pub fn start_at(&mut self, entry_id: u32) -> Option<State> {
+    pub fn start_at(&mut self, entry_id: u32) {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
         let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];
         self.start = entry_id * 100000;
@@ -367,14 +386,6 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert(edge);
                 }
             }
-            return Some(State {
-                start: self.start,
-                stop: self.stop,
-                edges: &self.edges,
-                vertices: &self.vertices,
-                dict: &self.dict,
-            });
         }
-        return None;
     }
 }

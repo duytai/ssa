@@ -1,14 +1,14 @@
 use std::collections::HashSet;
+use crate::cfg::ControlFlowGraph;
 use crate::core::{
     DataLink,
     Shape,
-    State,
 };
 
 pub struct Dot {}
 
 impl Dot {
-    pub fn format(state: &State, ls: &HashSet<DataLink>) -> String {
+    pub fn format(cfg: &ControlFlowGraph, ls: &HashSet<DataLink>) -> String {
         let mut edges = vec![];
         let mut vertices = vec![];
         let mut links = vec![];
@@ -18,10 +18,10 @@ impl Dot {
             let label = link.get_var().get_source();
             links.push(format!("  {} -> {}[label=\"{}\", style=dotted];", from, to, label));
         }
-        for edge in state.edges.iter() {
+        for edge in cfg.get_edges().iter() {
             edges.push(format!("  {} -> {};", edge.get_from(), edge.get_to()));
         } 
-        for vertex in state.vertices.iter() {
+        for vertex in cfg.get_vertices().iter() {
             let id = vertex.get_id();
             let source = vertex.get_source();
             let shape = match vertex.get_shape() {

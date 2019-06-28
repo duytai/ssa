@@ -1,6 +1,6 @@
 use std::collections::{ HashSet, HashMap };
+use crate::cfg::ControlFlowGraph;
 use crate::core::{
-    State,
     VariableComparison,
     Operator,
     Action,
@@ -13,7 +13,7 @@ use crate::dfg::utils;
 /// It takes edges and vertices from the cfg to find assignments 
 /// and build data flow
 pub struct DataFlowGraph<'a> {
-    state: &'a State<'a>,
+    cfg: &'a ControlFlowGraph<'a>,
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
@@ -21,8 +21,9 @@ pub struct DataFlowGraph<'a> {
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(state: &'a State) -> Self {
-        let State { vertices, edges, .. } = state;
+    pub fn new(cfg: &'a ControlFlowGraph) -> Self {
+        let vertices = cfg.get_vertices();
+        let edges = cfg.get_edges();
         let mut tables = HashMap::new();
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
         for vertex in vertices.iter() {
@@ -37,7 +38,7 @@ impl<'a> DataFlowGraph<'a> {
             }
         }
         DataFlowGraph {
-            state,
+            cfg,
             parents,
             tables,
             visited: HashSet::new(),
@@ -77,13 +78,14 @@ impl<'a> DataFlowGraph<'a> {
     ///
     /// The loop will stop if no sequence changes happen
     pub fn find_links(&mut self) -> HashSet<DataLink> {
-        let State { dict, stop, .. } = self.state;
+        let dict = self.cfg.get_dict();
+        let stop = self.cfg.get_stop();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut links: HashSet<DataLink> = HashSet::new();
         let actions: Vec<Action> = vec![]; 
         if let Some(parents) = self.parents.get(&stop) {
             for parent in parents {
-                stack.push((*stop, *parent, actions.clone()));
+                stack.push((stop, *parent, actions.clone()));
             }
         } 
         while stack.len() > 0 {
