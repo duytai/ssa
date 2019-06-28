@@ -42,14 +42,16 @@ pub struct LoopBreaker {
 
 impl<'a> ControlFlowGraph<'a> {
     /// Create a new cfg from dictionary
-    pub fn new(dict: &'a Dictionary) -> Self {
-        ControlFlowGraph {
+    pub fn new(dict: &'a Dictionary, entry_id: u32) -> Self {
+        let mut cfg = ControlFlowGraph {
             edges: HashSet::new(),
             vertices: HashSet::new(),
             dict,
             start: 0,
             stop: 0,
-        }
+        };
+        cfg.start_at(entry_id);
+        cfg
     }
 
     pub fn get_start(&self) -> u32 {
