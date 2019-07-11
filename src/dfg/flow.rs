@@ -165,15 +165,35 @@ impl<'a> DataFlowGraph<'a> {
                         // Link from stop to Return statement 
                         if let Some(ctx_returns) = &ctx_returns {
                             for var in ctx_returns.1.iter() {
-                                actions.push(Action::Kill(var.clone(), id));
+                                new_actions.push(Action::Kill(var.clone(), id));
+                                // TODO: Add this line to make sure variables bubble up 
+                                new_actions.push(Action::Use(var.clone(), id));
+                            } 
+                        }
+                    },
+                    "ParameterList" => {
+                        // Link from parameters to start
+                        if let Some(ctx_params) = &ctx_params {
+                            for vars in ctx_params.1.iter() {
+                                for var in vars {
+                                    new_actions.push(Action::Use(var.clone(), id));
+                                }
                             } 
                         }
                     },
                     _ => {},
                 }
             }
-            // Link from parameters to start
             if id == start {
+                if let Some(ctx_params) = &ctx_params {
+                    for vars in ctx_params.1.iter() {
+                        for var in vars {
+                            new_actions.push(Action::Kill(var.clone(), id));
+                            new_actions.push(Action::Use(var.clone(), id));
+                            new_actions.push(Action::Kill(var.clone(), ctx_params.0));
+                        }
+                    } 
+                }
             }
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
@@ -233,6 +253,7 @@ impl<'a> DataFlowGraph<'a> {
                     break;
                 }
             }
+            println!("condition {} != {}", cur_table.len(), cur_table_len);
             if cur_table.len() != cur_table_len || !self.visited.contains(&id) {
                 self.visited.insert(id);
                 if let Some(parents) = self.parents.get(&id) {

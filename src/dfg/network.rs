@@ -42,10 +42,11 @@ impl<'a> Network<'a> {
                     if let Some(dfg) = dfgs.get_mut(&reference) {
                         // Call to function defined at @reference
                         // Add fake data to Return statement of that function
-                        let po = ParameterOrder::parse(walker, self.dict);
                         let fake_node = FakeNode::parse_one(walker, false);
+                        let po = ParameterOrder::parse(walker, self.dict);
                         let ctx_returns = (open, fake_node.get_variables().clone());
                         let ctx_params = (open, po.get_variables().clone());
+                        println!(">> Extend");
                         links.extend(dfg.find_links(Some(ctx_params), Some(ctx_returns)));
                     }
                 }
