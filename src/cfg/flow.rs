@@ -346,6 +346,11 @@ impl<'a> ControlFlowGraph<'a> {
                         },
                         BlockNode::Return(blocks) => {
                             predecessors = self.simple_traverse(blocks, predecessors.clone(), breakers);
+                            for predecessor in predecessors.iter() {
+                                let edge = Edge::new(*predecessor, self.stop);
+                                self.edges.insert(edge);
+                            }
+                            predecessors = vec![];
                         },
                         BlockNode::Root(_) => unimplemented!(),
                         BlockNode::None => unimplemented!(),
