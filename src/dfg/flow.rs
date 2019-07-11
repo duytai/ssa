@@ -5,6 +5,7 @@ use crate::core::{
     Operator,
     Action,
     DataLink,
+    Variable,
 };
 use crate::dfg::utils;
 
@@ -18,8 +19,9 @@ pub struct DataFlowGraph<'a> {
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
     opens: HashSet<u32>,
-    returns: HashSet<u32>,
 }
+
+pub type DataFlowContext = Option<(u32, HashSet<Variable>)>;
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
@@ -45,16 +47,11 @@ impl<'a> DataFlowGraph<'a> {
             tables,
             visited: HashSet::new(),
             opens: HashSet::new(),
-            returns: HashSet::new(),
         }
     }
 
     pub fn get_opens(&self) -> &HashSet<u32> {
         &self.opens
-    }
-
-    pub fn get_returns(&self) -> &HashSet<u32> {
-        &self.returns
     }
 
     /// Find data dependency links
@@ -89,7 +86,7 @@ impl<'a> DataFlowGraph<'a> {
     /// All elements in that pattern will be removed from the sequence.
     ///
     /// The loop will stop if no sequence changes happen
-    pub fn find_links(&mut self) -> HashSet<DataLink> {
+    pub fn find_links(&mut self, ctx_params: DataFlowContext, ctx_returns: DataFlowContext) -> HashSet<DataLink> {
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
@@ -125,20 +122,12 @@ impl<'a> DataFlowGraph<'a> {
                 assignments.append(&mut agns);
                 variables.extend(vars);
             }
-            if let Some(walker) = dict.lookup(id) {
-                if walker.node.name == "FunctionCall" {
-                    self.opens.insert(id);
-                }
-                if walker.node.name == "Return" {
-                    self.returns.insert(id);
-                }
+            for fake_node in utils::find_fake_nodes(id, dict) {
+                let mut agns = fake_node.get_assignments().clone();
+                let vars = fake_node.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
             }
-            // for fake_node in utils::find_fake_nodes(id, dict) {
-                // let mut agns = fake_node.get_assignments().clone();
-                // let vars = fake_node.get_variables().clone();
-                // assignments.append(&mut agns);
-                // variables.extend(vars);
-            // }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
@@ -157,6 +146,16 @@ impl<'a> DataFlowGraph<'a> {
             }
             for var in variables {
                 new_actions.push(Action::Use(var, id));
+            }
+            if let Some(walker) = dict.lookup(id) {
+                match walker.node.name {
+                    "FunctionCall" => {
+                        self.opens.insert(id);
+                    },
+                    "Return" => {
+                    },
+                    _ => {},
+                }
             }
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);

@@ -1,8 +1,11 @@
-use crate::core::Dictionary;
 use crate::dot::Dot;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
-use crate::core::DataLink;
+use crate::core::{
+    DataLink,
+    FakeNode,
+    Dictionary,
+};
 use std::collections::{
     HashMap,
     HashSet,
@@ -26,7 +29,7 @@ impl<'a> Network<'a> {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);
-            links.extend(dfg.find_links());
+            links.extend(dfg.find_links(None, None));
             opens.extend(dfg.get_opens());
             dfgs.insert(walker.node.id, dfg);
         }
@@ -36,8 +39,11 @@ impl<'a> Network<'a> {
                 let reference = &childs[0].node.attributes["referencedDeclaration"];
                 if let Some(reference) = reference.as_u32() {
                     if let Some(dfg) = dfgs.get_mut(&reference) {
-                        let returns = dfg.get_returns();
-                        println!("returns: {:?}", returns);
+                        // Call to function defined at @reference
+                        // Add fake data to Return statement of that function
+                        let fake_node = FakeNode::parse_one(walker, false);
+                        let ctx_returns = (open, fake_node.get_variables().clone());
+                        println!("new_links: {:?}", dfg.find_links(None, Some(ctx_returns)));
                     }
                 }
             }
