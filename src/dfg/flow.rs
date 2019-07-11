@@ -17,6 +17,8 @@ pub struct DataFlowGraph<'a> {
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
+    opens: HashSet<u32>,
+    returns: HashSet<u32>,
 }
 
 impl<'a> DataFlowGraph<'a> {
@@ -42,7 +44,17 @@ impl<'a> DataFlowGraph<'a> {
             parents,
             tables,
             visited: HashSet::new(),
+            opens: HashSet::new(),
+            returns: HashSet::new(),
         }
+    }
+
+    pub fn get_opens(&self) -> &HashSet<u32> {
+        &self.opens
+    }
+
+    pub fn get_returns(&self) -> &HashSet<u32> {
+        &self.returns
     }
 
     /// Find data dependency links
@@ -112,6 +124,14 @@ impl<'a> DataFlowGraph<'a> {
                 let vars = parameter.get_variables().clone();
                 assignments.append(&mut agns);
                 variables.extend(vars);
+            }
+            if let Some(walker) = dict.lookup(id) {
+                if walker.node.name == "FunctionCall" {
+                    self.opens.insert(id);
+                }
+                if walker.node.name == "Return" {
+                    self.returns.insert(id);
+                }
             }
             // for fake_node in utils::find_fake_nodes(id, dict) {
                 // let mut agns = fake_node.get_assignments().clone();
