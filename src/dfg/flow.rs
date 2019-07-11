@@ -21,7 +21,8 @@ pub struct DataFlowGraph<'a> {
     opens: HashSet<u32>,
 }
 
-pub type DataFlowContext = Option<(u32, HashSet<Variable>)>;
+pub type DataFlowReturnContext = Option<(u32, HashSet<Variable>)>;
+pub type DataFlowParamContext = Option<(u32, Vec<HashSet<Variable>>)>;
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
@@ -86,12 +87,20 @@ impl<'a> DataFlowGraph<'a> {
     /// All elements in that pattern will be removed from the sequence.
     ///
     /// The loop will stop if no sequence changes happen
-    pub fn find_links(&mut self, ctx_params: DataFlowContext, ctx_returns: DataFlowContext) -> HashSet<DataLink> {
+    pub fn find_links(&mut self, ctx_params: DataFlowParamContext, ctx_returns: DataFlowReturnContext) -> HashSet<DataLink> {
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
+        let start = self.cfg.get_start();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut links: HashSet<DataLink> = HashSet::new();
-        let actions: Vec<Action> = vec![]; 
+        let mut actions: Vec<Action> = vec![]; 
+        if let Some(ctx_returns) = &ctx_returns {
+            for var in ctx_returns.1.iter() {
+                actions.push(Action::Use(var.clone(), ctx_returns.0));
+                actions.push(Action::Kill(var.clone(), stop));
+                actions.push(Action::Use(var.clone(), stop));
+            } 
+        }
         if let Some(parents) = self.parents.get(&stop) {
             for parent in parents {
                 stack.push((stop, *parent, actions.clone()));
@@ -153,9 +162,18 @@ impl<'a> DataFlowGraph<'a> {
                         self.opens.insert(id);
                     },
                     "Return" => {
+                        // Link from stop to Return statement 
+                        if let Some(ctx_returns) = &ctx_returns {
+                            for var in ctx_returns.1.iter() {
+                                actions.push(Action::Kill(var.clone(), id));
+                            } 
+                        }
                     },
                     _ => {},
                 }
+            }
+            // Link from parameters to start
+            if id == start {
             }
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
