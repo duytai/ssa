@@ -9,3 +9,4 @@ pub mod core;
 pub mod dfg;
 pub mod dot;
 pub mod loader;
+pub mod oracle;
