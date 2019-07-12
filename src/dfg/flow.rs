@@ -6,6 +6,7 @@ use crate::core::{
     Action,
     DataLink,
     Variable,
+    Member,
 };
 use crate::dfg::utils;
 
@@ -160,7 +161,13 @@ impl<'a> DataFlowGraph<'a> {
                                 actions.push(Action::Use(var.clone(), ctx_returns.0));
                                 new_actions.push(Action::Kill(var.clone(), id));
                                 // TODO: Add this line to make sure variables bubble up 
-                                new_actions.push(Action::Use(var.clone(), id));
+                                let mut members = var.get_members().clone();
+                                members.push(Member::Global(String::from(":::")));
+                                let var = Variable::new(
+                                    members,
+                                    String::from(":::"),
+                                );
+                                new_actions.push(Action::Use(var, id));
                             } 
                         }
                     },

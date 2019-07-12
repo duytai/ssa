@@ -46,7 +46,6 @@ impl<'a> Network<'a> {
                         let po = ParameterOrder::parse(walker, self.dict);
                         let ctx_returns = (open, fake_node.get_variables().clone());
                         let ctx_params = (open, po.get_variables().clone());
-                        println!(">> Extend");
                         links.extend(dfg.find_links(Some(ctx_params), Some(ctx_returns)));
                     }
                 }
