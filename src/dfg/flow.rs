@@ -90,17 +90,9 @@ impl<'a> DataFlowGraph<'a> {
     pub fn find_links(&mut self, ctx_params: DataFlowParamContext, ctx_returns: DataFlowReturnContext) -> HashSet<DataLink> {
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
-        let start = self.cfg.get_start();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut links: HashSet<DataLink> = HashSet::new();
-        let mut actions: Vec<Action> = vec![]; 
-        if let Some(ctx_returns) = &ctx_returns {
-            for var in ctx_returns.1.iter() {
-                actions.push(Action::Use(var.clone(), ctx_returns.0));
-                actions.push(Action::Kill(var.clone(), stop));
-                actions.push(Action::Use(var.clone(), stop));
-            } 
-        }
+        let actions: Vec<Action> = vec![]; 
         if let Some(parents) = self.parents.get(&stop) {
             for parent in parents {
                 stack.push((stop, *parent, actions.clone()));
@@ -165,6 +157,7 @@ impl<'a> DataFlowGraph<'a> {
                         // Link from stop to Return statement 
                         if let Some(ctx_returns) = &ctx_returns {
                             for var in ctx_returns.1.iter() {
+                                actions.push(Action::Use(var.clone(), ctx_returns.0));
                                 new_actions.push(Action::Kill(var.clone(), id));
                                 // TODO: Add this line to make sure variables bubble up 
                                 new_actions.push(Action::Use(var.clone(), id));
@@ -177,22 +170,12 @@ impl<'a> DataFlowGraph<'a> {
                             for vars in ctx_params.1.iter() {
                                 for var in vars {
                                     new_actions.push(Action::Use(var.clone(), id));
+                                    new_actions.push(Action::Kill(var.clone(), ctx_params.0));
                                 }
                             } 
                         }
                     },
                     _ => {},
-                }
-            }
-            if id == start {
-                if let Some(ctx_params) = &ctx_params {
-                    for vars in ctx_params.1.iter() {
-                        for var in vars {
-                            new_actions.push(Action::Kill(var.clone(), id));
-                            new_actions.push(Action::Use(var.clone(), id));
-                            new_actions.push(Action::Kill(var.clone(), ctx_params.0));
-                        }
-                    } 
                 }
             }
             actions.extend(new_actions.clone());
@@ -253,7 +236,6 @@ impl<'a> DataFlowGraph<'a> {
                     break;
                 }
             }
-            println!("condition {} != {}", cur_table.len(), cur_table_len);
             if cur_table.len() != cur_table_len || !self.visited.contains(&id) {
                 self.visited.insert(id);
                 if let Some(parents) = self.parents.get(&id) {

@@ -58,8 +58,8 @@ impl FakeNode {
     }
 
     pub fn parse_one(walker: &Walker, is_assignment: bool) -> FakeNode {
-        let name = format!("fake_{}", walker.node.id);
-        let source = format!("{} = {}", name, walker.node.source);
+        let name = format!("el_{}", walker.node.id);
+        let source = format!("{}", name);
         let variable = Variable::new(
             vec![Member::Global(name)],
             source,
