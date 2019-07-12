@@ -24,6 +24,7 @@ pub struct DataFlowGraph<'a> {
 
 pub type DataFlowReturnContext = Option<(u32, HashSet<Variable>)>;
 pub type DataFlowParamContext = Option<(u32, Vec<HashSet<Variable>>)>;
+pub type DataFlowRootContext = Option<HashSet<Variable>>;
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
@@ -88,9 +89,15 @@ impl<'a> DataFlowGraph<'a> {
     /// All elements in that pattern will be removed from the sequence.
     ///
     /// The loop will stop if no sequence changes happen
-    pub fn find_links(&mut self, ctx_params: DataFlowParamContext, ctx_returns: DataFlowReturnContext) -> HashSet<DataLink> {
+    pub fn find_links(
+        &mut self,
+        ctx_params: DataFlowParamContext,
+        ctx_returns: DataFlowReturnContext,
+        ctx_root: DataFlowRootContext,
+    ) -> HashSet<DataLink> {
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
+        let start = self.cfg.get_start();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut links: HashSet<DataLink> = HashSet::new();
         let actions: Vec<Action> = vec![]; 
@@ -183,6 +190,15 @@ impl<'a> DataFlowGraph<'a> {
                         }
                     },
                     _ => {},
+                }
+            }
+            // Add msg.sender to the root node of each function
+            // Help find gasless_send
+            if start == id {
+                if let Some(ctx_root) = &ctx_root {
+                    for var in ctx_root {
+                        new_actions.push(Action::Kill(var.clone(), id));
+                    }
                 }
             }
             actions.extend(new_actions.clone());
