@@ -19,6 +19,7 @@ pub struct DataFlowGraph<'a> {
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
+    actions: HashMap<u32, Vec<Action>>,
     opens: HashSet<u32>,
 }
 
@@ -50,13 +51,21 @@ impl<'a> DataFlowGraph<'a> {
             tables,
             visited: HashSet::new(),
             opens: HashSet::new(),
+            actions: HashMap::new(),
         }
+    }
+
+    pub fn get_cfg(&self) -> &ControlFlowGraph {
+        &self.cfg
     }
 
     pub fn get_opens(&self) -> &HashSet<u32> {
         &self.opens
     }
 
+    pub fn get_actions(&self) -> &HashMap<u32, Vec<Action>> {
+        &self.actions
+    }
     /// Find data dependency links
     ///
     /// Start at stop point and go bottom up. Whenever a node is visited:
@@ -201,6 +210,7 @@ impl<'a> DataFlowGraph<'a> {
                     }
                 }
             }
+            self.actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);

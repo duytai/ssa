@@ -30,6 +30,18 @@ impl<'a> Network<'a> {
         }
     }
 
+    pub fn get_links(&self) -> &HashSet<DataLink> {
+        &self.links
+    }
+
+    pub fn get_dfgs(&self) -> &HashMap<u32, DataFlowGraph> {
+        &self.dfgs
+    }
+
+    pub fn get_dict(&self) -> &Dictionary {
+        &self.dict
+    }
+
     pub fn find_links(&mut self, entry_id: u32, ctx_root: Option<HashSet<Variable>>) {
         let mut opens: HashSet<u32> = HashSet::new();
         for walker in self.dict.lookup_functions(entry_id) {
