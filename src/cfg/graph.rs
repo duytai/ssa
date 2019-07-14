@@ -67,7 +67,13 @@ impl<'a> Graph<'a> {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall"
         };
-        for walker in walker.walk(false, ig, fi).into_iter() {
+        // Split parameters to other nodes
+        for walker in walker.walk(true, ig, fi).into_iter() {
+            for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
+                if index > 0 {
+                    function_calls.append(&mut Graph::split(walker));
+                }
+            }
             let child_walkers = walker.direct_childs(|_| true);
             let function_name = child_walkers[0].node.attributes["value"].as_str();
             match function_name {
@@ -113,8 +119,10 @@ impl<'a> Graph<'a> {
                 }
             }
         }
-        let node = SimpleBlockNode::Unit(walker.clone());
-        function_calls.push(node);
+        if walker.node.name != "FunctionCall" {
+            let node = SimpleBlockNode::Unit(walker.clone());
+            function_calls.push(node);
+        }
         function_calls
     }
 
@@ -178,10 +186,10 @@ impl<'a> Graph<'a> {
                     match walker.node.name {
                         "ParameterList" => {
                             if index == 0 {
-                                // for walker in walker.direct_childs(|_| true) {
+                                for walker in walker.direct_childs(|_| true) {
                                     let block = CodeBlock::Block(walker);
                                     blocks.push(block);
-                                // }
+                                }
                             }
                         },
                         "Block" => {
