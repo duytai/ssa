@@ -41,7 +41,6 @@ impl<'a> Network<'a> {
 
     pub fn find_links(&mut self, entry_id: u32) {
         for walker in self.dict.lookup_functions(entry_id) {
-            self.dict.lookup_returns(walker.node.id);
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);
