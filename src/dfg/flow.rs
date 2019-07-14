@@ -19,13 +19,7 @@ pub struct DataFlowGraph<'a> {
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
-    actions: HashMap<u32, Vec<Action>>,
-    opens: HashSet<u32>,
 }
-
-pub type DataFlowReturnContext = Option<(u32, HashSet<Variable>)>;
-pub type DataFlowParamContext = Option<(u32, Vec<HashSet<Variable>>)>;
-pub type DataFlowRootContext = Option<HashSet<Variable>>;
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
@@ -50,8 +44,6 @@ impl<'a> DataFlowGraph<'a> {
             parents,
             tables,
             visited: HashSet::new(),
-            opens: HashSet::new(),
-            actions: HashMap::new(),
         }
     }
 
@@ -59,13 +51,6 @@ impl<'a> DataFlowGraph<'a> {
         &self.cfg
     }
 
-    pub fn get_opens(&self) -> &HashSet<u32> {
-        &self.opens
-    }
-
-    pub fn get_actions(&self) -> &HashMap<u32, Vec<Action>> {
-        &self.actions
-    }
     /// Find data dependency links
     ///
     /// Start at stop point and go bottom up. Whenever a node is visited:
@@ -98,15 +83,9 @@ impl<'a> DataFlowGraph<'a> {
     /// All elements in that pattern will be removed from the sequence.
     ///
     /// The loop will stop if no sequence changes happen
-    pub fn find_links(
-        &mut self,
-        ctx_params: DataFlowParamContext,
-        ctx_returns: DataFlowReturnContext,
-        ctx_root: DataFlowRootContext,
-    ) -> HashSet<DataLink> {
+    pub fn find_links(&mut self) -> HashSet<DataLink> {
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
-        let start = self.cfg.get_start();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
         let mut links: HashSet<DataLink> = HashSet::new();
         let actions: Vec<Action> = vec![]; 
@@ -140,13 +119,6 @@ impl<'a> DataFlowGraph<'a> {
                 assignments.append(&mut agns);
                 variables.extend(vars);
             }
-            // TODO: Connect functions later
-            // for fake_node in utils::find_fake_nodes(id, dict) {
-                // let mut agns = fake_node.get_assignments().clone();
-                // let vars = fake_node.get_variables().clone();
-                // assignments.append(&mut agns);
-                // variables.extend(vars);
-            // }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
@@ -166,52 +138,6 @@ impl<'a> DataFlowGraph<'a> {
             for var in variables {
                 new_actions.push(Action::Use(var, id));
             }
-            if let Some(walker) = dict.lookup(id) {
-                match walker.node.name {
-                    "FunctionCall" => {
-                        self.opens.insert(id);
-                    },
-                    "Return" => {
-                        // Link from stop to Return statement 
-                        if let Some(ctx_returns) = &ctx_returns {
-                            for var in ctx_returns.1.iter() {
-                                actions.push(Action::Use(var.clone(), ctx_returns.0));
-                                new_actions.push(Action::Kill(var.clone(), id));
-                                // TODO: Add this line to make sure variables bubble up 
-                                // let mut members = var.get_members().clone();
-                                // members.push(Member::Global(String::from(":::")));
-                                // let var = Variable::new(
-                                    // members,
-                                    // String::from(":::"),
-                                // );
-                                // new_actions.push(Action::Use(var, id));
-                            } 
-                        }
-                    },
-                    "ParameterList" => {
-                        // TODO: Link from parameters to start
-                        // if let Some(ctx_params) = &ctx_params {
-                            // for vars in ctx_params.1.iter() {
-                                // for var in vars {
-                                    // new_actions.push(Action::Use(var.clone(), id));
-                                    // new_actions.push(Action::Kill(var.clone(), ctx_params.0));
-                                // }
-                            // }
-                        // }
-                    },
-                    _ => {},
-                }
-            }
-            // Add msg.sender to the root node of each function
-            // Help find gasless_send
-            if start == id {
-                if let Some(ctx_root) = &ctx_root {
-                    for var in ctx_root {
-                        new_actions.push(Action::Kill(var.clone(), id));
-                    }
-                }
-            }
-            self.actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);

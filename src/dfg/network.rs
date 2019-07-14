@@ -3,10 +3,7 @@ use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
     DataLink,
-    FakeNode,
     Dictionary,
-    ParameterOrder,
-    Variable,
 };
 use std::collections::{
     HashMap,
@@ -42,37 +39,14 @@ impl<'a> Network<'a> {
         &self.dict
     }
 
-    pub fn find_links(&mut self, entry_id: u32, ctx_root: Option<HashSet<Variable>>) {
-        let mut opens: HashSet<u32> = HashSet::new();
+    pub fn find_links(&mut self, entry_id: u32) {
         for walker in self.dict.lookup_functions(entry_id) {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);
-            self.links.extend(dfg.find_links(None, None, ctx_root.clone()));
-            opens.extend(dfg.get_opens());
+            self.links.extend(dfg.find_links());
             self.dfgs.insert(walker.node.id, dfg);
         }
-        // TODO: open connections between function
-        // Open all functionCall node in the network
-        // Ignore global function
-        // for open in opens {
-            // if let Some(walker) = self.dict.lookup(open) {
-                // let childs = walker.direct_childs(|_| true);
-                // let reference = &childs[0].node.attributes["referencedDeclaration"];
-                // if let Some(reference) = reference.as_u32() {
-                    // if let Some(dfg) = self.dfgs.get_mut(&reference) {
-                        // Call to function defined at @reference
-                        // Add fake data to Return statement of that function
-                        // Add fake data to ParameterList
-                        // let fake_node = FakeNode::parse_one(walker, false);
-                        // let po = ParameterOrder::parse(walker, self.dict);
-                        // let ctx_returns = (open, fake_node.get_variables().clone());
-                        // let ctx_params = (open, po.get_variables().clone());
-                        // self.links.extend(dfg.find_links(Some(ctx_params), Some(ctx_returns), None));
-                    // }
-                // }
-            // }
-        // }
         self.dot.add_links(&self.links);
     }
 

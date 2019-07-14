@@ -187,10 +187,10 @@ impl<'a> Graph<'a> {
                     match walker.node.name {
                         "ParameterList" => {
                             if index == 0 {
-                                for walker in walker.direct_childs(|_| true) {
+                                // for walker in walker.direct_childs(|_| true) {
                                     let block = CodeBlock::Block(walker);
                                     blocks.push(block);
-                                }
+                                // }
                             }
                         },
                         "Block" => {
