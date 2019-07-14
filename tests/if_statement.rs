@@ -80,25 +80,25 @@ fn both_if_else_body_are_expression() -> io::Result<()> {
     Ok(())
 }
 
-#[test]
-fn condition_is_function() -> io::Result<()> {
-    setup_cfg("if_6.sol", 37, |cfg| {
-        let vertices = cfg.get_vertices();
-        let edges = cfg.get_edges();
-        let stop = cfg.get_stop();
-        let condition_vertex = vertices.iter().find(|v| {
-            v.get_id() == 26
-        }).unwrap();
-        assert_eq!(condition_vertex.get_shape(), &Shape::Mdiamond);
-        assert_eq!(vertices.len(), 7);
-        assert_eq!(edges.len(), 7);
-        assert!(edges.contains(&Edge::new(26, 34)));
-        assert!(edges.contains(&Edge::new(26, 30)));
-        assert!(edges.contains(&Edge::new(34, stop)));
-        assert!(edges.contains(&Edge::new(30, stop)));
-    })?;
-    Ok(())
-}
+// #[test]
+// fn condition_is_function() -> io::Result<()> {
+    // setup_cfg("if_6.sol", 37, |cfg| {
+        // let vertices = cfg.get_vertices();
+        // let edges = cfg.get_edges();
+        // let stop = cfg.get_stop();
+        // let condition_vertex = vertices.iter().find(|v| {
+            // v.get_id() == 26
+        // }).unwrap();
+        // assert_eq!(condition_vertex.get_shape(), &Shape::Mdiamond);
+        // assert_eq!(vertices.len(), 7);
+        // assert_eq!(edges.len(), 7);
+        // assert!(edges.contains(&Edge::new(26, 34)));
+        // assert!(edges.contains(&Edge::new(26, 30)));
+        // assert!(edges.contains(&Edge::new(34, stop)));
+        // assert!(edges.contains(&Edge::new(30, stop)));
+    // })?;
+    // Ok(())
+// }
 
 #[test]
 fn condition_is_function_and_expression() -> io::Result<()> {

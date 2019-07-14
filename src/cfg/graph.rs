@@ -63,7 +63,6 @@ impl<'a> Graph<'a> {
     /// Some functions directly affect to control flow will be collected to precisely build cfg
     pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
-        let mut last_source = None;
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall"
@@ -71,7 +70,6 @@ impl<'a> Graph<'a> {
         for walker in walker.walk(false, ig, fi).into_iter() {
             let child_walkers = walker.direct_childs(|_| true);
             let function_name = child_walkers[0].node.attributes["value"].as_str();
-            last_source = Some(walker.node.source);
             match function_name {
                 Some(function_name) => match function_name {
                     "revert" => {
@@ -115,15 +113,8 @@ impl<'a> Graph<'a> {
                 }
             }
         }
-        if let Some(last_source) = last_source {
-            if last_source.trim() != walker.node.source.trim() {
-                let node = SimpleBlockNode::Unit(walker.clone());
-                function_calls.push(node);
-            } 
-        } else {
-            let node = SimpleBlockNode::Unit(walker.clone());
-            function_calls.push(node);
-        }
+        let node = SimpleBlockNode::Unit(walker.clone());
+        function_calls.push(node);
         function_calls
     }
 
@@ -187,10 +178,10 @@ impl<'a> Graph<'a> {
                     match walker.node.name {
                         "ParameterList" => {
                             if index == 0 {
-                                for walker in walker.direct_childs(|_| true) {
+                                // for walker in walker.direct_childs(|_| true) {
                                     let block = CodeBlock::Block(walker);
                                     blocks.push(block);
-                                }
+                                // }
                             }
                         },
                         "Block" => {

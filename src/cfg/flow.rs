@@ -79,17 +79,12 @@ impl<'a> ControlFlowGraph<'a> {
     /// Build a list of nested function calls and connect them toghether
     pub fn condition_traverse(&mut self, blocks: &Vec<SimpleBlockNode>) -> Vec<u32> {
         let mut chains = vec![];
-        for (index, block) in blocks.iter().enumerate() {
+        for block in blocks {
             match block {
                 SimpleBlockNode::FunctionCall(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    if index == blocks.len() - 1 {
-                        let vertice = Vertex::new(id, source, Shape::Mdiamond);
-                        self.vertices.insert(vertice);
-                    } else {
-                        let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                        self.vertices.insert(vertice);
-                    }
+                    let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                    self.vertices.insert(vertice);
                     chains.push(id);
                 },
                 SimpleBlockNode::Unit(walker) => {

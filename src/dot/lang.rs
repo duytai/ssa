@@ -28,7 +28,6 @@ impl Dot {
                 Shape::Box => "box",
                 Shape::Diamond => "diamond",
                 Shape::DoubleCircle => "doublecircle",
-                Shape::Mdiamond => "Mdiamond",
             };
             self.vertices.push(format!("  {}[label={:?}, shape=\"{}\"];", id, source, shape));
         }
