@@ -5,6 +5,7 @@ use crate::core::{
     Dictionary,
     Declaration,
     FunctionAccess,
+    FunctionUse,
     IndexAccess,
 };
 
@@ -35,5 +36,11 @@ pub fn find_function_access(id: u32, dict: &Dictionary) -> Vec<FunctionAccess> {
 pub fn find_index_accesses(id: u32, dict: &Dictionary) -> Vec<IndexAccess> {
     dict.lookup(id)
         .map(|walker| IndexAccess::parse(walker, dict))
+        .unwrap_or(vec![])
+}
+
+pub fn find_function_use(id: u32, dict: &Dictionary) -> Vec<FunctionUse> {
+    dict.lookup(id)
+        .map(|walker| FunctionUse::parse(walker, dict))
         .unwrap_or(vec![])
 }
