@@ -6,7 +6,6 @@ use crate::core::{
     Declaration,
     FunctionAccess,
     IndexAccess,
-    FakeNode,
 };
 
 pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Declaration> {
@@ -36,11 +35,5 @@ pub fn find_function_access(id: u32, dict: &Dictionary) -> Vec<FunctionAccess> {
 pub fn find_index_accesses(id: u32, dict: &Dictionary) -> Vec<IndexAccess> {
     dict.lookup(id)
         .map(|walker| IndexAccess::parse(walker, dict))
-        .unwrap_or(vec![])
-}
-
-pub fn find_fake_nodes(id: u32, dict: &Dictionary) -> Vec<FakeNode> {
-    dict.lookup(id)
-        .map(|walker| FakeNode::parse(walker, dict))
         .unwrap_or(vec![])
 }

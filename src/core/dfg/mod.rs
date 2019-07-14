@@ -5,7 +5,6 @@ mod index_access;
 mod link;
 mod function_access;
 mod variable;
-mod fakenode;
 
 pub use assignment::*;
 pub use common::*;
@@ -14,4 +13,3 @@ pub use index_access::*;
 pub use link::*;
 pub use function_access::*;
 pub use variable::*;
-pub use fakenode::*;
