@@ -6,12 +6,12 @@ use crate::core::{
     Walker,
 };
 
-pub struct Parameter {
+pub struct FunctionAccess {
     assignments: Vec<Assignment>,
     variables: HashSet<Variable>,
 }
 
-impl Parameter {
+impl FunctionAccess {
     pub fn get_assignments(&self) -> &Vec<Assignment> {
         &self.assignments
     }
@@ -20,18 +20,20 @@ impl Parameter {
         &self.variables
     }
 
-    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Parameter> {
+    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<FunctionAccess> {
         let mut parameters = vec![];
         if walker.node.name == "FunctionCall" {
-            for walker in walker.direct_childs(|_| true) {
-                parameters.push(Parameter::parse_one(&walker, dict));
+            for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
+                if index == 0 {
+                    parameters.push(FunctionAccess::parse_one(&walker, dict));
+                }
             }
         }
         parameters
     }
 
-    pub fn parse_one(walker: &Walker, dict: &Dictionary) -> Parameter {
-        Parameter {
+    pub fn parse_one(walker: &Walker, dict: &Dictionary) -> FunctionAccess {
+        FunctionAccess {
             assignments: Assignment::parse(&walker, dict),
             variables: Variable::parse(&walker, dict),
         }

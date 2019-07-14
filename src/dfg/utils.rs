@@ -4,7 +4,7 @@ use crate::core::{
     Assignment,
     Dictionary,
     Declaration,
-    Parameter,
+    FunctionAccess,
     IndexAccess,
     FakeNode,
 };
@@ -27,9 +27,9 @@ pub fn find_variables(id: u32, dict: &Dictionary) -> HashSet<Variable> {
         .unwrap_or(HashSet::new())
 }
 
-pub fn find_parameters(id: u32, dict: &Dictionary) -> Vec<Parameter> {
+pub fn find_function_access(id: u32, dict: &Dictionary) -> Vec<FunctionAccess> {
     dict.lookup(id)
-        .map(|walker| Parameter::parse(walker, dict))
+        .map(|walker| FunctionAccess::parse(walker, dict))
         .unwrap_or(vec![])
 }
 

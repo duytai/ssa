@@ -44,8 +44,7 @@ impl<'a> Network<'a> {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);
-            // TODO: open later
-            //self.links.extend(dfg.find_links());
+            self.links.extend(dfg.find_links());
             self.dfgs.insert(walker.node.id, dfg);
         }
         self.dot.add_links(&self.links);
