@@ -70,6 +70,53 @@ impl<'a> Dictionary<'a> {
         self.entries.get(&id)
     }
 
+    /// Find return statements
+    pub fn lookup_returns(&self, id: u32) -> Vec<&Walker> {
+        let fi = |walker: &Walker, _: &Vec<Walker>| {
+            walker.node.name == "Return"
+        };
+        let ig = |_: &Walker, _: &Vec<Walker>| false;
+        self.entries
+            .get(&id)
+            .and_then(|walker| {
+                let walkers = walker.walk(false, ig, fi)
+                    .iter()
+                    .filter_map(|w| self.lookup(w.node.id))
+                    .collect::<Vec<&Walker>>();
+                Some(walkers)
+            })
+            .unwrap_or(vec![])
+    } 
+
+    /// Find all parameters of a function definition or function call
+    // pub fn lookup_parameters(&self, id: u32) -> Vec<&Walker> {
+        // self.entries
+            // .get(&id)
+            // .and_then(|walker|  match walker.node.name {
+                // "FunctionDefinition" => {
+                    // let mut ret = vec![];
+                    // for (index, walker) in walker.direct_childs(|_| true).iter().enumerate() {
+                        // if index == 0 && walker.node.name == "ParameterList" {
+                            // for walker in walker.direct_childs(|_| true).iter() {
+                                // ret.push(walker.node.id);
+                            // }
+                        // }
+                    // }
+                    // println!("ret: {:?}", ret);
+                    // Some(ret)
+                // },
+                // _ => Some(vec![])
+            // })
+            // .and_then(|ids| {
+                // Some(ids.iter()
+                    // .map(|id| { self.lookup(*id)})
+                    // .filter_map(|w| w)
+                    // .collect::<Vec<&Walker>>())
+            // })
+            // .unwrap_or(vec![])
+    // }
+
+    /// Find scoped functions from a function id
     pub fn lookup_functions(&self, id: u32) -> Vec<&Walker> {
         let mut ret = vec![];
         for (_, prop) in self.contracts.iter() {
