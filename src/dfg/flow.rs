@@ -140,12 +140,13 @@ impl<'a> DataFlowGraph<'a> {
                 assignments.append(&mut agns);
                 variables.extend(vars);
             }
-            for fake_node in utils::find_fake_nodes(id, dict) {
-                let mut agns = fake_node.get_assignments().clone();
-                let vars = fake_node.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            }
+            // TODO: Connect functions later
+            // for fake_node in utils::find_fake_nodes(id, dict) {
+                // let mut agns = fake_node.get_assignments().clone();
+                // let vars = fake_node.get_variables().clone();
+                // assignments.append(&mut agns);
+                // variables.extend(vars);
+            // }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
@@ -177,26 +178,26 @@ impl<'a> DataFlowGraph<'a> {
                                 actions.push(Action::Use(var.clone(), ctx_returns.0));
                                 new_actions.push(Action::Kill(var.clone(), id));
                                 // TODO: Add this line to make sure variables bubble up 
-                                let mut members = var.get_members().clone();
-                                members.push(Member::Global(String::from(":::")));
-                                let var = Variable::new(
-                                    members,
-                                    String::from(":::"),
-                                );
-                                new_actions.push(Action::Use(var, id));
+                                // let mut members = var.get_members().clone();
+                                // members.push(Member::Global(String::from(":::")));
+                                // let var = Variable::new(
+                                    // members,
+                                    // String::from(":::"),
+                                // );
+                                // new_actions.push(Action::Use(var, id));
                             } 
                         }
                     },
                     "ParameterList" => {
-                        // Link from parameters to start
-                        if let Some(ctx_params) = &ctx_params {
-                            for vars in ctx_params.1.iter() {
-                                for var in vars {
-                                    new_actions.push(Action::Use(var.clone(), id));
-                                    new_actions.push(Action::Kill(var.clone(), ctx_params.0));
-                                }
-                            } 
-                        }
+                        // TODO: Link from parameters to start
+                        // if let Some(ctx_params) = &ctx_params {
+                            // for vars in ctx_params.1.iter() {
+                                // for var in vars {
+                                    // new_actions.push(Action::Use(var.clone(), id));
+                                    // new_actions.push(Action::Kill(var.clone(), ctx_params.0));
+                                // }
+                            // }
+                        // }
                     },
                     _ => {},
                 }

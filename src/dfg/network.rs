@@ -52,26 +52,27 @@ impl<'a> Network<'a> {
             opens.extend(dfg.get_opens());
             self.dfgs.insert(walker.node.id, dfg);
         }
+        // TODO: open connections between function
         // Open all functionCall node in the network
         // Ignore global function
-        for open in opens {
-            if let Some(walker) = self.dict.lookup(open) {
-                let childs = walker.direct_childs(|_| true);
-                let reference = &childs[0].node.attributes["referencedDeclaration"];
-                if let Some(reference) = reference.as_u32() {
-                    if let Some(dfg) = self.dfgs.get_mut(&reference) {
+        // for open in opens {
+            // if let Some(walker) = self.dict.lookup(open) {
+                // let childs = walker.direct_childs(|_| true);
+                // let reference = &childs[0].node.attributes["referencedDeclaration"];
+                // if let Some(reference) = reference.as_u32() {
+                    // if let Some(dfg) = self.dfgs.get_mut(&reference) {
                         // Call to function defined at @reference
                         // Add fake data to Return statement of that function
                         // Add fake data to ParameterList
-                        let fake_node = FakeNode::parse_one(walker, false);
-                        let po = ParameterOrder::parse(walker, self.dict);
-                        let ctx_returns = (open, fake_node.get_variables().clone());
-                        let ctx_params = (open, po.get_variables().clone());
-                        self.links.extend(dfg.find_links(Some(ctx_params), Some(ctx_returns), None));
-                    }
-                }
-            }
-        }
+                        // let fake_node = FakeNode::parse_one(walker, false);
+                        // let po = ParameterOrder::parse(walker, self.dict);
+                        // let ctx_returns = (open, fake_node.get_variables().clone());
+                        // let ctx_params = (open, po.get_variables().clone());
+                        // self.links.extend(dfg.find_links(Some(ctx_params), Some(ctx_returns), None));
+                    // }
+                // }
+            // }
+        // }
         self.dot.add_links(&self.links);
     }
 

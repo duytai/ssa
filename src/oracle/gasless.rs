@@ -20,7 +20,7 @@ impl<'a> Gasless<'a> {
             let actions = dfg.get_actions();
             for (_, actions) in  actions {
                 for action in actions {
-                    println!("action: {:?}", action);
+                    // println!("action: {:?}", action);
                     match action {
                         Action::Use(var, id) => {
                             let members = var.get_members();
