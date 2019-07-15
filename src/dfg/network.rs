@@ -57,6 +57,16 @@ impl<'a> Network<'a> {
                             let link = DataLink::new(fc_id, walker.node.id, variable);
                             self.links.insert(link);
                         }
+                        let defined_parameters = self.dict.lookup_parameters(reference);
+                        let invoked_parameters = self.dict.lookup_parameters(fc_id);
+                        for i in 0..defined_parameters.len() {
+                            let defined_parameter = defined_parameters[i];
+                            let invoked_parameter = invoked_parameters[i];
+                            let members = vec![Member::Reference(invoked_parameter.node.id)];
+                            let variable = Variable::new(members, defined_parameter.node.source.to_string());
+                            let link = DataLink::new(defined_parameter.node.id, invoked_parameter.node.id, variable);
+                            self.links.insert(link);
+                        }
                     },
                     None => {
                     },
