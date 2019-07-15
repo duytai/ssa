@@ -32,57 +32,55 @@ impl<'a> GaslessSend <'a> {
             let new_actions = dfg.get_new_actions();
             for vertice in vertices {
                 // Functioncall node
-                if vertice.get_shape() == &Shape::DoubleCircle {
-                    let vertex_id = vertice.get_id();
-                    if let Some(actions) = new_actions.get(&vertex_id) {
-                        for action in actions {
-                            if let Action::Use(var, _) = action {
-                                let members = var.get_members();
-                                // Place where send()/transfer() occurrs 
-                                if members.contains(&send) || members.contains(&transfer) {
-                                    let paths = self.network.traverse(vertex_id);
-                                    // TODO: consider where object = object, it does not contains
-                                    // ref
-                                    let address_paths: Vec<Vec<&DataLink>> = paths
-                                        .into_iter()
-                                        .filter(|path| {
-                                            for link in path {
-                                                match link.get_label() {
-                                                    DataLinkLabel::Internal => {
-                                                        let ref_member = link
-                                                            .get_var()
-                                                            .get_members()
-                                                            .iter()
-                                                            .find(|m| match m {
-                                                                Member::Reference(_) => true,
-                                                                _ => false,
-                                                            });
-                                                        if let Some(Member::Reference(ref_id)) = ref_member {
-                                                            let walker = dict.lookup(*ref_id).unwrap();
-                                                            let variable_type = walker.node.attributes["type"].as_str();
-                                                            if let Some(variable_type) = variable_type {
-                                                                if !vec!["address", "address[]"].contains(&variable_type) {
-                                                                    return false;
-                                                                }
-                                                            } else {
+                let vertex_id = vertice.get_id();
+                if let Some(actions) = new_actions.get(&vertex_id) {
+                    for action in actions {
+                        if let Action::Use(var, _) = action {
+                            let members = var.get_members();
+                            // Place where send()/transfer() occurrs 
+                            if members.contains(&send) || members.contains(&transfer) {
+                                let paths = self.network.traverse(vertex_id);
+                                // TODO: consider where object = object, it does not contains
+                                println!(">> paths: {:?}", paths);
+                                let address_paths: Vec<Vec<&DataLink>> = paths
+                                    .into_iter()
+                                    .filter(|path| {
+                                        for link in path {
+                                            match link.get_label() {
+                                                DataLinkLabel::Internal => {
+                                                    let ref_member = link
+                                                        .get_var()
+                                                        .get_members()
+                                                        .iter()
+                                                        .find(|m| match m {
+                                                            Member::Reference(_) => true,
+                                                            _ => false,
+                                                        });
+                                                    if let Some(Member::Reference(ref_id)) = ref_member {
+                                                        let walker = dict.lookup(*ref_id).unwrap();
+                                                        let variable_type = walker.node.attributes["type"].as_str();
+                                                        if let Some(variable_type) = variable_type {
+                                                            if !vec!["address", "address[]"].contains(&variable_type) {
                                                                 return false;
                                                             }
                                                         } else {
                                                             return false;
                                                         }
-                                                    },
-                                                    DataLinkLabel::InFrom(_) => {},
-                                                    DataLinkLabel::OutTo(_) => {},
-                                                    DataLinkLabel::BuiltIn => {},
-                                                    DataLinkLabel::Executor => {},
-                                                }
+                                                    } else {
+                                                        return false;
+                                                    }
+                                                },
+                                                DataLinkLabel::InFrom(_) => {},
+                                                DataLinkLabel::OutTo(_) => {},
+                                                DataLinkLabel::BuiltIn => {},
+                                                DataLinkLabel::Executor => {},
                                             }
-                                            true
-                                        })
-                                        .collect();
-                                    // path contains address only
-                                    println!("address_paths: {:?}", address_paths);
-                                }
+                                        }
+                                        true
+                                    })
+                                .collect();
+                                // path contains address only
+                                println!(">> address_paths: {:?}", address_paths);
                             }
                         }
                     }
