@@ -128,7 +128,7 @@ impl<'a> Network<'a> {
                             }
                         }
                     },
-                    DataLinkLabel::Internal | DataLinkLabel::BuiltInt => {
+                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn => {
                         targets.push((link, call_stack.clone()));
                     },
                 }
@@ -170,7 +170,7 @@ impl<'a> Network<'a> {
                     DataLinkLabel::InFrom(fc_id) => {
                         targets.push((link, vec![*fc_id]));
                     },
-                    DataLinkLabel::Internal | DataLinkLabel::BuiltInt => {
+                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn => {
                         targets.push((link, vec![]));
                     },
                     DataLinkLabel::OutTo(_) => {},

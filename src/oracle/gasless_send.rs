@@ -3,6 +3,7 @@ use crate::core::{
     Shape,
     Action,
     Member,
+    DataLinkLabel,
 };
 
 /// Detect gasless send <X>.send() / <X>.transfer()
@@ -35,11 +36,18 @@ impl<'a> GaslessSend <'a> {
                         for action in actions {
                             if let Action::Use(var, _) = action {
                                 let members = var.get_members();
+                                // Place where send()/transfer() occurrs 
                                 if members.contains(&send) || members.contains(&transfer) {
                                     let paths = self.network.traverse(vertex_id);
                                     for links in paths {
-                                        println!(">>>");
+                                        // Find link contains address type only
                                         for link in links {
+                                            match link.get_label() {
+                                                DataLinkLabel::InFrom(_) => {},
+                                                DataLinkLabel::OutTo(_) => {},
+                                                DataLinkLabel::BuiltIn => {},
+                                                DataLinkLabel::Internal => {},
+                                            }
                                         }
                                     }
                                 }
