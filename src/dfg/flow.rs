@@ -17,6 +17,7 @@ pub struct DataFlowGraph<'a> {
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
+    new_actions: HashMap<u32, Vec<Action>>,
 }
 
 impl<'a> DataFlowGraph<'a> {
@@ -42,11 +43,16 @@ impl<'a> DataFlowGraph<'a> {
             parents,
             tables,
             visited: HashSet::new(),
+            new_actions: HashMap::new(),
         }
     }
 
     pub fn get_cfg(&self) -> &ControlFlowGraph {
         &self.cfg
+    }
+
+    pub fn get_new_actions(&self) -> &HashMap<u32, Vec<Action>> {
+        &self.new_actions
     }
 
     /// Find data dependency links
@@ -142,6 +148,7 @@ impl<'a> DataFlowGraph<'a> {
             for var in variables {
                 new_actions.push(Action::Use(var, id));
             }
+            self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
