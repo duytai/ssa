@@ -1,8 +1,8 @@
 use crate::dfg::Network;
-use crate::oracle::Gasless;
+use crate::oracle::GaslessSend;
 
 pub enum OracleAction {
-    GaslessSend(u32),
+    GaslessSend,
 }
 
 pub struct Oracle<'a> {
@@ -10,16 +10,15 @@ pub struct Oracle<'a> {
 }
 
 impl<'a> Oracle<'a> {
-    pub fn new(network: Network<'a>) -> Self {
+    pub fn new(mut network: Network<'a>, entry_id: u32) -> Self {
+        network.find_links(entry_id);
         Oracle { network }
     }
 
     pub fn run(&mut self, action: OracleAction) {
         match action {
-            OracleAction::GaslessSend(entry_id) => {
-                self.network.find_links(entry_id);
-                let gasless = Gasless::new(&self.network); 
-                gasless.run();
+            OracleAction::GaslessSend => {
+                GaslessSend::new(&self.network).run();
             },
         }
     }

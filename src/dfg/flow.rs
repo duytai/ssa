@@ -5,8 +5,6 @@ use crate::core::{
     Operator,
     Action,
     DataLink,
-    Variable,
-    Member,
 };
 use crate::dfg::utils;
 
