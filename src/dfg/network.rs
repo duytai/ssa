@@ -50,6 +50,9 @@ impl<'a> Network<'a> {
                 let source = walkers[0].node.source;
                 let fc_id = walker.node.id;
                 match reference {
+                    // User defined functions
+                    // Connect invoked_parameters to defined_parameters 
+                    // Connect function_call to return statement
                     Some(reference) => {
                         for walker in self.dict.lookup_returns(reference) {
                             let members = vec![Member::Reference(walker.node.id)];
@@ -68,7 +71,16 @@ impl<'a> Network<'a> {
                             self.links.insert(link);
                         }
                     },
+                    // Global functions
+                    // Connect function_calls to parameters
                     None => {
+                        let invoked_parameters = self.dict.lookup_parameters(fc_id);
+                        for invoked_parameter in invoked_parameters {
+                            let members = vec![Member::Reference(invoked_parameter.node.id)];
+                            let variable = Variable::new(members, invoked_parameter.node.source.to_string());
+                            let link = DataLink::new(fc_id, invoked_parameter.node.id, variable);
+                            self.links.insert(link);
+                        }
                     },
                 };
             }
