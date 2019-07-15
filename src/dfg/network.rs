@@ -47,9 +47,9 @@ impl<'a> Network<'a> {
             let function_calls = self.dict.lookup_function_calls(walker.node.id);
             for walker in function_calls.iter() {
                 let walkers = walker.direct_childs(|_| true);
-                let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                let source = walkers[0].node.source;
+                let source = walker.node.source;
                 let fc_id = walker.node.id;
+                let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32();
                 match reference {
                     // User defined functions
                     // Connect invoked_parameters to defined_parameters 
