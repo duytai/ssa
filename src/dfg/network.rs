@@ -4,6 +4,8 @@ use crate::dfg::DataFlowGraph;
 use crate::core::{
     DataLink,
     Dictionary,
+    Member,
+    Variable,
 };
 use std::collections::{
     HashMap,
@@ -39,7 +41,31 @@ impl<'a> Network<'a> {
         &self.dict
     }
 
-    pub fn find_links(&mut self, entry_id: u32) {
+    pub fn find_external_links(&mut self, entry_id: u32) {
+        for walker in self.dict.lookup_functions(entry_id) {
+            let function_calls = self.dict.lookup_function_calls(walker.node.id);
+            for walker in function_calls.iter() {
+                let walkers = walker.direct_childs(|_| true);
+                let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                let source = walkers[0].node.source;
+                let fc_id = walker.node.id;
+                match reference {
+                    Some(reference) => {
+                        for walker in self.dict.lookup_returns(reference) {
+                            let members = vec![Member::Reference(walker.node.id)];
+                            let variable = Variable::new(members, source.to_string());
+                            let link = DataLink::new(fc_id, walker.node.id, variable);
+                            self.links.insert(link);
+                        }
+                    },
+                    None => {
+                    },
+                };
+            }
+        }
+    } 
+
+    pub fn find_internal_links(&mut self, entry_id: u32) {
         for walker in self.dict.lookup_functions(entry_id) {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
@@ -47,6 +73,11 @@ impl<'a> Network<'a> {
             self.links.extend(dfg.find_links());
             self.dfgs.insert(walker.node.id, dfg);
         }
+    }
+
+    pub fn find_links(&mut self, entry_id: u32) {
+        self.find_internal_links(entry_id);
+        self.find_external_links(entry_id);
         self.dot.add_links(&self.links);
     }
 
