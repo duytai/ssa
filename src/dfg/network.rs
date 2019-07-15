@@ -3,6 +3,7 @@ use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
     DataLink,
+    DataLinkLabel,
     Dictionary,
     Member,
     Variable,
@@ -57,7 +58,8 @@ impl<'a> Network<'a> {
                         for walker in self.dict.lookup_returns(reference) {
                             let members = vec![Member::Reference(walker.node.id)];
                             let variable = Variable::new(members, source.to_string());
-                            let link = DataLink::new(fc_id, walker.node.id, variable);
+                            let label = DataLinkLabel::InFrom(fc_id);
+                            let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
                             self.links.insert(link);
                         }
                         let defined_parameters = self.dict.lookup_parameters(reference);
@@ -67,7 +69,8 @@ impl<'a> Network<'a> {
                             let invoked_parameter = invoked_parameters[i];
                             let members = vec![Member::Reference(invoked_parameter.node.id)];
                             let variable = Variable::new(members, defined_parameter.node.source.to_string());
-                            let link = DataLink::new(defined_parameter.node.id, invoked_parameter.node.id, variable);
+                            let label = DataLinkLabel::OutTo(fc_id);
+                            let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
                             self.links.insert(link);
                         }
                     },
