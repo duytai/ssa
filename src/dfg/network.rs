@@ -87,6 +87,13 @@ impl<'a> Network<'a> {
                         }
                     },
                 };
+                // Connect to object which call function
+                let members = vec![Member::Reference(walkers[0].node.id)];
+                let source = walkers[0].node.source;
+                let variable = Variable::new(members, source.to_string());
+                let label = DataLinkLabel::Executor;
+                let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
+                self.links.insert(link);
             }
         }
     } 
@@ -128,7 +135,7 @@ impl<'a> Network<'a> {
                             }
                         }
                     },
-                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn => {
+                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn | DataLinkLabel::Executor => {
                         targets.push((link, call_stack.clone()));
                     },
                 }
@@ -170,7 +177,7 @@ impl<'a> Network<'a> {
                     DataLinkLabel::InFrom(fc_id) => {
                         targets.push((link, vec![*fc_id]));
                     },
-                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn => {
+                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn | DataLinkLabel::Executor => {
                         targets.push((link, vec![]));
                     },
                     DataLinkLabel::OutTo(_) => {},

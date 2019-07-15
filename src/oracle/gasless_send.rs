@@ -41,6 +41,8 @@ impl<'a> GaslessSend <'a> {
                                 // Place where send()/transfer() occurrs 
                                 if members.contains(&send) || members.contains(&transfer) {
                                     let paths = self.network.traverse(vertex_id);
+                                    // TODO: consider where object = object, it does not contains
+                                    // ref
                                     let address_paths: Vec<Vec<&DataLink>> = paths
                                         .into_iter()
                                         .filter(|path| {
@@ -72,6 +74,7 @@ impl<'a> GaslessSend <'a> {
                                                     DataLinkLabel::InFrom(_) => {},
                                                     DataLinkLabel::OutTo(_) => {},
                                                     DataLinkLabel::BuiltIn => {},
+                                                    DataLinkLabel::Executor => {},
                                                 }
                                             }
                                             true

@@ -22,10 +22,14 @@ impl FunctionUse {
         &self.variables
     }
 
-    pub fn parse(walker: &Walker, _: &Dictionary) -> Vec<FunctionUse> {
+    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<FunctionUse> {
         let mut function_use = FunctionUse {
             assignments: vec![],
             variables: HashSet::new(),
+        };
+        let ig = |_: &Walker, _: &Vec<Walker>| false;
+        let fi = |walker: &Walker, _: &Vec<Walker>| {
+            walker.node.name == "FunctionCall"
         };
         if walker.node.name == "FunctionCall" {
             let mut lhs = HashSet::new();
@@ -34,10 +38,6 @@ impl FunctionUse {
             lhs.insert(FunctionUse::to_var(walker));
             function_use.assignments.push(Assignment::new(lhs, rhs, op));
         } else {
-            let ig = |_: &Walker, _: &Vec<Walker>| false;
-            let fi = |walker: &Walker, _: &Vec<Walker>| {
-                walker.node.name == "FunctionCall"
-            };
             for walker in walker.walk(true, ig, fi).into_iter() {
                 function_use.variables.insert(FunctionUse::to_var(&walker));
             }
@@ -47,12 +47,7 @@ impl FunctionUse {
 
     pub fn to_var(walker: &Walker) -> Variable {
         let members = vec![Member::Reference(walker.node.id)];
-        let mut source: Option<&str> = None;
-        for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
-            if index == 0 {
-                source = Some(walker.node.source);
-            }
-        }
-        Variable::new(members, source.unwrap_or("").to_string())
+        let source = walker.node.source;
+        Variable::new(members, source.to_string())
     }
 }

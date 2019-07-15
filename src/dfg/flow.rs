@@ -117,12 +117,6 @@ impl<'a> DataFlowGraph<'a> {
                 assignments.append(&mut agns);
                 variables.extend(vars);
             }
-            for func_access in utils::find_function_access(id, dict) {
-                let mut agns = func_access.get_assignments().clone();
-                let vars = func_access.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            }
             for function_use in utils::find_function_use(id, dict) {
                 let mut agns = function_use.get_assignments().clone();
                 let vars = function_use.get_variables().clone();

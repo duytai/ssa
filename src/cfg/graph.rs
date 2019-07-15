@@ -69,10 +69,8 @@ impl<'a> Graph<'a> {
         };
         // Split parameters to other nodes
         for walker in walker.walk(true, ig, fi).into_iter() {
-            for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
-                if index > 0 {
-                    function_calls.append(&mut Graph::split(walker));
-                }
+            for walker in walker.direct_childs(|_| true).into_iter() {
+                function_calls.append(&mut Graph::split(walker));
             }
             let child_walkers = walker.direct_childs(|_| true);
             let function_name = child_walkers[0].node.attributes["value"].as_str();
