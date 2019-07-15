@@ -157,7 +157,7 @@ impl<'a> Network<'a> {
 
     /// Traverse around network
     /// Stop at visited nodes or no more link
-    pub fn traverse(&self, start_at: u32) {
+    pub fn traverse(&self, start_at: u32) -> Vec<Vec<&DataLink>> {
         let mut paths = vec![];
         let mut targets: Vec<(&DataLink, Vec<u32>)> = vec![];
         let mut visited = HashSet::new(); 
@@ -179,6 +179,7 @@ impl<'a> Network<'a> {
         for (link, call_stack) in targets {
             self.find_paths(link.get_to(), visited.clone(), &mut paths, call_stack);
         }
+        paths
     }
 
     pub fn format(&self) -> String {

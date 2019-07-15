@@ -20,31 +20,30 @@ impl<'a> GaslessSend <'a> {
     }
 
     pub fn run(&self) -> bool {
-        self.network.traverse(34);
-        // let dfgs = self.network.get_dfgs();
-        // let send = Member::Global(String::from("send"));
-        // let transfer = Member::Global(String::from("transfer"));
-        // for (_, dfg) in dfgs {
+        let dfgs = self.network.get_dfgs();
+        let send = Member::Global(String::from("send"));
+        let transfer = Member::Global(String::from("transfer"));
+        for (_, dfg) in dfgs {
             // Find send / transfer
-            // let vertices = dfg.get_cfg().get_vertices();
-            // let new_actions = dfg.get_new_actions();
-            // for vertice in vertices {
+            let vertices = dfg.get_cfg().get_vertices();
+            let new_actions = dfg.get_new_actions();
+            for vertice in vertices {
                 // Functioncall node
-                // if vertice.get_shape() == &Shape::DoubleCircle {
-                    // let vertex_id = vertice.get_id();
-                    // if let Some(actions) = new_actions.get(&vertex_id) {
-                        // for action in actions {
-                            // if let Action::Use(var, _) = action {
-                                // let members = var.get_members();
-                                // if members.contains(&send) || members.contains(&transfer) {
-                                    // self.network.traverse(vertex_id);
-                                // }
-                            // }
-                        // }
-                    // }
-                // }
-            // }
-        // }
+                if vertice.get_shape() == &Shape::DoubleCircle {
+                    let vertex_id = vertice.get_id();
+                    if let Some(actions) = new_actions.get(&vertex_id) {
+                        for action in actions {
+                            if let Action::Use(var, _) = action {
+                                let members = var.get_members();
+                                if members.contains(&send) || members.contains(&transfer) {
+                                    self.network.traverse(vertex_id);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         true
     }
 }
