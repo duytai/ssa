@@ -4,6 +4,7 @@ use crate::core::Variable;
 pub enum DataLinkLabel {
     InFrom(u32), // Link to other function
     OutTo(u32), // Exit from current function
+    BuiltInt, // From current function to parameter
     Internal, // Inside current function
 }
 

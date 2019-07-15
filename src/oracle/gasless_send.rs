@@ -36,7 +36,12 @@ impl<'a> GaslessSend <'a> {
                             if let Action::Use(var, _) = action {
                                 let members = var.get_members();
                                 if members.contains(&send) || members.contains(&transfer) {
-                                    self.network.traverse(vertex_id);
+                                    let paths = self.network.traverse(vertex_id);
+                                    for links in paths {
+                                        println!(">>>");
+                                        for link in links {
+                                        }
+                                    }
                                 }
                             }
                         }

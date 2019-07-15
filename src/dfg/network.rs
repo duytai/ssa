@@ -81,7 +81,8 @@ impl<'a> Network<'a> {
                         for invoked_parameter in invoked_parameters {
                             let members = vec![Member::Reference(invoked_parameter.node.id)];
                             let variable = Variable::new(members, invoked_parameter.node.source.to_string());
-                            let link = DataLink::new(fc_id, invoked_parameter.node.id, variable);
+                            let label = DataLinkLabel::BuiltInt;
+                            let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
                             self.links.insert(link);
                         }
                     },
@@ -127,7 +128,7 @@ impl<'a> Network<'a> {
                             }
                         }
                     },
-                    DataLinkLabel::Internal => {
+                    DataLinkLabel::Internal | DataLinkLabel::BuiltInt => {
                         targets.push((link, call_stack.clone()));
                     },
                 }
@@ -169,7 +170,7 @@ impl<'a> Network<'a> {
                     DataLinkLabel::InFrom(fc_id) => {
                         targets.push((link, vec![*fc_id]));
                     },
-                    DataLinkLabel::Internal => {
+                    DataLinkLabel::Internal | DataLinkLabel::BuiltInt => {
                         targets.push((link, vec![]));
                     },
                     DataLinkLabel::OutTo(_) => {},
