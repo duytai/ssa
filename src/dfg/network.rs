@@ -81,7 +81,7 @@ impl<'a> Network<'a> {
                         for invoked_parameter in invoked_parameters {
                             let members = vec![Member::Reference(invoked_parameter.node.id)];
                             let variable = Variable::new(members, invoked_parameter.node.source.to_string());
-                            let label = DataLinkLabel::BuiltInt;
+                            let label = DataLinkLabel::BuiltIn;
                             let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
                             self.links.insert(link);
                         }

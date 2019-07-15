@@ -2,8 +2,9 @@ use crate::dfg::Network;
 use crate::core::{
     Shape,
     Action,
-    Member,
     DataLinkLabel,
+    DataLink,
+    Member,
 };
 
 /// Detect gasless send <X>.send() / <X>.transfer()
@@ -22,6 +23,7 @@ impl<'a> GaslessSend <'a> {
 
     pub fn run(&self) -> bool {
         let dfgs = self.network.get_dfgs();
+        let dict = self.network.get_dict();
         let send = Member::Global(String::from("send"));
         let transfer = Member::Global(String::from("transfer"));
         for (_, dfg) in dfgs {
@@ -39,17 +41,44 @@ impl<'a> GaslessSend <'a> {
                                 // Place where send()/transfer() occurrs 
                                 if members.contains(&send) || members.contains(&transfer) {
                                     let paths = self.network.traverse(vertex_id);
-                                    for links in paths {
-                                        // Find link contains address type only
-                                        for link in links {
-                                            match link.get_label() {
-                                                DataLinkLabel::InFrom(_) => {},
-                                                DataLinkLabel::OutTo(_) => {},
-                                                DataLinkLabel::BuiltIn => {},
-                                                DataLinkLabel::Internal => {},
+                                    let address_paths: Vec<Vec<&DataLink>> = paths
+                                        .into_iter()
+                                        .filter(|path| {
+                                            for link in path {
+                                                match link.get_label() {
+                                                    DataLinkLabel::Internal => {
+                                                        let ref_member = link
+                                                            .get_var()
+                                                            .get_members()
+                                                            .iter()
+                                                            .find(|m| match m {
+                                                                Member::Reference(_) => true,
+                                                                _ => false,
+                                                            });
+                                                        if let Some(Member::Reference(ref_id)) = ref_member {
+                                                            let walker = dict.lookup(*ref_id).unwrap();
+                                                            let variable_type = walker.node.attributes["type"].as_str();
+                                                            if let Some(variable_type) = variable_type {
+                                                                if !vec!["address", "address[]"].contains(&variable_type) {
+                                                                    return false;
+                                                                }
+                                                            } else {
+                                                                return false;
+                                                            }
+                                                        } else {
+                                                            return false;
+                                                        }
+                                                    },
+                                                    DataLinkLabel::InFrom(_) => {},
+                                                    DataLinkLabel::OutTo(_) => {},
+                                                    DataLinkLabel::BuiltIn => {},
+                                                }
                                             }
-                                        }
-                                    }
+                                            true
+                                        })
+                                        .collect();
+                                    // path contains address only
+                                    println!("address_paths: {:?}", address_paths);
                                 }
                             }
                         }
