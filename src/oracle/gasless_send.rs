@@ -40,7 +40,6 @@ impl<'a> GaslessSend <'a> {
                             // Place where send()/transfer() occurrs 
                             if members.contains(&send) || members.contains(&transfer) {
                                 let paths = self.network.traverse(vertex_id);
-                                println!(">> paths: {:?}", paths);
                                 let address_paths: Vec<Vec<&DataLink>> = paths
                                     .into_iter()
                                     .filter(|path| {
@@ -76,10 +75,19 @@ impl<'a> GaslessSend <'a> {
                                             }
                                         }
                                         true
+                                    }).collect();
+                                // Check if
+                                // + last link points to parameters 
+                                // + last link points to msg.sender 
+                                let satisfied_paths: Vec<Vec<&DataLink>> = address_paths
+                                    .into_iter()
+                                    .filter(|path| {
+                                        let last_link = path.last().unwrap();
+                                        println!("{:?}", last_link);
+                                        true
                                     })
-                                .collect();
-                                // path contains address only
-                                println!(">> address_paths: {:?}", address_paths);
+                                    .collect();
+                                println!(">> satisfied_paths: {:?}", satisfied_paths);
                             }
                         }
                     }

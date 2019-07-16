@@ -18,16 +18,20 @@ pub struct Network<'a> {
     links: HashSet<DataLink>,
     dfgs: HashMap<u32, DataFlowGraph<'a>>,
     dot: Dot,
+    entry_id: u32,
 }
 
 impl<'a> Network<'a> {
-    pub fn new(dict: &'a Dictionary) -> Self {
-        Network {
+    pub fn new(dict: &'a Dictionary, entry_id: u32) -> Self {
+        let mut network = Network {
             dict,
-            dot: Dot::new(),
             links: HashSet::new(),
             dfgs: HashMap::new(),
-        }
+            dot: Dot::new(),
+            entry_id,
+        };
+        network.find_links();
+        network
     }
 
     pub fn get_links(&self) -> &HashSet<DataLink> {
@@ -42,8 +46,12 @@ impl<'a> Network<'a> {
         &self.dict
     }
 
-    pub fn find_external_links(&mut self, entry_id: u32) {
-        for walker in self.dict.lookup_functions(entry_id) {
+    pub fn get_entry_id(&self) -> u32 {
+        self.entry_id
+    }
+
+    fn find_external_links(&mut self) {
+        for walker in self.dict.lookup_functions(self.entry_id) {
             let function_calls = self.dict.lookup_function_calls(walker.node.id);
             for walker in function_calls.iter() {
                 let walkers = walker.direct_childs(|_| true);
@@ -98,8 +106,8 @@ impl<'a> Network<'a> {
         }
     } 
 
-    pub fn find_internal_links(&mut self, entry_id: u32) {
-        for walker in self.dict.lookup_functions(entry_id) {
+    fn find_internal_links(&mut self) {
+        for walker in self.dict.lookup_functions(self.entry_id) {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);
@@ -108,9 +116,9 @@ impl<'a> Network<'a> {
         }
     }
 
-    pub fn find_links(&mut self, entry_id: u32) {
-        self.find_internal_links(entry_id);
-        self.find_external_links(entry_id);
+    fn find_links(&mut self) {
+        self.find_internal_links();
+        self.find_external_links();
         self.dot.add_links(&self.links);
     }
 

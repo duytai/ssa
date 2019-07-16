@@ -10,8 +10,7 @@ pub struct Oracle<'a> {
 }
 
 impl<'a> Oracle<'a> {
-    pub fn new(mut network: Network<'a>, entry_id: u32) -> Self {
-        network.find_links(entry_id);
+    pub fn new(network: Network<'a>) -> Self {
         Oracle { network }
     }
 
