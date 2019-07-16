@@ -40,7 +40,6 @@ impl<'a> GaslessSend <'a> {
                             // Place where send()/transfer() occurrs 
                             if members.contains(&send) || members.contains(&transfer) {
                                 let paths = self.network.traverse(vertex_id);
-                                // TODO: consider where object = object, it does not contains
                                 println!(">> paths: {:?}", paths);
                                 let address_paths: Vec<Vec<&DataLink>> = paths
                                     .into_iter()
@@ -60,7 +59,7 @@ impl<'a> GaslessSend <'a> {
                                                         let walker = dict.lookup(*ref_id).unwrap();
                                                         let variable_type = walker.node.attributes["type"].as_str();
                                                         if let Some(variable_type) = variable_type {
-                                                            if !vec!["address", "address[]"].contains(&variable_type) {
+                                                            if !(variable_type.starts_with("struct") || variable_type.ends_with("[]") || variable_type == "address"){
                                                                 return false;
                                                             }
                                                         } else {
