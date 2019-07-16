@@ -35,11 +35,10 @@ impl<'a> GaslessSend <'a> {
         for (_, dfg) in dfgs {
             // Find send / transfer
             let vertices = dfg.get_cfg().get_vertices();
-            let new_actions = dfg.get_new_actions();
             for vertice in vertices {
                 // Functioncall node
                 let vertex_id = vertice.get_id();
-                if let Some(actions) = new_actions.get(&vertex_id) {
+                if let Some(actions) = dfg.get_new_actions().get(&vertex_id) {
                     for action in actions {
                         if let Action::Use(var, _) = action {
                             let members = var.get_members();
@@ -85,13 +84,40 @@ impl<'a> GaslessSend <'a> {
                                 // Check if
                                 // + last link points to parameters 
                                 // + last link points to msg.sender 
+                                // + address is set to state => state is used to send()/transfer()
                                 let satisfied_paths: Vec<Vec<&DataLink>> = address_paths
                                     .into_iter()
                                     .filter(|path| {
                                         let link_to = path.last().unwrap().get_to();
-                                        parameter_ids.contains(&link_to)
+                                        // Address is provided in parameters
+                                        if parameter_ids.contains(&link_to) {
+                                            return true;
+                                        } else {
+                                            for (_, dfg) in dfgs {
+                                                if let Some(actions) = dfg.get_new_actions().get(&link_to) {
+                                                    for action in actions {
+                                                        if let Action::Use(var, _) = action {
+                                                            let msg = Member::Global(String::from("msg"));
+                                                            let sender = Member::Global(String::from("sender"));
+                                                            // msg.sender is assigned to variable
+                                                            if var.get_members() == &vec![sender, msg] {
+                                                                return true;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            return false;
+                                        }
                                     })
                                     .collect();
+                                // for path in satisfied_paths.iter() {
+                                    // println!(">> PATH ");
+                                    // println!("{:?}", path);
+                                    // for link in path {
+                                        // println!("        {} => {}", link.get_from(), link.get_to());
+                                    // }
+                                // }
                                 if !satisfied_paths.is_empty() {
                                     return Some(satisfied_paths);
                                 }
