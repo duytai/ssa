@@ -17,7 +17,21 @@ impl<'a> Oracle<'a> {
     pub fn run(&mut self, action: OracleAction) {
         match action {
             OracleAction::GaslessSend => {
-                GaslessSend::new(&self.network).run();
+                let gasless_send = GaslessSend::new(&self.network);
+                match gasless_send.run() {
+                    Some(paths) => {
+                        println!(">> GaslessSend : Found ");
+                        for links in paths {
+                            println!("  ++ Path ++");
+                            for link in links {
+                                println!("        {} => {}", link.get_from(), link.get_to());
+                            }
+                        }
+                    },
+                    None => {
+                        println!(">> GaslessSend : None ");
+                    }
+                }
             },
         }
     }

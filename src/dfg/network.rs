@@ -124,7 +124,7 @@ impl<'a> Network<'a> {
 
     /// Find all paths
     /// keep call_stack for each path to know correct exit point
-    fn find_paths(&'a self, start_at: u32, mut visited: HashSet<u32>, paths: &mut Vec<Vec<&'a DataLink>>, call_stack: Vec<u32>) {
+    fn find_paths(&'a self, start_at: u32, mut visited: HashSet<(Option<u32>, u32)>, paths: &mut Vec<Vec<&'a DataLink>>, call_stack: Vec<u32>) {
         let mut targets = vec![];
         for link in self.links.iter() {
             if link.get_from() == start_at {
@@ -149,10 +149,10 @@ impl<'a> Network<'a> {
                 }
             }
         }
-        if !visited.contains(&start_at) && !targets.is_empty() {
+        let last_stack_item: Option<u32> = call_stack.last().map(|x| *x);
+        if !visited.contains(&(last_stack_item, start_at)) && !targets.is_empty() {
             let prev_paths = paths.clone();
             paths.clear();
-            visited.insert(start_at);
             for path in prev_paths {
                 let last_link = path.last().unwrap();
                 if last_link.get_to() == start_at {
@@ -166,6 +166,8 @@ impl<'a> Network<'a> {
                 }
             }
             for (link, call_stack) in targets {
+                let last_stack_item: Option<u32> = call_stack.last().map(|x| *x);
+                visited.insert((last_stack_item, start_at));
                 self.find_paths(link.get_to(), visited.clone(), paths, call_stack);
             }
         }
@@ -176,8 +178,10 @@ impl<'a> Network<'a> {
     pub fn traverse(&self, start_at: u32) -> Vec<Vec<&DataLink>> {
         let mut paths = vec![];
         let mut targets: Vec<(&DataLink, Vec<u32>)> = vec![];
-        let mut visited = HashSet::new(); 
-        visited.insert(start_at);
+        // (X, Y) where
+        // X is call_stack id
+        // Y is node id
+        let mut visited: HashSet<(Option<u32>, u32)> = HashSet::new(); 
         for link in self.links.iter() {
             if link.get_from() == start_at {
                 paths.push(vec![link]);
@@ -193,6 +197,8 @@ impl<'a> Network<'a> {
             }
         }
         for (link, call_stack) in targets {
+            let last_stack_item: Option<u32> = call_stack.last().map(|x| *x).clone();
+            visited.insert((last_stack_item, start_at));
             self.find_paths(link.get_to(), visited.clone(), &mut paths, call_stack);
         }
         paths

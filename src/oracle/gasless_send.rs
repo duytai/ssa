@@ -21,11 +21,17 @@ impl<'a> GaslessSend <'a> {
         GaslessSend { network }
     }
 
-    pub fn run(&self) -> bool {
+    pub fn run(&self) -> Option<Vec<Vec<&DataLink>>> {
         let dfgs = self.network.get_dfgs();
         let dict = self.network.get_dict();
         let send = Member::Global(String::from("send"));
         let transfer = Member::Global(String::from("transfer"));
+        let mut parameter_ids = vec![];
+        for walker in dict.lookup_functions(self.network.get_entry_id()) {
+            for walker in dict.lookup_parameters(walker.node.id) {
+                parameter_ids.push(walker.node.id);
+            }
+        }
         for (_, dfg) in dfgs {
             // Find send / transfer
             let vertices = dfg.get_cfg().get_vertices();
@@ -82,18 +88,19 @@ impl<'a> GaslessSend <'a> {
                                 let satisfied_paths: Vec<Vec<&DataLink>> = address_paths
                                     .into_iter()
                                     .filter(|path| {
-                                        let last_link = path.last().unwrap();
-                                        println!("{:?}", last_link);
-                                        true
+                                        let link_to = path.last().unwrap().get_to();
+                                        parameter_ids.contains(&link_to)
                                     })
                                     .collect();
-                                println!(">> satisfied_paths: {:?}", satisfied_paths);
+                                if !satisfied_paths.is_empty() {
+                                    return Some(satisfied_paths);
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        true
+        None
     }
 }
