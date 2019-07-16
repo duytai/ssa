@@ -18,18 +18,16 @@ impl<'a> Oracle<'a> {
         match action {
             OracleAction::GaslessSend => {
                 let gasless_send = GaslessSend::new(&self.network);
-                match gasless_send.run() {
-                    Some(paths) => {
-                        println!(">> GaslessSend : Found ");
-                        for links in paths {
-                            println!("  ++ Path ++");
-                            for link in links {
-                                println!("        {} => {}", link.get_from(), link.get_to());
-                            }
+                let paths = gasless_send.run();
+                if paths.is_empty() {
+                    println!(">> GaslessSend : None ");
+                } else {
+                    println!(">> GaslessSend : Found ");
+                    for links in paths {
+                        println!("  ++ Path ++");
+                        for link in links {
+                            println!("        {} => {}", link.get_from(), link.get_to());
                         }
-                    },
-                    None => {
-                        println!(">> GaslessSend : None ");
                     }
                 }
             },
