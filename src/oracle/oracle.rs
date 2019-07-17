@@ -18,6 +18,7 @@ impl<'a> Oracle<'a> {
     }
 
     pub fn run(&mut self, action: OracleAction) {
+        let dict = self.network.get_dict();
         match action {
             OracleAction::GaslessSend => {
                 let gasless_send = GaslessSend::new(&self.network);
@@ -28,8 +29,11 @@ impl<'a> Oracle<'a> {
                             println!("Use: {}", v.get_source());
                         },
                         GaslessSendResult::LinkedUse(path) => {
+                            println!("Linked");
                             for link in path {
-                                println!("        {} => {}", link.get_from(), link.get_to());
+                                let from = dict.lookup(link.get_from()).unwrap();
+                                let to = dict.lookup(link.get_to()).unwrap();
+                                println!("  {}({}) => {}({})", from.node.source, link.get_from(), to.node.source, link.get_to());
                             }
                         },
                     }

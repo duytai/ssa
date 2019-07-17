@@ -198,9 +198,26 @@ impl<'a> GaslessSend <'a> {
             }
             // Search back to see whether it depends on parameters or msg.sender
             for id in kill_state_ids {
-                // TODO
+                // state_var = msg.sender;
+                // state_var links to parameter / msg.sender 
+                let dict = self.network.get_dict();
+                if self.find_msg_sender(id) {
+                    println!("State is killed directly");
+                    println!("  {}({})", dict.lookup(id).unwrap().node.source, id);
+                    return true;
+                }
                 let satisfied_paths = self.find_from(id);
-                println!("satisfied_paths: {:?}", satisfied_paths);
+                if !satisfied_paths.is_empty() {
+                    println!("State is killed via link");
+                    for path in satisfied_paths {
+                        for p in path {
+                            let from = dict.lookup(p.get_from()).unwrap().node.source;
+                            let to = dict.lookup(p.get_to()).unwrap().node.source;
+                            println!("  {}({}) => {}({})", from, p.get_from(), to, p.get_to());
+                        }
+                    }
+                    return true;
+                }
             } 
         }
         false
