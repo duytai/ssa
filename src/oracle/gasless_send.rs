@@ -11,10 +11,11 @@ use crate::core::{
 };
 
 /// Detect gasless send <X>.send() / <X>.transfer()
-/// - address <X> depends on parameters
-///  + has no condition check on path to <X> 
-/// - address <X> depends on msg.sender
-///  + has no condition check on path to <X> 
+/// X is msg.sender
+/// Link from X to parameter or msg.sender
+/// Link from X to a state variable where that variable is set by parameter or msg.sender
+// TODO
+// There is a loop if <X> depends on state => state depends on itself
 pub struct GaslessSend<'a> {
     network: &'a Network<'a>,
 }
