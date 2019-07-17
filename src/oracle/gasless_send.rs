@@ -7,6 +7,7 @@ use crate::core::{
     DataLink,
     Member,
     VariableComparison,
+    Variable,
 };
 
 /// Detect gasless send <X>.send() / <X>.transfer()
@@ -16,6 +17,11 @@ use crate::core::{
 ///  + has no condition check on path to <X> 
 pub struct GaslessSend<'a> {
     network: &'a Network<'a>,
+}
+
+pub enum GaslessSendResult<'a> {
+    DirectUse(Variable),
+    LinkedUse(Vec<&'a DataLink>),
 }
 
 impl<'a> GaslessSend <'a> {
@@ -60,6 +66,28 @@ impl<'a> GaslessSend <'a> {
             }
         }
         false
+    }
+
+    fn is_address_var(&self, var: &Variable) -> bool {
+        let dict = self.network.get_dict();
+        var.get_members()
+        .iter()
+        .find(|m| match m {
+            Member::Reference(_) => true,
+            _ => false,
+        })
+        .and_then(|ref_member| match ref_member {
+            Member::Reference(ref_id) => {
+                Some(ref_id)
+            },
+            _ => None,
+        })
+        .and_then(|ref_id| dict.lookup(*ref_id))
+        .and_then(|walker| walker.node.attributes["type"].as_str())
+        .and_then(|variable_type| {
+            Some(variable_type.starts_with("struct") || variable_type == "address[]" || variable_type == "address")
+        })
+        .unwrap_or(false)
     }
 
     fn find_cfg_paths(&self, start_at: u32, cfg: &ControlFlowGraph, paths: &mut Vec<Vec<u32>>) {
@@ -115,15 +143,15 @@ impl<'a> GaslessSend <'a> {
             // Get state variable declaration
             // All CFG store the same states => dont need to loop all cfg
             let mut state_var = None; 
+            let mut kill_state_ids: HashSet<u32> = HashSet::new();
             for (_, dfg) in dfgs {
                 let actions = dfg.get_new_actions().get(&link_to);
                 if let Some(actions) = actions {
                     for action in actions {
                         if let Action::Kill(var, _) = action {
-                            if state_var != None {
-                                panic!("Unsupported case: where more than 1 assignment, I dont know which one is correct flow");
+                            if self.is_address_var(var) {
+                                state_var = Some(var.clone());
                             }
-                            state_var = Some(var.clone());
                         }
                     }
                 }
@@ -138,37 +166,47 @@ impl<'a> GaslessSend <'a> {
                     let start = cfg.get_start();
                     let mut paths: Vec<Vec<u32>> = vec![];
                     self.find_cfg_paths(start, cfg, &mut paths);
-                    for path in paths {
-                        for index in (0..path.len()).rev() {
-                            let id = path[index];
-                            let actions = dfg.get_new_actions().get(&id);
-                            if let Some(actions) = actions {
-                                for action in actions {
-                                    if let Action::Kill(var, _id) = action {
-                                        match state_var.contains(var) {
-                                            VariableComparison::Equal => {
-                                                // TODO
-                                            },
-                                            VariableComparison::Partial => {
-                                                // TODO
-                                            },
-                                            VariableComparison::NotEqual => {
-                                                // TODO
-                                            },
+                    for mut path in paths {
+                        path.reverse();
+                        let pos = path.iter().position(|id| {
+                            // Current id is not state var 
+                            if id != &link_to {
+                                let actions = dfg.get_new_actions().get(&id);
+                                if let Some(actions) = actions {
+                                    for action in actions {
+                                        if let Action::Kill(var, _id) = action {
+                                            match state_var.contains(var) {
+                                                VariableComparison::Equal | VariableComparison::Partial => {
+                                                    // Var is killed here
+                                                    if self.is_address_var(var) {
+                                                        return true;
+                                                    } 
+                                                },
+                                                VariableComparison::NotEqual => {}
+                                            }
                                         }
                                     }
                                 }
                             }
+                            false
+                        });
+                        if let Some(pos) = pos {
+                            kill_state_ids.insert(path[pos]);
                         }
                     }
                 }
             }
+            // Search back to see whether it depends on parameters or msg.sender
+            for id in kill_state_ids {
+                // TODO
+                let satisfied_paths = self.find_from(id);
+                println!("satisfied_paths: {:?}", satisfied_paths);
+            } 
         }
         false
     }
 
     fn find_from(&self, vertex_id: u32) -> Vec<Vec<&DataLink>> {
-        let dict = self.network.get_dict();
         let parameter_ids = self.get_parameter_ids();
         let paths = self.network.traverse(vertex_id);
         let address_paths: Vec<Vec<&DataLink>> = paths
@@ -177,25 +215,7 @@ impl<'a> GaslessSend <'a> {
                 for link in path {
                     match link.get_label() {
                         DataLinkLabel::Internal => {
-                            let ref_member = link
-                                .get_var()
-                                .get_members()
-                                .iter()
-                                .find(|m| match m {
-                                    Member::Reference(_) => true,
-                                    _ => false,
-                                });
-                            if let Some(Member::Reference(ref_id)) = ref_member {
-                                let walker = dict.lookup(*ref_id).unwrap();
-                                let variable_type = walker.node.attributes["type"].as_str();
-                                if let Some(variable_type) = variable_type {
-                                    if !(variable_type.starts_with("struct") || variable_type.ends_with("[]") || variable_type == "address"){
-                                        return false;
-                                    }
-                                } else {
-                                    return false;
-                                }
-                            } else {
+                            if !self.is_address_var(link.get_var()) {
                                 return false;
                             }
                         },
@@ -224,8 +244,10 @@ impl<'a> GaslessSend <'a> {
         satisfied_paths
     }
 
-    pub fn run(&self) -> Vec<Vec<&DataLink>> {
-        let mut satisfied_paths = vec![];
+    pub fn run(&self) -> Vec<GaslessSendResult> {
+        let mut ret = vec![];
+        let mut linked_uses = vec![];
+        let mut direct_uses = vec![];
         let dfgs = self.network.get_dfgs();
         let send = Member::Global(String::from("send"));
         let transfer = Member::Global(String::from("transfer"));
@@ -241,13 +263,23 @@ impl<'a> GaslessSend <'a> {
                             let members = var.get_members();
                             // Place where send()/transfer() occurrs 
                             if members.contains(&send) || members.contains(&transfer) {
-                                satisfied_paths.append(&mut self.find_from(vertex_id));
+                                // msg.sender.send / msg.sender.transfer
+                                if vec!["msg.sender.send", "msg.sender.transfer"].contains(&var.get_source()) {
+                                    direct_uses.push(var.clone());
+                                }
+                                linked_uses.append(&mut self.find_from(vertex_id));
                             }
                         }
                     }
                 }
             }
         }
-        satisfied_paths
+        for p in linked_uses {
+            ret.push(GaslessSendResult::LinkedUse(p));
+        }
+        for p in direct_uses {
+            ret.push(GaslessSendResult::DirectUse(p));
+        }
+        ret
     }
 }

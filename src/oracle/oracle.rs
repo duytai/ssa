@@ -1,5 +1,8 @@
 use crate::dfg::Network;
-use crate::oracle::GaslessSend;
+use crate::oracle::{
+    GaslessSend,
+    GaslessSendResult,
+};
 
 pub enum OracleAction {
     GaslessSend,
@@ -18,16 +21,17 @@ impl<'a> Oracle<'a> {
         match action {
             OracleAction::GaslessSend => {
                 let gasless_send = GaslessSend::new(&self.network);
-                let paths = gasless_send.run();
-                if paths.is_empty() {
-                    println!(">> GaslessSend : None ");
-                } else {
-                    println!(">> GaslessSend : Found ");
-                    for links in paths {
-                        println!("  ++ Path ++");
-                        for link in links {
-                            println!("        {} => {}", link.get_from(), link.get_to());
-                        }
+                let result = gasless_send.run();
+                for r in result {
+                    match r {
+                        GaslessSendResult::DirectUse(v) => {
+                            println!("Use: {}", v.get_source());
+                        },
+                        GaslessSendResult::LinkedUse(path) => {
+                            for link in path {
+                                println!("        {} => {}", link.get_from(), link.get_to());
+                            }
+                        },
                     }
                 }
             },
