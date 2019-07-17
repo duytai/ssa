@@ -1,3 +1,10 @@
+// NOTE: Need to improve 
+// + There is a loop if <X> depends on state => state depends on itself
+// + Algorithm to find places where state variable is killed
+//   + must be last place that state is killed
+//   + loop is solved by check the duplication of a vector, not only the visted node
+// + Algorithm to traverse around network, stop when a node is visited with corressponding call_stack
+
 use std::collections::HashSet;
 use crate::dfg::Network;
 use crate::cfg::ControlFlowGraph;
@@ -14,8 +21,6 @@ use crate::core::{
 /// X is msg.sender
 /// Link from X to parameter or msg.sender
 /// Link from X to a state variable where that variable is set by parameter or msg.sender
-// TODO
-// There is a loop if <X> depends on state => state depends on itself
 pub struct GaslessSend<'a> {
     network: &'a Network<'a>,
 }
