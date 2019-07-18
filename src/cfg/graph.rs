@@ -166,10 +166,9 @@ impl<'a> Graph<'a> {
                 let node = SimpleBlockNode::Break(walker);
                 vec![CodeBlock::SimpleBlocks(vec![node])]
             },
-            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" | "PlaceholderStatement" => {
+            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" | "PlaceholderStatement" | "InlineAssemblyStatement" => {
                 vec![CodeBlock::Block(walker)]
             },
-            "InlineAssemblyStatement" => unimplemented!(),
             _ => vec![CodeBlock::Block(walker)],
         }
     }
