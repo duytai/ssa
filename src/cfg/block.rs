@@ -25,6 +25,7 @@ pub enum SimpleBlockNode<'a> {
     Transfer(Walker<'a>),
     Suicide(Walker<'a>),
     Selfdestruct(Walker<'a>),
+    ModifierInvocation(Walker<'a>),
     FunctionCall(Walker<'a>),
     Unit(Walker<'a>),
     None,

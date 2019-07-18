@@ -170,7 +170,7 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert(edge);
                     predecessors = vec![];
                 },
-                SimpleBlockNode::FunctionCall(walker) => {
+                SimpleBlockNode::FunctionCall(walker) | SimpleBlockNode::ModifierInvocation(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
                         .iter()

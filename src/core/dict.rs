@@ -48,7 +48,7 @@ impl<'a> Dictionary<'a> {
                             prop.parents.push(reference);
                         }
                     },
-                    "FunctionDefinition" => {
+                    "FunctionDefinition" | "ModifierDefinition" => {
                         prop.functions.push(walker.node.id);
                     },
                     "VariableDeclaration" => {
@@ -73,13 +73,13 @@ impl<'a> Dictionary<'a> {
     /// Find return statements
     pub fn lookup_returns(&self, id: u32) -> Vec<&Walker> {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "Return"
+            walker.node.name == "Return" || walker.node.name == "PlaceholderStatement"
         };
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         self.entries
             .get(&id)
             .and_then(|walker| match walker.node.name {
-                "FunctionDefinition" => {
+                "FunctionDefinition" | "ModifierDefinition" => {
                     let walkers = walker.walk(true, ig, fi)
                         .iter()
                         .filter_map(|w| self.lookup(w.node.id))
@@ -94,13 +94,13 @@ impl<'a> Dictionary<'a> {
     /// Find all function calls inside a function
     pub fn lookup_function_calls(&self, id: u32) -> Vec<&Walker> {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "FunctionCall"
+            walker.node.name == "FunctionCall" || walker.node.name == "ModifierInvocation"
         };
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         self.entries
             .get(&id)
             .and_then(|walker| match walker.node.name {
-                "FunctionDefinition" => {
+                "FunctionDefinition" | "ModifierDefinition" => {
                     let walkers = walker.walk(false, ig, fi)
                         .iter()
                         .filter_map(|w| self.lookup(w.node.id))
@@ -117,7 +117,7 @@ impl<'a> Dictionary<'a> {
         self.entries
             .get(&id)
             .and_then(|walker|  match walker.node.name {
-                "FunctionDefinition" => {
+                "FunctionDefinition" | "ModifierDefinition" => {
                     let mut ret = vec![];
                     for (index, walker) in walker.direct_childs(|_| true).iter().enumerate() {
                         if index == 0 && walker.node.name == "ParameterList" {
@@ -128,7 +128,7 @@ impl<'a> Dictionary<'a> {
                     }
                     Some(ret)
                 },
-                "FunctionCall" => {
+                "FunctionCall" | "ModifierInvocation" => {
                     let mut ret = vec![];
                     for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                         if index > 0 {

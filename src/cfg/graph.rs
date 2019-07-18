@@ -65,7 +65,7 @@ impl<'a> Graph<'a> {
         let mut function_calls = vec![];
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         let fi = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "FunctionCall"
+            walker.node.name == "FunctionCall" || walker.node.name == "ModifierInvocation"
         };
         // Split parameters to other nodes
         for walker in walker.walk(true, ig, fi).into_iter() {
@@ -96,9 +96,15 @@ impl<'a> Graph<'a> {
                         let node = SimpleBlockNode::Selfdestruct(walker);
                         function_calls.push(node);
                     },
-                    _ => {
-                        let node = SimpleBlockNode::FunctionCall(walker);
-                        function_calls.push(node);
+                    _ => match walker.node.name {
+                        "ModifierInvocation" => {
+                            let node = SimpleBlockNode::ModifierInvocation(walker);
+                            function_calls.push(node);
+                        },
+                        _ => {
+                            let node = SimpleBlockNode::FunctionCall(walker);
+                            function_calls.push(node);
+                        }
                     }
                 },
                 None => {
@@ -117,7 +123,7 @@ impl<'a> Graph<'a> {
                 }
             }
         }
-        if walker.node.name != "FunctionCall" {
+        if walker.node.name != "FunctionCall" && walker.node.name != "ModifierInvocation" {
             let node = SimpleBlockNode::Unit(walker.clone());
             function_calls.push(node);
         }
@@ -160,11 +166,10 @@ impl<'a> Graph<'a> {
                 let node = SimpleBlockNode::Break(walker);
                 vec![CodeBlock::SimpleBlocks(vec![node])]
             },
-            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" => {
+            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" | "PlaceholderStatement" => {
                 vec![CodeBlock::Block(walker)]
             },
             "InlineAssemblyStatement" => unimplemented!(),
-            "PlaceholderStatement" => unimplemented!(), 
             _ => vec![CodeBlock::Block(walker)],
         }
     }
@@ -193,7 +198,9 @@ impl<'a> Graph<'a> {
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
                         },
-                        "ModifierInvocation" => panic!(),
+                        "ModifierInvocation" => {
+                            blocks.push(CodeBlock::Block(walker));
+                        },
                         _ => {},
                     }
                 }
