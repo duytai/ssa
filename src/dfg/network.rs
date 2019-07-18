@@ -81,8 +81,6 @@ impl<'a> Network<'a> {
                         }
                         let defined_parameters = self.dict.lookup_parameters(reference);
                         let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
-                        println!("defined_parameters: {:?}", defined_parameters.len());
-                        println!("invoked_parameters: {:?}", invoked_parameters.len());
                         if invoked_parameters.len() < defined_parameters.len() {
                             invoked_parameters.insert(0, &walkers[0]);
                         }
