@@ -71,8 +71,11 @@ impl<'a> Network<'a> {
                             self.links.insert(link);
                         }
                         let defined_parameters = self.dict.lookup_parameters(reference);
-                        let invoked_parameters = self.dict.lookup_parameters(fc_id);
-                        for i in 0..defined_parameters.len() {
+                        let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
+                        if invoked_parameters.len() < defined_parameters.len() {
+                            invoked_parameters.insert(0, &walkers[0]);
+                        }
+                        for i in 0..invoked_parameters.len() {
                             let defined_parameter = defined_parameters[i];
                             let invoked_parameter = invoked_parameters[i];
                             let members = vec![Member::Reference(invoked_parameter.node.id)];
