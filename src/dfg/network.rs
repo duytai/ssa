@@ -57,7 +57,13 @@ impl<'a> Network<'a> {
                 let walkers = walker.direct_childs(|_| true);
                 let source = walker.node.source;
                 let fc_id = walker.node.id;
-                let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                let reference = walkers[0].node
+                    .attributes["referencedDeclaration"]
+                    .as_u32()
+                    .and_then(|reference| match self.dict.lookup(reference) {
+                        Some(_) => Some(reference),
+                        None => None,
+                    });
                 match reference {
                     // User defined functions
                     // Connect invoked_parameters to defined_parameters 
