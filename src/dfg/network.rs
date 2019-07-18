@@ -61,7 +61,10 @@ impl<'a> Network<'a> {
                     .attributes["referencedDeclaration"]
                     .as_u32()
                     .and_then(|reference| match self.dict.lookup(reference) {
-                        Some(_) => Some(reference),
+                        Some(walker) => match walker.node.name {
+                            "EventDefinition" => None, 
+                            _ => Some(reference),
+                        },
                         None => None,
                     });
                 match reference {
@@ -91,6 +94,7 @@ impl<'a> Network<'a> {
                             self.links.insert(link);
                         }
                     },
+                    // Emit event
                     // Global functions
                     // Connect function_calls to parameters
                     None => {
