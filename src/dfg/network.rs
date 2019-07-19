@@ -51,7 +51,7 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
-        let mut links = HashSet::new(); 
+        let mut ret = HashSet::new();
         let function_calls = self.dict.lookup_function_calls(self.entry_id);
         for walker in function_calls.iter() {
             let walkers = walker.direct_childs(|_| true);
@@ -62,7 +62,8 @@ impl<'a> Network<'a> {
                 .as_str()
                 .and_then(|return_type| {
                     if return_type.starts_with("contract") {
-                        // let contract_id = self.dict.lookup_contract_by_name(&return_type[9..]);
+                        let contract_id = self.dict.lookup_contract_by_name(&return_type[9..]);
+                        // TODO: Do something here 
                         None
                     } else {
                         walkers[0].node.attributes["referencedDeclaration"]
@@ -86,7 +87,7 @@ impl<'a> Network<'a> {
                         let variable = Variable::new(members, source.to_string());
                         let label = DataLinkLabel::InFrom(fc_id);
                         let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
-                        links.insert(link);
+                        ret.insert(link);
                     }
                     let defined_parameters = self.dict.lookup_parameters(reference);
                     let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
@@ -100,7 +101,7 @@ impl<'a> Network<'a> {
                         let variable = Variable::new(members, defined_parameter.node.source.to_string());
                         let label = DataLinkLabel::OutTo(fc_id);
                         let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
-                        links.insert(link);
+                        ret.insert(link);
                     }
                 },
                 // Emit event
@@ -113,7 +114,7 @@ impl<'a> Network<'a> {
                         let variable = Variable::new(members, invoked_parameter.node.source.to_string());
                         let label = DataLinkLabel::BuiltIn;
                         let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
-                        links.insert(link);
+                        ret.insert(link);
                     }
                 },
             };
@@ -123,9 +124,9 @@ impl<'a> Network<'a> {
             let variable = Variable::new(members, source.to_string());
             let label = DataLinkLabel::Executor;
             let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
-            links.insert(link);
+            ret.insert(link);
         }
-        links
+        ret
     } 
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {

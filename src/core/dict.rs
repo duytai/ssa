@@ -150,11 +150,12 @@ impl<'a> Dictionary<'a> {
     pub fn lookup_contract_by_name(&self, name: &str) -> u32 {
         let mut contract_id = None;
         for (id, _) in self.contracts.iter() {
-            contract_id = self.lookup(*id)
+            self.lookup(*id)
                 .and_then(|walker| walker.node.attributes["name"].as_str())
-                .and_then(|contract_name| match contract_name == name {
-                    true => Some(*id),
-                    false => None,
+                .map(|contract_name| {
+                    if name == contract_name {
+                        contract_id = Some(*id);
+                    }
                 });
         }
         contract_id.expect("Contract must exists")
