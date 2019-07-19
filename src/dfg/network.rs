@@ -51,76 +51,73 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) {
-        for walker in self.dict.lookup_functions_by_contract_id(self.entry_id) {
-            let function_calls = self.dict.lookup_function_calls(walker.node.id);
-            for walker in function_calls.iter() {
-                let walkers = walker.direct_childs(|_| true);
-                let source = walker.node.source;
-                let fc_id = walker.node.id;
-                let reference = walkers[0].node
-                    .attributes["referencedDeclaration"]
-                    .as_u32()
-                    .and_then(|reference| match self.dict.lookup(reference) {
-                        Some(walker) => match walker.node.name {
-                            "EventDefinition" => None, 
-                            _ => Some(reference),
-                        },
-                        None => None,
-                    });
-                match reference {
-                    // User defined functions
-                    // Connect invoked_parameters to defined_parameters 
-                    // Connect function_call to return statement
-                    Some(reference) => {
-                        for walker in self.dict.lookup_returns(reference) {
-                            let members = vec![Member::Reference(walker.node.id)];
-                            let variable = Variable::new(members, source.to_string());
-                            let label = DataLinkLabel::InFrom(fc_id);
-                            let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
-                            self.links.insert(link);
-                        }
-                        let defined_parameters = self.dict.lookup_parameters(reference);
-                        let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
-                        if invoked_parameters.len() < defined_parameters.len() {
-                            invoked_parameters.insert(0, &walkers[0]);
-                        }
-                        for i in 0..invoked_parameters.len() {
-                            let defined_parameter = defined_parameters[i];
-                            let invoked_parameter = invoked_parameters[i];
-                            let members = vec![Member::Reference(invoked_parameter.node.id)];
-                            let variable = Variable::new(members, defined_parameter.node.source.to_string());
-                            let label = DataLinkLabel::OutTo(fc_id);
-                            let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
-                            self.links.insert(link);
-                        }
+        let function_calls = self.dict.lookup_function_calls(self.entry_id);
+        for walker in function_calls.iter() {
+            let walkers = walker.direct_childs(|_| true);
+            let source = walker.node.source;
+            let fc_id = walker.node.id;
+            let reference = walkers[0].node
+                .attributes["referencedDeclaration"]
+                .as_u32()
+                .and_then(|reference| match self.dict.lookup(reference) {
+                    Some(walker) => match walker.node.name {
+                        "EventDefinition" => None, 
+                        _ => Some(reference),
                     },
-                    // Emit event
-                    // Global functions
-                    // Connect function_calls to parameters
-                    None => {
-                        let invoked_parameters = self.dict.lookup_parameters(fc_id);
-                        for invoked_parameter in invoked_parameters {
-                            let members = vec![Member::Reference(invoked_parameter.node.id)];
-                            let variable = Variable::new(members, invoked_parameter.node.source.to_string());
-                            let label = DataLinkLabel::BuiltIn;
-                            let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
-                            self.links.insert(link);
-                        }
-                    },
-                };
-                // Connect to object which call function
-                let members = vec![Member::Reference(walkers[0].node.id)];
-                let source = walkers[0].node.source;
-                let variable = Variable::new(members, source.to_string());
-                let label = DataLinkLabel::Executor;
-                let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
-                self.links.insert(link);
-            }
+                    None => None,
+                });
+            match reference {
+                // User defined functions
+                // Connect invoked_parameters to defined_parameters 
+                // Connect function_call to return statement
+                Some(reference) => {
+                    for walker in self.dict.lookup_returns(reference) {
+                        let members = vec![Member::Reference(walker.node.id)];
+                        let variable = Variable::new(members, source.to_string());
+                        let label = DataLinkLabel::InFrom(fc_id);
+                        let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
+                        self.links.insert(link);
+                    }
+                    let defined_parameters = self.dict.lookup_parameters(reference);
+                    let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
+                    if invoked_parameters.len() < defined_parameters.len() {
+                        invoked_parameters.insert(0, &walkers[0]);
+                    }
+                    for i in 0..invoked_parameters.len() {
+                        let defined_parameter = defined_parameters[i];
+                        let invoked_parameter = invoked_parameters[i];
+                        let members = vec![Member::Reference(invoked_parameter.node.id)];
+                        let variable = Variable::new(members, defined_parameter.node.source.to_string());
+                        let label = DataLinkLabel::OutTo(fc_id);
+                        let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
+                        self.links.insert(link);
+                    }
+                },
+                // Emit event
+                // Global functions
+                // Connect function_calls to parameters
+                None => {
+                    let invoked_parameters = self.dict.lookup_parameters(fc_id);
+                    for invoked_parameter in invoked_parameters {
+                        let members = vec![Member::Reference(invoked_parameter.node.id)];
+                        let variable = Variable::new(members, invoked_parameter.node.source.to_string());
+                        let label = DataLinkLabel::BuiltIn;
+                        let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
+                        self.links.insert(link);
+                    }
+                },
+            };
+            // Connect to object which call function
+            let members = vec![Member::Reference(walkers[0].node.id)];
+            let source = walkers[0].node.source;
+            let variable = Variable::new(members, source.to_string());
+            let label = DataLinkLabel::Executor;
+            let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
+            self.links.insert(link);
         }
     } 
 
     fn find_internal_links(&mut self) {
-        println!("ENTRY: {}", self.entry_id);
         for walker in self.dict.lookup_functions_by_contract_id(self.entry_id) {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
@@ -134,6 +131,7 @@ impl<'a> Network<'a> {
         self.find_internal_links();
         self.find_external_links();
         self.dot.add_links(&self.links);
+        // TODO: search for NewExpression
     }
 
     /// Find all paths

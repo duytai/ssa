@@ -91,7 +91,7 @@ impl<'a> Dictionary<'a> {
             .unwrap_or(vec![])
     } 
 
-    /// Find all function calls inside a function
+    /// Find all function calls start from @id
     pub fn lookup_function_calls(&self, id: u32) -> Vec<&Walker> {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall" || walker.node.name == "ModifierInvocation"
@@ -99,15 +99,12 @@ impl<'a> Dictionary<'a> {
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         self.entries
             .get(&id)
-            .and_then(|walker| match walker.node.name {
-                "FunctionDefinition" | "ModifierDefinition" => {
-                    let walkers = walker.walk(false, ig, fi)
-                        .iter()
-                        .filter_map(|w| self.lookup(w.node.id))
-                        .collect::<Vec<&Walker>>();
-                    Some(walkers)
-                },
-                _ => Some(vec![])
+            .and_then(|walker| {
+                let walkers = walker.walk(false, ig, fi)
+                    .iter()
+                    .filter_map(|w| self.lookup(w.node.id))
+                    .collect::<Vec<&Walker>>();
+                Some(walkers)
             })
             .unwrap_or(vec![])
     }
