@@ -149,29 +149,27 @@ impl<'a> Dictionary<'a> {
             .unwrap_or(vec![])
     }
 
-    /// Find scoped functions from a function id
-    pub fn lookup_functions(&self, id: u32) -> Vec<&Walker> {
+    /// Find scoped functions from id of contract
+    /// Start from ContractDefinition node
+    pub fn lookup_functions_by_contract_id(&self, id: u32) -> Vec<&Walker> {
         let mut ret = vec![];
-        for (_, prop) in self.contracts.iter() {
-            if prop.functions.contains(&id) {
-                for index in (0..prop.functions.len()).rev() {
-                    ret.push(prop.functions[index]);
-                }
-                let mut parents = prop.parents.clone();
-                loop {
-                    match parents.pop() {
-                        Some(contract_id) => {
-                            if let Some(prop) = self.contracts.get(&contract_id) {
-                                for index in (0..prop.functions.len()).rev() {
-                                    ret.push(prop.functions[index]);
-                                }
-                                parents.extend_from_slice(&prop.parents[..]);
+        if let Some(prop) = self.contracts.get(&id) {
+            for index in (0..prop.functions.len()).rev() {
+                ret.push(prop.functions[index]);
+            }
+            let mut parents = prop.parents.clone();
+            loop {
+                match parents.pop() {
+                    Some(contract_id) => {
+                        if let Some(prop) = self.contracts.get(&contract_id) {
+                            for index in (0..prop.functions.len()).rev() {
+                                ret.push(prop.functions[index]);
                             }
-                        },
-                        None => { break; }
-                    }
+                            parents.extend_from_slice(&prop.parents[..]);
+                        }
+                    },
+                    None => { break; }
                 }
-                break;
             }
         }
         ret.reverse();
@@ -181,8 +179,9 @@ impl<'a> Dictionary<'a> {
            .collect::<Vec<&Walker>>()
     }
 
-    /// Find a list of functions by node id, the list includes inherited functions
-    pub fn lookup_states(&self, id: u32) -> Vec<&Walker> {
+    /// Find a list of states from function_id
+    /// Include inherited states
+    pub fn lookup_states_by_function_id(&self, id: u32) -> Vec<&Walker> {
         let mut ret = vec![];
         for (_, prop) in self.contracts.iter() {
             if prop.functions.contains(&id) {

@@ -369,7 +369,7 @@ impl<'a> ControlFlowGraph<'a> {
         if entry_names.contains(&walker.node.name) {
             let mut graph = Graph::new(walker);
             let root = graph.update();
-            let states = self.dict.lookup_states(entry_id);
+            let states = self.dict.lookup_states_by_function_id(entry_id);
             if let BlockNode::Root(blocks) = root {
                 for id in vec![self.start, self.stop] {
                     let vertex = Vertex::new(id, "", Shape::Point);

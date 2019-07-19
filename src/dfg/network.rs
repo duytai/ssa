@@ -51,7 +51,7 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) {
-        for walker in self.dict.lookup_functions(self.entry_id) {
+        for walker in self.dict.lookup_functions_by_contract_id(self.entry_id) {
             let function_calls = self.dict.lookup_function_calls(walker.node.id);
             for walker in function_calls.iter() {
                 let walkers = walker.direct_childs(|_| true);
@@ -120,7 +120,8 @@ impl<'a> Network<'a> {
     } 
 
     fn find_internal_links(&mut self) {
-        for walker in self.dict.lookup_functions(self.entry_id) {
+        println!("ENTRY: {}", self.entry_id);
+        for walker in self.dict.lookup_functions_by_contract_id(self.entry_id) {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
             self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);

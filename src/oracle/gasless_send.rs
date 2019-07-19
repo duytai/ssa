@@ -39,8 +39,10 @@ impl<'a> GaslessSend <'a> {
         let mut ret = vec![];
         let dict = self.network.get_dict();
         let entry_id = self.network.get_entry_id();
-        for walker in dict.lookup_states(entry_id) {
-            ret.push(walker.node.id);
+        for walker in dict.lookup_functions_by_contract_id(entry_id) {
+            for walker in dict.lookup_states_by_function_id(walker.node.id) {
+                ret.push(walker.node.id);
+            }
         }
         ret
     }
@@ -48,7 +50,7 @@ impl<'a> GaslessSend <'a> {
     fn get_parameter_ids(&self) -> Vec<u32> {
         let mut ret = vec![];
         let dict = self.network.get_dict();
-        for walker in dict.lookup_functions(self.network.get_entry_id()) {
+        for walker in dict.lookup_functions_by_contract_id(self.network.get_entry_id()) {
             for walker in dict.lookup_parameters(walker.node.id) {
                 ret.push(walker.node.id);
             }
