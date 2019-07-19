@@ -42,7 +42,7 @@ impl<'a> Oracle<'a> {
         }
     }
 
-    pub fn format(&self) -> String {
+    pub fn format(&mut self) -> String {
         self.network.format()
     }
 }

@@ -16,6 +16,12 @@ impl Dot {
         Dot { edges: vec![], vertices: vec![], links: vec![] }
     }
 
+    pub fn clear(&mut self) {
+        self.edges.clear();
+        self.vertices.clear();
+        self.links.clear();
+    }
+
     pub fn add_cfg(&mut self, cfg: &ControlFlowGraph) {
         for edge in cfg.get_edges().iter() {
             self.edges.push(format!("  {} -> {};", edge.get_from(), edge.get_to()));

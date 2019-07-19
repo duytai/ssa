@@ -50,21 +50,31 @@ impl<'a> Network<'a> {
         self.entry_id
     }
 
-    fn find_external_links(&mut self) {
+    fn find_external_links(&mut self) -> HashSet<DataLink> {
+        let mut links = HashSet::new(); 
         let function_calls = self.dict.lookup_function_calls(self.entry_id);
         for walker in function_calls.iter() {
             let walkers = walker.direct_childs(|_| true);
             let source = walker.node.source;
             let fc_id = walker.node.id;
-            let reference = walkers[0].node
-                .attributes["referencedDeclaration"]
-                .as_u32()
-                .and_then(|reference| match self.dict.lookup(reference) {
-                    Some(walker) => match walker.node.name {
-                        "EventDefinition" => None, 
-                        _ => Some(reference),
-                    },
-                    None => None,
+            let reference = walker.node
+                .attributes["type"]
+                .as_str()
+                .and_then(|return_type| {
+                    if return_type.starts_with("contract") {
+                        // let contract_id = self.dict.lookup_contract_by_name(&return_type[9..]);
+                        None
+                    } else {
+                        walkers[0].node.attributes["referencedDeclaration"]
+                            .as_u32()
+                            .and_then(|reference| match self.dict.lookup(reference) {
+                                Some(walker) => match walker.node.name {
+                                    "EventDefinition" => None,
+                                    _ => Some(reference),
+                                },
+                                None => None,
+                            })
+                    }
                 });
             match reference {
                 // User defined functions
@@ -76,7 +86,7 @@ impl<'a> Network<'a> {
                         let variable = Variable::new(members, source.to_string());
                         let label = DataLinkLabel::InFrom(fc_id);
                         let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
-                        self.links.insert(link);
+                        links.insert(link);
                     }
                     let defined_parameters = self.dict.lookup_parameters(reference);
                     let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
@@ -90,7 +100,7 @@ impl<'a> Network<'a> {
                         let variable = Variable::new(members, defined_parameter.node.source.to_string());
                         let label = DataLinkLabel::OutTo(fc_id);
                         let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
-                        self.links.insert(link);
+                        links.insert(link);
                     }
                 },
                 // Emit event
@@ -103,7 +113,7 @@ impl<'a> Network<'a> {
                         let variable = Variable::new(members, invoked_parameter.node.source.to_string());
                         let label = DataLinkLabel::BuiltIn;
                         let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
-                        self.links.insert(link);
+                        links.insert(link);
                     }
                 },
             };
@@ -113,25 +123,27 @@ impl<'a> Network<'a> {
             let variable = Variable::new(members, source.to_string());
             let label = DataLinkLabel::Executor;
             let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
-            self.links.insert(link);
+            links.insert(link);
         }
+        links
     } 
 
-    fn find_internal_links(&mut self) {
+    fn find_internal_links(&mut self) -> HashSet<DataLink> {
+        let mut links = HashSet::new();
         for walker in self.dict.lookup_functions_by_contract_id(self.entry_id) {
             let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
-            self.dot.add_cfg(&cfg);
             let mut dfg = DataFlowGraph::new(cfg);
-            self.links.extend(dfg.find_links());
+            links.extend(dfg.find_links());
             self.dfgs.insert(walker.node.id, dfg);
         }
+        links
     }
 
     fn find_links(&mut self) {
-        self.find_internal_links();
-        self.find_external_links();
-        self.dot.add_links(&self.links);
-        // TODO: search for NewExpression
+        let internal_links = self.find_internal_links();
+        let external_links = self.find_external_links();
+        self.links.extend(internal_links);
+        self.links.extend(external_links);
     }
 
     /// Find all paths
@@ -216,7 +228,12 @@ impl<'a> Network<'a> {
         paths
     }
 
-    pub fn format(&self) -> String {
+    pub fn format(&mut self) -> String {
+        self.dot.clear();
+        for (_, dfg) in self.dfgs.iter() {
+            self.dot.add_cfg(dfg.get_cfg());
+        }
+        self.dot.add_links(&self.links);
         self.dot.format()
     }
 }

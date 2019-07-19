@@ -146,6 +146,20 @@ impl<'a> Dictionary<'a> {
             .unwrap_or(vec![])
     }
 
+    /// Find contract based on function call return type
+    pub fn lookup_contract_by_name(&self, name: &str) -> u32 {
+        let mut contract_id = None;
+        for (id, _) in self.contracts.iter() {
+            contract_id = self.lookup(*id)
+                .and_then(|walker| walker.node.attributes["name"].as_str())
+                .and_then(|contract_name| match contract_name == name {
+                    true => Some(*id),
+                    false => None,
+                });
+        }
+        contract_id.expect("Contract must exists")
+    }
+
     /// Find scoped functions from id of contract
     /// Start from ContractDefinition node
     pub fn lookup_functions_by_contract_id(&self, id: u32) -> Vec<&Walker> {
