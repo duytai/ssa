@@ -26,9 +26,9 @@ impl IndexAccess {
             walker.node.name == "IndexAccess"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "FunctionCall"
+            walker.node.name == "FunctionCall" || walker.node.name == "ModifierInvocation"
         };
-        for walker in walker.walk(false, ig, fi) {
+        for walker in walker.walk(true, ig, fi) {
             let walkers = walker.direct_childs(|_| true);
             accesses.push(IndexAccess::parse_one(&walkers[1], dict));
         }

@@ -92,7 +92,7 @@ impl Variable {
                 true => {
                     match offset == 0 {
                         true => VariableComparison::Equal,
-                        false => VariableComparison::NotEqual,
+                        false => VariableComparison::Partial,
                     }
                 },
                 false => VariableComparison::NotEqual,

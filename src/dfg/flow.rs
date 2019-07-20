@@ -1,6 +1,6 @@
 use std::collections::{ HashSet, HashMap };
+use crate::cfg::ControlFlowGraph;
 use crate::core::{
-    State,
     VariableComparison,
     Operator,
     Action,
@@ -13,13 +13,46 @@ use crate::dfg::utils;
 /// It takes edges and vertices from the cfg to find assignments 
 /// and build data flow
 pub struct DataFlowGraph<'a> {
-    state: &'a State<'a>,
+    cfg: ControlFlowGraph<'a>,
+    visited: HashSet<u32>,
+    parents: HashMap<u32, Vec<u32>>,
+    tables: HashMap<u32, HashSet<Action>>,
+    new_actions: HashMap<u32, Vec<Action>>,
 }
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(state: &'a State) -> Self {
-        DataFlowGraph { state }
+    pub fn new(cfg: ControlFlowGraph<'a>) -> Self {
+        let vertices = cfg.get_vertices();
+        let edges = cfg.get_edges();
+        let mut tables = HashMap::new();
+        let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
+        for vertex in vertices.iter() {
+            tables.insert(vertex.get_id(), HashSet::new());
+        }
+        for edge in edges.iter() {
+            let from = edge.get_from();
+            let to = edge.get_to();
+            match parents.get_mut(&to) {
+                Some(v) => { v.push(from); },
+                None => { parents.insert(to, vec![from]); },
+            }
+        }
+        DataFlowGraph {
+            cfg,
+            parents,
+            tables,
+            visited: HashSet::new(),
+            new_actions: HashMap::new(),
+        }
+    }
+
+    pub fn get_cfg(&self) -> &ControlFlowGraph {
+        &self.cfg
+    }
+
+    pub fn get_new_actions(&self) -> &HashMap<u32, Vec<Action>> {
+        &self.new_actions
     }
 
     /// Find data dependency links
@@ -54,34 +87,21 @@ impl<'a> DataFlowGraph<'a> {
     /// All elements in that pattern will be removed from the sequence.
     ///
     /// The loop will stop if no sequence changes happen
-    pub fn find_links(&self) -> HashSet<DataLink> {
-        let State { vertices, edges, dict, stop, .. } = self.state;
-        let mut visited: HashSet<u32> = HashSet::new();
+    pub fn find_links(&mut self) -> HashSet<DataLink> {
+        let dict = self.cfg.get_dict();
+        let stop = self.cfg.get_stop();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
-        let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
-        let mut tables: HashMap<u32, HashSet<Action>> = HashMap::new();
-        let mut links: HashSet<DataLink> = HashSet::new(); 
+        let mut links: HashSet<DataLink> = HashSet::new();
         let actions: Vec<Action> = vec![]; 
-        for vertex in vertices.iter() {
-            tables.insert(vertex.get_id(), HashSet::new());
-        }
-        for edge in edges.iter() {
-            let from = edge.get_from();
-            let to = edge.get_to();
-            match parents.get_mut(&to) {
-                Some(v) => { v.push(from); },
-                None => { parents.insert(to, vec![from]); },
-            }
-        }
-        if let Some(parents) = parents.get(&stop) {
+        if let Some(parents) = self.parents.get(&stop) {
             for parent in parents {
-                stack.push((*stop, *parent, actions.clone()));
+                stack.push((stop, *parent, actions.clone()));
             }
         } 
         while stack.len() > 0 {
             let (from, id, mut actions) = stack.pop().unwrap();
-            let pre_table = tables.get(&from).unwrap().clone();
-            let cur_table = tables.get_mut(&id).unwrap();
+            let pre_table = self.tables.get(&from).unwrap().clone();
+            let cur_table = self.tables.get_mut(&id).unwrap();
             let cur_table_len = cur_table.len();
             let mut new_actions = vec![];
             let mut assignments = vec![];
@@ -97,12 +117,12 @@ impl<'a> DataFlowGraph<'a> {
                 assignments.append(&mut agns);
                 variables.extend(vars);
             }
-            for parameter in utils::find_parameters(id, dict) {
-                let mut agns = parameter.get_assignments().clone();
-                let vars = parameter.get_variables().clone();
+            for function_use in utils::find_function_use(id, dict) {
+                let mut agns = function_use.get_assignments().clone();
+                let vars = function_use.get_variables().clone();
                 assignments.append(&mut agns);
                 variables.extend(vars);
-            }
+            } 
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
@@ -122,6 +142,7 @@ impl<'a> DataFlowGraph<'a> {
             for var in variables {
                 new_actions.push(Action::Use(var, id));
             }
+            self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
@@ -180,9 +201,9 @@ impl<'a> DataFlowGraph<'a> {
                     break;
                 }
             }
-            if cur_table.len() != cur_table_len || !visited.contains(&id) {
-                visited.insert(id);
-                if let Some(parents) = parents.get(&id) {
+            if cur_table.len() != cur_table_len || !self.visited.contains(&id) {
+                self.visited.insert(id);
+                if let Some(parents) = self.parents.get(&id) {
                     for parent in parents {
                         stack.push((id, *parent, actions.clone()));
                     }

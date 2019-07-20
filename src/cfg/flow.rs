@@ -10,11 +10,11 @@ use crate::cfg::{
     ForStatement,
 };
 use crate::core::{
+    StateLookup,
     Dictionary,
     Node,
     Vertex,
     Shape,
-    State,
     Edge,
 };
 
@@ -43,14 +43,36 @@ pub struct LoopBreaker {
 
 impl<'a> ControlFlowGraph<'a> {
     /// Create a new cfg from dictionary
-    pub fn new(dict: &'a Dictionary) -> Self {
-        ControlFlowGraph {
+    pub fn new(dict: &'a Dictionary, entry_id: u32) -> Self {
+        let mut cfg = ControlFlowGraph {
             edges: HashSet::new(),
             vertices: HashSet::new(),
             dict,
             start: 0,
-            stop: 1000000,
-        }
+            stop: 0,
+        };
+        cfg.start_at(entry_id);
+        cfg
+    }
+
+    pub fn get_start(&self) -> u32 {
+        self.start
+    }
+
+    pub fn get_stop(&self) -> u32 {
+        self.stop
+    }
+
+    pub fn get_dict(&self) -> &Dictionary {
+        self.dict
+    }
+
+    pub fn get_vertices(&self) -> &HashSet<Vertex> {
+        &self.vertices
+    }
+
+    pub fn get_edges(&self) -> &HashSet<Edge> {
+        &self.edges
     }
 
     /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
@@ -58,17 +80,12 @@ impl<'a> ControlFlowGraph<'a> {
     /// Build a list of nested function calls and connect them toghether
     pub fn condition_traverse(&mut self, blocks: &Vec<SimpleBlockNode>) -> Vec<u32> {
         let mut chains = vec![];
-        for (index, block) in blocks.iter().enumerate() {
+        for block in blocks {
             match block {
                 SimpleBlockNode::FunctionCall(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    if index == blocks.len() - 1 {
-                        let vertice = Vertex::new(id, source, Shape::Mdiamond);
-                        self.vertices.insert(vertice);
-                    } else {
-                        let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                        self.vertices.insert(vertice);
-                    }
+                    let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                    self.vertices.insert(vertice);
                     chains.push(id);
                 },
                 SimpleBlockNode::Unit(walker) => {
@@ -154,7 +171,7 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert(edge);
                     predecessors = vec![];
                 },
-                SimpleBlockNode::FunctionCall(walker) => {
+                SimpleBlockNode::FunctionCall(walker) | SimpleBlockNode::ModifierInvocation(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
                         .iter()
@@ -325,6 +342,11 @@ impl<'a> ControlFlowGraph<'a> {
                         },
                         BlockNode::Return(blocks) => {
                             predecessors = self.simple_traverse(blocks, predecessors.clone(), breakers);
+                            for predecessor in predecessors.iter() {
+                                let edge = Edge::new(*predecessor, self.stop);
+                                self.edges.insert(edge);
+                            }
+                            predecessors = vec![];
                         },
                         BlockNode::Root(_) => unimplemented!(),
                         BlockNode::None => unimplemented!(),
@@ -339,15 +361,37 @@ impl<'a> ControlFlowGraph<'a> {
         return predecessors;
     }
 
-    /// Build a cfg, the cfg starts at FunctionDefinition `entry_id`
-    pub fn start_at(&mut self, entry_id: u32) -> Option<State> {
+    /// Build a cfg, the cfg starts at FunctionDefinition, ModifierDefinition `entry_id`
+    pub fn start_at(&mut self, entry_id: u32) {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
-        let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];
-        if entry_names.contains(&walker.node.name) {
-            let mut graph = Graph::new(walker);
-            let root = graph.update();
-            let states = self.dict.lookup_states(entry_id);
-            if let BlockNode::Root(blocks) = root {
+        self.start = entry_id * 100000;
+        self.stop = self.start + 1;
+        match walker.node.name {
+            "FunctionDefinition" | "ModifierDefinition" => {
+                let mut graph = Graph::new(walker);
+                let root = graph.update();
+                let states = self.dict.lookup_states(StateLookup::FunctionId(entry_id));
+                if let BlockNode::Root(blocks) = root {
+                    for id in vec![self.start, self.stop] {
+                        let vertex = Vertex::new(id, "", Shape::Point);
+                        self.vertices.insert(vertex);
+                    }
+                    let last_id = states.iter().fold(self.start, |prev, cur| {
+                        let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
+                        let edge = Edge::new(prev, cur.node.id);
+                        self.vertices.insert(vertex);
+                        self.edges.insert(edge);
+                        cur.node.id
+                    });
+                    let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
+                    for predecessor in predecessors.iter() {
+                        let edge = Edge::new(*predecessor, self.stop);
+                        self.edges.insert(edge);
+                    }
+                }
+            },
+            "ContractDefinition" => {
+                let states = self.dict.lookup_states(StateLookup::ContractId(entry_id));
                 for id in vec![self.start, self.stop] {
                     let vertex = Vertex::new(id, "", Shape::Point);
                     self.vertices.insert(vertex);
@@ -359,19 +403,59 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert(edge);
                     cur.node.id
                 });
-                let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
-                for predecessor in predecessors.iter() {
-                    let edge = Edge::new(*predecessor, self.stop);
-                    self.edges.insert(edge);
+                let edge = Edge::new(last_id, self.stop);
+                self.edges.insert(edge);
+            },
+            _ => {},
+        }
+    }
+
+    /// Find all paths of current cfg
+    /// from starting point to the end 
+    pub fn find_execution_paths(&self, start_at: u32, paths: &mut Vec<Vec<u32>>) {
+        if paths.is_empty() {
+            paths.push(vec![start_at]);
+        }
+        let mut childs = vec![];
+        for edge in self.edges.iter() {
+            if edge.get_from() == start_at {
+                childs.push(edge.get_to());
+            }
+        }
+        if !childs.is_empty() {
+            let mut is_extensible = false;
+            let prev_paths = paths.clone();
+            paths.clear();
+            for path in prev_paths {
+                let prev_path_len = paths.len();
+                if path.last().unwrap() == &start_at {
+                    for child in childs.iter() {
+                        // path vector is stored or not 
+                        if let Some(pos) = path.iter().position(|x| x == child) {
+                            if path[pos - 1] != start_at {
+                                let mut new_path = path.clone();
+                                new_path.push(*child);
+                                paths.push(new_path);
+                                is_extensible = true;
+                            }
+                        } else {
+                            let mut new_path = path.clone();
+                            new_path.push(*child);
+                            paths.push(new_path);
+                            is_extensible = true;
+                        }
+                    }
+                }
+                if paths.len() == prev_path_len {
+                    paths.push(path);
                 }
             }
-            return Some(State {
-                edges: &self.edges,
-                vertices: &self.vertices,
-                dict: &self.dict,
-                stop: self.stop,
-            });
+            if is_extensible {
+                for child in childs {
+                    self.find_execution_paths(child, paths);
+                }
+            }
         }
-        return None;
     }
+
 }

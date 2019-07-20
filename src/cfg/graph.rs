@@ -63,15 +63,17 @@ impl<'a> Graph<'a> {
     /// Some functions directly affect to control flow will be collected to precisely build cfg
     pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
-        let mut last_source = None;
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         let fi = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "FunctionCall"
+            walker.node.name == "FunctionCall" || walker.node.name == "ModifierInvocation"
         };
-        for walker in walker.walk(false, ig, fi).into_iter() {
+        // Split parameters to other nodes
+        for walker in walker.walk(true, ig, fi).into_iter() {
+            for walker in walker.direct_childs(|_| true).into_iter() {
+                function_calls.append(&mut Graph::split(walker));
+            }
             let child_walkers = walker.direct_childs(|_| true);
             let function_name = child_walkers[0].node.attributes["value"].as_str();
-            last_source = Some(walker.node.source);
             match function_name {
                 Some(function_name) => match function_name {
                     "revert" => {
@@ -94,9 +96,15 @@ impl<'a> Graph<'a> {
                         let node = SimpleBlockNode::Selfdestruct(walker);
                         function_calls.push(node);
                     },
-                    _ => {
-                        let node = SimpleBlockNode::FunctionCall(walker);
-                        function_calls.push(node);
+                    _ => match walker.node.name {
+                        "ModifierInvocation" => {
+                            let node = SimpleBlockNode::ModifierInvocation(walker);
+                            function_calls.push(node);
+                        },
+                        _ => {
+                            let node = SimpleBlockNode::FunctionCall(walker);
+                            function_calls.push(node);
+                        }
                     }
                 },
                 None => {
@@ -115,12 +123,7 @@ impl<'a> Graph<'a> {
                 }
             }
         }
-        if let Some(last_source) = last_source {
-            if last_source.trim() != walker.node.source.trim() {
-                let node = SimpleBlockNode::Unit(walker.clone());
-                function_calls.push(node);
-            } 
-        } else {
+        if walker.node.name != "FunctionCall" && walker.node.name != "ModifierInvocation" {
             let node = SimpleBlockNode::Unit(walker.clone());
             function_calls.push(node);
         }
@@ -163,11 +166,9 @@ impl<'a> Graph<'a> {
                 let node = SimpleBlockNode::Break(walker);
                 vec![CodeBlock::SimpleBlocks(vec![node])]
             },
-            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" => {
+            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" | "PlaceholderStatement" | "InlineAssemblyStatement" => {
                 vec![CodeBlock::Block(walker)]
             },
-            "InlineAssemblyStatement" => unimplemented!(),
-            "PlaceholderStatement" => unimplemented!(), 
             _ => vec![CodeBlock::Block(walker)],
         }
     }
@@ -187,14 +188,18 @@ impl<'a> Graph<'a> {
                     match walker.node.name {
                         "ParameterList" => {
                             if index == 0 {
-                                let block = CodeBlock::Block(walker);
-                                blocks.push(block);
+                                for walker in walker.direct_childs(|_| true) {
+                                    let block = CodeBlock::Block(walker);
+                                    blocks.push(block);
+                                }
                             }
                         },
                         "Block" => {
                             blocks.append(&mut self.build_block(BlockKind::Body, walker));
                         },
-                        "ModifierInvocation" => panic!(),
+                        "ModifierInvocation" => {
+                            blocks.push(CodeBlock::Block(walker));
+                        },
                         _ => {},
                     }
                 }

@@ -80,6 +80,7 @@ impl Assignment {
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall"
+            || walker.node.name == "ModifierInvocation"
             || walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "MemberAccess"
