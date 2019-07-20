@@ -98,52 +98,6 @@ impl<'a> GaslessSend <'a> {
         .unwrap_or(false)
     }
 
-    fn find_cfg_paths(&self, start_at: u32, cfg: &ControlFlowGraph, paths: &mut Vec<Vec<u32>>) {
-        if paths.is_empty() {
-            paths.push(vec![start_at]);
-        }
-        let mut childs = vec![];
-        for edge in cfg.get_edges() {
-            if edge.get_from() == start_at {
-                childs.push(edge.get_to());
-            }
-        }
-        if !childs.is_empty() {
-            let mut is_extensible = false;
-            let prev_paths = paths.clone();
-            paths.clear();
-            for path in prev_paths {
-                let prev_path_len = paths.len();
-                if path.last().unwrap() == &start_at {
-                    for child in childs.iter() {
-                        // path vector is stored or not 
-                        if let Some(pos) = path.iter().position(|x| x == child) {
-                            if path[pos - 1] != start_at {
-                                let mut new_path = path.clone();
-                                new_path.push(*child);
-                                paths.push(new_path);
-                                is_extensible = true;
-                            }
-                        } else {
-                            let mut new_path = path.clone();
-                            new_path.push(*child);
-                            paths.push(new_path);
-                            is_extensible = true;
-                        }
-                    }
-                }
-                if paths.len() == prev_path_len {
-                    paths.push(path);
-                }
-            }
-            if is_extensible {
-                for child in childs {
-                    self.find_cfg_paths(child, cfg, paths);
-                }
-            }
-        }
-    }
-
     fn find_state_assignment(&self, link_to: u32) -> bool {
         let state_ids = self.get_states_ids();
         let dfgs = self.network.get_dfgs();
@@ -173,7 +127,7 @@ impl<'a> GaslessSend <'a> {
                     let cfg = dfg.get_cfg();
                     let start = cfg.get_start();
                     let mut paths: Vec<Vec<u32>> = vec![];
-                    self.find_cfg_paths(start, cfg, &mut paths);
+                    cfg.find_execution_paths(start, &mut paths);
                     for mut path in paths {
                         path.reverse();
                         let pos = path.iter().position(|id| {
