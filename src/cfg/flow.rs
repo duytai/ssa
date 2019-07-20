@@ -10,6 +10,7 @@ use crate::cfg::{
     ForStatement,
 };
 use crate::core::{
+    StateLookup,
     Dictionary,
     Node,
     Vertex,
@@ -360,17 +361,37 @@ impl<'a> ControlFlowGraph<'a> {
         return predecessors;
     }
 
-    /// Build a cfg, the cfg starts at FunctionDefinition `entry_id`
+    /// Build a cfg, the cfg starts at FunctionDefinition, ModifierDefinition `entry_id`
     pub fn start_at(&mut self, entry_id: u32) {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
-        let entry_names = vec!["FunctionDefinition", "ModifierDefinition"];
         self.start = entry_id * 100000;
         self.stop = self.start + 1;
-        if entry_names.contains(&walker.node.name) {
-            let mut graph = Graph::new(walker);
-            let root = graph.update();
-            let states = self.dict.lookup_states_by_function_id(entry_id);
-            if let BlockNode::Root(blocks) = root {
+        match walker.node.name {
+            "FunctionDefinition" | "ModifierDefinition" => {
+                let mut graph = Graph::new(walker);
+                let root = graph.update();
+                let states = self.dict.lookup_states(StateLookup::FunctionId(entry_id));
+                if let BlockNode::Root(blocks) = root {
+                    for id in vec![self.start, self.stop] {
+                        let vertex = Vertex::new(id, "", Shape::Point);
+                        self.vertices.insert(vertex);
+                    }
+                    let last_id = states.iter().fold(self.start, |prev, cur| {
+                        let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
+                        let edge = Edge::new(prev, cur.node.id);
+                        self.vertices.insert(vertex);
+                        self.edges.insert(edge);
+                        cur.node.id
+                    });
+                    let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
+                    for predecessor in predecessors.iter() {
+                        let edge = Edge::new(*predecessor, self.stop);
+                        self.edges.insert(edge);
+                    }
+                }
+            },
+            "ContractDefinition" => {
+                let states = self.dict.lookup_states(StateLookup::ContractId(entry_id));
                 for id in vec![self.start, self.stop] {
                     let vertex = Vertex::new(id, "", Shape::Point);
                     self.vertices.insert(vertex);
@@ -382,12 +403,10 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert(edge);
                     cur.node.id
                 });
-                let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
-                for predecessor in predecessors.iter() {
-                    let edge = Edge::new(*predecessor, self.stop);
-                    self.edges.insert(edge);
-                }
-            }
+                let edge = Edge::new(last_id, self.stop);
+                self.edges.insert(edge);
+            },
+            _ => {},
         }
     }
 

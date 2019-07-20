@@ -9,6 +9,12 @@ pub struct ContractProp {
     parents: Vec<u32>,
 }
 
+#[derive(Debug)]
+pub enum StateLookup {
+    FunctionId(u32),
+    ContractId(u32),
+}
+
 /// Allow searching by node id 
 #[derive(Debug)]
 pub struct Dictionary<'a> {
@@ -193,29 +199,54 @@ impl<'a> Dictionary<'a> {
 
     /// Find a list of states from function_id
     /// Include inherited states
-    pub fn lookup_states_by_function_id(&self, id: u32) -> Vec<&Walker> {
+    pub fn lookup_states(&self, state_lookup: StateLookup) -> Vec<&Walker> {
         let mut ret = vec![];
-        for (_, prop) in self.contracts.iter() {
-            if prop.functions.contains(&id) {
-                for index in (0..prop.states.len()).rev() {
-                    ret.push(prop.states[index]);
-                }
-                let mut parents = prop.parents.clone();
-                loop {
-                    match parents.pop() {
-                        Some(contract_id) => {
-                            if let Some(prop) = self.contracts.get(&contract_id) {
-                                for index in (0..prop.states.len()).rev() {
-                                    ret.push(prop.states[index]);
-                                }
-                                parents.extend_from_slice(&prop.parents[..]);
+        match state_lookup {
+            StateLookup::FunctionId(id) => {
+                for (_, prop) in self.contracts.iter() {
+                    if prop.functions.contains(&id) {
+                        for index in (0..prop.states.len()).rev() {
+                            ret.push(prop.states[index]);
+                        }
+                        let mut parents = prop.parents.clone();
+                        loop {
+                            match parents.pop() {
+                                Some(contract_id) => {
+                                    if let Some(prop) = self.contracts.get(&contract_id) {
+                                        for index in (0..prop.states.len()).rev() {
+                                            ret.push(prop.states[index]);
+                                        }
+                                        parents.extend_from_slice(&prop.parents[..]);
+                                    }
+                                },
+                                None => { break; }
                             }
-                        },
-                        None => { break; }
+                        }
+                        break;
                     }
                 }
-                break;
-            }
+            },
+            StateLookup::ContractId(id) => {
+                if let Some(prop) = self.contracts.get(&id) {
+                    for index in (0..prop.states.len()).rev() {
+                        ret.push(prop.states[index]);
+                    }
+                    let mut parents = prop.parents.clone();
+                    loop {
+                        match parents.pop() {
+                            Some(contract_id) => {
+                                if let Some(prop) = self.contracts.get(&contract_id) {
+                                    for index in (0..prop.states.len()).rev() {
+                                        ret.push(prop.states[index]);
+                                    }
+                                    parents.extend_from_slice(&prop.parents[..]);
+                                }
+                            },
+                            None => { break; }
+                        }
+                    }
+                }
+            },
         }
         ret.reverse();
         ret.iter()

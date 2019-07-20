@@ -7,8 +7,8 @@
 
 use std::collections::HashSet;
 use crate::dfg::Network;
-use crate::cfg::ControlFlowGraph;
 use crate::core::{
+    StateLookup,
     Action,
     DataLinkLabel,
     DataLink,
@@ -39,10 +39,8 @@ impl<'a> GaslessSend <'a> {
         let mut ret = vec![];
         let dict = self.network.get_dict();
         let entry_id = self.network.get_entry_id();
-        for walker in dict.lookup_functions_by_contract_id(entry_id) {
-            for walker in dict.lookup_states_by_function_id(walker.node.id) {
-                ret.push(walker.node.id);
-            }
+        for walker in dict.lookup_states(StateLookup::ContractId(entry_id)) {
+            ret.push(walker.node.id);
         }
         ret
     }

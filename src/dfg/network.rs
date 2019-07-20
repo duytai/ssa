@@ -131,11 +131,19 @@ impl<'a> Network<'a> {
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        for walker in self.dict.lookup_functions_by_contract_id(self.entry_id) {
-            let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
+        let walkers = self.dict.lookup_functions_by_contract_id(self.entry_id);
+        if walkers.is_empty() {
+            let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
             let mut dfg = DataFlowGraph::new(cfg);
             links.extend(dfg.find_links());
-            self.dfgs.insert(walker.node.id, dfg);
+            self.dfgs.insert(self.entry_id, dfg);
+        } else {
+            for walker in walkers {
+                let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
+                let mut dfg = DataFlowGraph::new(cfg);
+                links.extend(dfg.find_links());
+                self.dfgs.insert(walker.node.id, dfg);
+            }
         }
         links
     }
