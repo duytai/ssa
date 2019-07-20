@@ -8,7 +8,7 @@
 use std::collections::HashSet;
 use crate::dfg::Network;
 use crate::core::{
-    StateLookup,
+    LookupInputType,
     Action,
     DataLinkLabel,
     DataLink,
@@ -39,7 +39,7 @@ impl<'a> GaslessSend <'a> {
         let mut ret = vec![];
         let dict = self.network.get_dict();
         let entry_id = self.network.get_entry_id();
-        for walker in dict.lookup_states(StateLookup::ContractId(entry_id)) {
+        for walker in dict.lookup_states(LookupInputType::ContractId(entry_id)) {
             ret.push(walker.node.id);
         }
         ret
@@ -48,8 +48,10 @@ impl<'a> GaslessSend <'a> {
     fn get_parameter_ids(&self) -> Vec<u32> {
         let mut ret = vec![];
         let dict = self.network.get_dict();
-        for walker in dict.lookup_functions_by_contract_id(self.network.get_entry_id()) {
-            for walker in dict.lookup_parameters(walker.node.id) {
+        let lookup_input = LookupInputType::ContractId(self.network.get_entry_id()); 
+        for walker in dict.lookup_functions(lookup_input) {
+            let lookup_input = LookupInputType::FunctionId(walker.node.id);
+            for walker in dict.lookup_parameters(lookup_input) {
                 ret.push(walker.node.id);
             }
         }

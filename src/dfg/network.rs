@@ -2,6 +2,7 @@ use crate::dot::Dot;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
+    LookupInputType,
     DataLink,
     DataLinkLabel,
     Dictionary,
@@ -62,7 +63,8 @@ impl<'a> Network<'a> {
                 .as_str()
                 .and_then(|return_type| {
                     if return_type.starts_with("contract") {
-                        let contract_id = self.dict.lookup_contract_by_name(&return_type[9..]);
+                        let lookup_input = LookupInputType::ContractName(&return_type[9..]);
+                        let contract_id = self.dict.lookup_contract(lookup_input);
                         // TODO: Do something here 
                         None
                     } else {
@@ -89,8 +91,8 @@ impl<'a> Network<'a> {
                         let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
                         ret.insert(link);
                     }
-                    let defined_parameters = self.dict.lookup_parameters(reference);
-                    let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
+                    let defined_parameters = self.dict.lookup_parameters(LookupInputType::FunctionId(reference));
+                    let mut invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
                     if invoked_parameters.len() < defined_parameters.len() {
                         invoked_parameters.insert(0, &walkers[0]);
                     }
@@ -108,7 +110,7 @@ impl<'a> Network<'a> {
                 // Global functions
                 // Connect function_calls to parameters
                 None => {
-                    let invoked_parameters = self.dict.lookup_parameters(fc_id);
+                    let invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
                     for invoked_parameter in invoked_parameters {
                         let members = vec![Member::Reference(invoked_parameter.node.id)];
                         let variable = Variable::new(members, invoked_parameter.node.source.to_string());
@@ -131,7 +133,7 @@ impl<'a> Network<'a> {
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        let walkers = self.dict.lookup_functions_by_contract_id(self.entry_id);
+        let walkers = self.dict.lookup_functions(LookupInputType::ContractId(self.entry_id));
         if walkers.is_empty() {
             let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
             let mut dfg = DataFlowGraph::new(cfg);
@@ -153,6 +155,7 @@ impl<'a> Network<'a> {
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);
+        // Find all sub networks 
     }
 
     /// Find all paths
