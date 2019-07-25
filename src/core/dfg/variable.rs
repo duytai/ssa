@@ -157,4 +157,76 @@ impl Variable {
             _ => vec![],
         }
     }
+
+    fn flatten_variable(
+        &self,
+        walker: &Walker,
+        dict: &Dictionary,
+        mut path: Vec<(Member, String)>,
+        paths: &mut Vec<Vec<(Member, String)>>
+    ) {
+        match walker.node.name {
+            "StructDefinition" => {
+                let walkers = walker.direct_childs(|_| true);
+                for walker in walkers.iter() {
+                    self.flatten_variable(walker, dict, path.clone(), paths);
+                }
+            },
+            _ => {
+                if walker.node.name == "VariableDeclaration" {
+                    let name = walker.node.attributes["name"].as_str().unwrap_or("*");
+                    let p = (Member::Reference(walker.node.id), name.to_string());
+                    path.push(p);
+                }
+                let walker = &walker.direct_childs(|_| true)[0];
+                match walker.node.name {
+                    "UserDefinedTypeName" => {
+                        let reference = walker.node.attributes["referencedDeclaration"]
+                            .as_u32()
+                            .unwrap();
+                        let walker = dict.lookup(reference).unwrap();
+                        self.flatten_variable(walker, dict, path.clone(), paths);
+                    },
+                    "ArrayTypeName" => {
+                        let p = (Member::IndexAccess, String::from("$"));
+                        path.push(p);
+                        self.flatten_variable(&walker, dict, path.clone(), paths);
+                    },
+                    "ElementaryTypeName" => {
+                        paths.push(path.clone());
+                    },
+                    _ => {},
+                }
+            }
+        }
+    }
+
+    pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
+        self.members.first()
+            .and_then(|member| match member {
+                Member::Reference(reference) => Some(reference),
+                _ => None,
+            })
+            .and_then(|reference| dict.lookup(*reference))
+            .and_then(|walker| {
+                let mut flat_variables = vec![];
+                let mut paths: Vec<Vec<(Member, String)>> = vec![];
+                self.flatten_variable(&walker, dict, vec![], &mut paths);
+                for mut path in paths {
+                    let mut members = vec![];
+                    let mut sources = vec![];
+                    path.remove(0);
+                    for (member, source) in path {
+                        members.insert(0, member);
+                        sources.push(source);
+                    }
+                    members.append(&mut self.members.clone());
+                    sources.insert(0, self.source.clone());
+                    let variable = Variable::new(members, sources.join("."));
+                    flat_variables.push(variable);
+                }
+                Some(flat_variables)
+            })
+            .unwrap_or(vec![])
+    }
 }
