@@ -127,20 +127,28 @@ impl<'a> DataFlowGraph<'a> {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
-                            new_actions.push(Action::Kill(l, id));
+                            for l in l.flatten(dict) {
+                                new_actions.push(Action::Kill(l, id));
+                            }
                         },
                         Operator::Other => {
-                            new_actions.push(Action::Kill(l.clone(), id));
-                            new_actions.push(Action::Use(l, id));
+                            for l in l.flatten(dict) {
+                                new_actions.push(Action::Kill(l.clone(), id));
+                                new_actions.push(Action::Use(l, id));
+                            }
                         }
                     }
                 }
                 for r in assignment.get_rhs().clone() {
-                    new_actions.push(Action::Use(r, id));
+                    for r in r.flatten(dict) {
+                        new_actions.push(Action::Use(r, id));
+                    }
                 }
             }
             for var in variables {
-                new_actions.push(Action::Use(var, id));
+                for var in var.flatten(dict) {
+                    new_actions.push(Action::Use(var, id));
+                }
             }
             self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
@@ -170,15 +178,14 @@ impl<'a> DataFlowGraph<'a> {
                                                 false
                                             },
                                             VariableComparison::Partial => {
-                                                if kill_var.get_members().len() > variable.get_members().len() {
-                                                    let data_link = DataLink::new(*id, kill_id, kill_var.clone());
-                                                    links.insert(data_link);
-                                                } else {
+                                                // Only kill by using parent
+                                                if kill_var.get_members().len() < variable.get_members().len() {
                                                     let data_link = DataLink::new(*id, kill_id, variable.clone());
                                                     links.insert(data_link);
+                                                    false
+                                                } else {
+                                                    true
                                                 }
-                                                cur_table.remove(action);
-                                                false
                                             },
                                             VariableComparison::NotEqual => {
                                                 true

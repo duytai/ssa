@@ -227,6 +227,6 @@ impl Variable {
                 }
                 Some(flat_variables)
             })
-            .unwrap_or(vec![])
+            .unwrap_or(vec![self.clone()])
     }
 }
