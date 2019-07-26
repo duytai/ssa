@@ -160,62 +160,54 @@ impl Variable {
 
     fn flatten_variable(
         &self,
-        walker: &Walker,
+        mut walker: Walker,
         dict: &Dictionary,
         mut path: Vec<(Member, String)>,
         paths: &mut Vec<Vec<(Member, String)>>
     ) {
-        match walker.node.name {
-            "StructDefinition" => {
-                let walkers = walker.direct_childs(|_| true);
-                for walker in walkers.iter() {
-                    self.flatten_variable(walker, dict, path.clone(), paths);
-                }
-            },
-            "ContractDefinition" => {
-                // Stop extracting here
-                paths.push(path.clone());
-            },
-            _ => {
-                if walker.node.name == "VariableDeclaration" {
-                    let name = walker.node.attributes["name"].as_str().unwrap_or("*");
-                    let p = (Member::Reference(walker.node.id), name.to_string());
-                    path.push(p);
-                }
-                let walker = &walker.direct_childs(|_| true)[0];
+        if walker.node.name == "VariableDeclaration" {
+            let name = walker.node.attributes["name"].as_str().unwrap_or("*");
+            path.push((Member::Reference(walker.node.id), name.to_string()));
+            loop {
+                walker = walker.direct_childs(|_| true)[0].clone();
                 match walker.node.name {
                     "UserDefinedTypeName" => {
-                        let reference = walker.node.attributes["referencedDeclaration"]
-                            .as_u32()
-                            .unwrap();
+                        let reference = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
                         let walker = dict.lookup(reference).unwrap();
-                        self.flatten_variable(walker, dict, path.clone(), paths);
+                        match walker.node.name {
+                            "StructDefinition" => {
+                                let walkers = walker.direct_childs(|_| true);
+                                for walker in walkers {
+                                    self.flatten_variable(walker, dict, path.clone(), paths);
+                                }
+                                break;
+                            },
+                            "ContractDefinition" => {
+                                paths.push(path.clone());
+                                break;
+                            },
+                            _ => unimplemented!(),
+                        }
                     },
                     "ArrayTypeName" => {
-                        let p = (Member::IndexAccess, String::from("$"));
-                        path.push(p);
-                        self.flatten_variable(&walker, dict, path.clone(), paths);
+                        path.push((Member::IndexAccess, String::from("$")));
                     },
                     "ElementaryTypeName" => {
                         paths.push(path.clone());
+                        break;
                     },
-                    _ => {},
+                    _ => unimplemented!(),
                 }
             }
         }
     }
 
     pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
-        self.members.first()
-            .and_then(|member| match member {
-                Member::Reference(reference) => Some(reference),
-                _ => None,
-            })
-            .and_then(|reference| dict.lookup(*reference))
-            .and_then(|walker| {
-                let mut flat_variables = vec![];
+        let mut flat_variables = vec![];
+        if let Some(Member::Reference(reference)) = self.members.first() {
+            if let Some(walker) = dict.lookup(*reference) {
                 let mut paths: Vec<Vec<(Member, String)>> = vec![];
-                self.flatten_variable(&walker, dict, vec![], &mut paths);
+                self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
                 for mut path in paths {
                     let mut members = vec![];
                     let mut sources = vec![];
@@ -229,8 +221,39 @@ impl Variable {
                     let variable = Variable::new(members, sources.join("."));
                     flat_variables.push(variable);
                 }
-                Some(flat_variables)
+            }
+        }
+        if flat_variables.is_empty() {
+            flat_variables.push(self.clone());
+        }
+        flat_variables
+    }
+
+    /// Whether a variable can has alias or not 
+    pub fn can_has_alias(&self, dict: &Dictionary) -> bool {
+        self.members.first()
+            .and_then(|member| match member {
+                Member::Reference(reference) => Some(reference),
+                _ => None,
             })
-            .unwrap_or(vec![self.clone()])
+            .and_then(|reference| dict.lookup(*reference))
+            .and_then(|walker| {
+                let walker = &walker.direct_childs(|_| true)[0];
+                Some(walker.node.name != "ElementaryTypeName")
+            })
+            .unwrap_or(false)
+    }
+    /// Get type of a variable
+    pub fn get_type(&self, dict: &Dictionary) -> Option<String> {
+        self.members.first()
+            .and_then(|member| match member {
+                Member::Reference(reference) => Some(reference),
+                _ => None,
+            })
+            .and_then(|reference| dict.lookup(*reference))
+            .and_then(|walker| {
+                let walker = &walker.direct_childs(|_| true)[0];
+                walker.node.attributes["type"].as_str().map(|x| x.to_string())
+            })
     }
 }

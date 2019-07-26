@@ -17,7 +17,6 @@ pub struct DataFlowGraph<'a> {
     cfg: ControlFlowGraph<'a>,
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
-    alias: Alias,
     tables: HashMap<u32, HashSet<Action>>,
     new_actions: HashMap<u32, Vec<Action>>,
 }
@@ -44,7 +43,6 @@ impl<'a> DataFlowGraph<'a> {
             cfg,
             parents,
             tables,
-            alias: Alias::new(),
             visited: HashSet::new(),
             new_actions: HashMap::new(),
         }
@@ -91,6 +89,7 @@ impl<'a> DataFlowGraph<'a> {
     ///
     /// The loop will stop if no sequence changes happen
     pub fn find_links(&mut self) -> HashSet<DataLink> {
+        let alias = Alias::new(&self.cfg);
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
