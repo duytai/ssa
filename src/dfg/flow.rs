@@ -6,6 +6,7 @@ use crate::core::{
     Action,
     DataLink,
 };
+use crate::dfg::Alias;
 use crate::dfg::utils;
 
 /// Data flow graph
@@ -16,6 +17,7 @@ pub struct DataFlowGraph<'a> {
     cfg: ControlFlowGraph<'a>,
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
+    alias: Alias,
     tables: HashMap<u32, HashSet<Action>>,
     new_actions: HashMap<u32, Vec<Action>>,
 }
@@ -42,6 +44,7 @@ impl<'a> DataFlowGraph<'a> {
             cfg,
             parents,
             tables,
+            alias: Alias::new(),
             visited: HashSet::new(),
             new_actions: HashMap::new(),
         }

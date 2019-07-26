@@ -172,6 +172,10 @@ impl Variable {
                     self.flatten_variable(walker, dict, path.clone(), paths);
                 }
             },
+            "ContractDefinition" => {
+                // Stop extracting here
+                paths.push(path.clone());
+            },
             _ => {
                 if walker.node.name == "VariableDeclaration" {
                     let name = walker.node.attributes["name"].as_str().unwrap_or("*");
