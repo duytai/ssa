@@ -22,7 +22,7 @@ impl FunctionUse {
         &self.variables
     }
 
-    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<FunctionUse> {
+    pub fn parse(walker: &Walker, _: &Dictionary) -> Vec<FunctionUse> {
         let mut function_use = FunctionUse {
             assignments: vec![],
             variables: HashSet::new(),
@@ -48,6 +48,6 @@ impl FunctionUse {
     pub fn to_var(walker: &Walker) -> Variable {
         let members = vec![Member::Reference(walker.node.id)];
         let source = walker.node.source;
-        Variable::new(members, source.to_string())
+        Variable::new(members, source.to_string(), Variable::normalize_type(walker))
     }
 }

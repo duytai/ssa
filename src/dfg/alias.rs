@@ -27,18 +27,6 @@ impl<'a> Alias<'a> {
             for declaration in utils::find_declarations(id, dict) {
                 assignments.push(declaration.get_assignment().clone());
             }
-            for function_use in utils::find_function_use(id, dict) {
-                let mut agns = function_use.get_assignments().clone();
-                assignments.append(&mut agns);
-            } 
-            // for assignment in assignments {
-                // for l in assignment.get_lhs() {
-                    // println!("L: {:?}", l);
-                // }
-                // for r in assignment.get_rhs() {
-                    // println!("R: {:?}", r);
-                // }
-            // }
         }
     }
 }

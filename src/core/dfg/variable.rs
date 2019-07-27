@@ -7,7 +7,7 @@ use crate::core::{
 };
 
 /// Variable in solidity program
-/// 
+///
 /// The variable can be `Array`, `Array Access`, `Struct`, `Struct Access`, `Primitive Type`,
 /// `Global Access`. We use the `members` field to describe the different among them.
 /// - `Array`, `Struct`, `Primitive`: `members` contains only one `Member::Reference`
@@ -17,12 +17,13 @@ use crate::core::{
 pub struct Variable {
     members: Vec<Member>,
     source: String,
+    kind: Option<String>,
 }
 
 impl Variable {
 
-    pub fn new(members: Vec<Member>, source: String) -> Self {
-        Variable { members, source }
+    pub fn new(members: Vec<Member>, source: String, kind: Option<String>) -> Self {
+        Variable { members, source, kind }
     }
 
     pub fn get_members(&self) -> &Vec<Member> {
@@ -32,6 +33,23 @@ impl Variable {
     pub fn get_source(&self) -> &str {
         &self.source
     }
+
+    pub fn get_type(&self) -> &Option<String> {
+        &self.kind
+    }
+
+    pub fn normalize_type(walker: &Walker) -> Option<String> {
+        // type: (contract|struct)* <TypeName>([]?) String*
+        walker.node.attributes["type"].as_str().map(|kind| {
+            let mut ret = vec![];
+            for (index, v) in kind.split(" ").enumerate() {
+                if index <= 1 {
+                    ret.push(v);
+                }
+            }
+            ret.join(" ")
+        })
+    } 
 
     /// Find all variables of the walker, we need the dictionary to identify `Member::Global`
     ///
@@ -65,6 +83,7 @@ impl Variable {
         let mut variable = Variable {
             members: vec![],
             source: walker.node.source.to_string(),
+            kind: Variable::normalize_type(walker),
         };
         variable.members = Variable::find_members(walker, dict);
         match variable.members.len() > 0 {
@@ -102,7 +121,7 @@ impl Variable {
 
     /// Find members of a variable
     ///
-    /// A member is reference to place where it is declared , global index, index access of array 
+    /// A member is reference to place where it is declared , global index, index access of array
     fn find_members(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
         let reference = walker.node.attributes["referencedDeclaration"].as_u32();
         let member_name = walker.node.attributes["member_name"].as_str().unwrap_or("");
@@ -163,13 +182,14 @@ impl Variable {
         mut walker: Walker,
         dict: &Dictionary,
         mut path: Vec<(Member, String)>,
-        paths: &mut Vec<Vec<(Member, String)>>
+        paths: &mut Vec<(Vec<(Member, String)>, Option<String>)>
     ) {
         if walker.node.name == "VariableDeclaration" {
-            let name = walker.node.attributes["name"].as_str().unwrap_or("*");
-            path.push((Member::Reference(walker.node.id), name.to_string()));
+            let source = walker.node.attributes["name"].as_str().unwrap_or("*").to_string();
+            path.push((Member::Reference(walker.node.id), source));
             loop {
                 walker = walker.direct_childs(|_| true)[0].clone();
+                let kind = Variable::normalize_type(&walker);
                 match walker.node.name {
                     "UserDefinedTypeName" => {
                         let reference = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
@@ -183,17 +203,18 @@ impl Variable {
                                 break;
                             },
                             "ContractDefinition" => {
-                                paths.push(path.clone());
+                                paths.push((path.clone(), kind));
                                 break;
                             },
                             _ => unimplemented!(),
                         }
                     },
                     "ArrayTypeName" => {
-                        path.push((Member::IndexAccess, String::from("$")));
+                        let source = String::from("$");
+                        path.push((Member::IndexAccess, source));
                     },
                     "ElementaryTypeName" => {
-                        paths.push(path.clone());
+                        paths.push((path.clone(), kind));
                         break;
                     },
                     _ => unimplemented!(),
@@ -206,19 +227,24 @@ impl Variable {
         let mut flat_variables = vec![];
         if let Some(Member::Reference(reference)) = self.members.first() {
             if let Some(walker) = dict.lookup(*reference) {
-                let mut paths: Vec<Vec<(Member, String)>> = vec![];
+                let mut paths = vec![];
                 self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
-                for mut path in paths {
+                for (mut path, kind) in paths {
                     let mut members = vec![];
                     let mut sources = vec![];
                     path.remove(0);
                     for (member, source) in path {
-                        members.insert(0, member);
+                        members.push(member);
                         sources.push(source);
                     }
+                    members.reverse();
                     members.append(&mut self.members.clone());
                     sources.insert(0, self.source.clone());
-                    let variable = Variable::new(members, sources.join("."));
+                    let variable = Variable {
+                        members,
+                        source: sources.join("."),
+                        kind,
+                    };
                     flat_variables.push(variable);
                 }
             }
@@ -229,31 +255,31 @@ impl Variable {
         flat_variables
     }
 
-    /// Whether a variable can has alias or not 
+    /// Whether a variable can has alias or not
     pub fn can_has_alias(&self, dict: &Dictionary) -> bool {
-        self.members.first()
-            .and_then(|member| match member {
-                Member::Reference(reference) => Some(reference),
-                _ => None,
-            })
-            .and_then(|reference| dict.lookup(*reference))
-            .and_then(|walker| {
-                let walker = &walker.direct_childs(|_| true)[0];
-                Some(walker.node.name != "ElementaryTypeName")
-            })
-            .unwrap_or(false)
-    }
-    /// Get type of a variable
-    pub fn get_type(&self, dict: &Dictionary) -> Option<String> {
-        self.members.first()
-            .and_then(|member| match member {
-                Member::Reference(reference) => Some(reference),
-                _ => None,
-            })
-            .and_then(|reference| dict.lookup(*reference))
-            .and_then(|walker| {
-                let walker = &walker.direct_childs(|_| true)[0];
-                walker.node.attributes["type"].as_str().map(|x| x.to_string())
-            })
+        let mut members = self.members.clone();
+        let mut index_access_count = 0;
+        while !members.is_empty() {
+            match members.remove(0) {
+                Member::Reference(reference) => {
+                    if let Some(walker) = dict.lookup(reference) {
+                        if walker.node.name == "VariableDeclaration" {
+                            let mut walker = walker.clone();
+                            while index_access_count >= 0 {
+                                walker = walker.direct_childs(|_| true)[0].clone();
+                                index_access_count -= 1;
+                            }
+                            return walker.node.name != "ElementaryTypeName";
+                        }
+                    }
+                    break;
+                },
+                Member::IndexAccess => {
+                    index_access_count += 1;
+                },
+                _ => break,
+            }
+        }
+        false
     }
 }

@@ -86,7 +86,7 @@ impl<'a> Network<'a> {
                 Some(reference) => {
                     for walker in self.dict.lookup_returns(reference) {
                         let members = vec![Member::Reference(walker.node.id)];
-                        let variable = Variable::new(members, source.to_string());
+                        let variable = Variable::new(members, source.to_string(), Variable::normalize_type(walker));
                         let label = DataLinkLabel::InFrom(fc_id);
                         let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
                         ret.insert(link);
@@ -100,7 +100,7 @@ impl<'a> Network<'a> {
                         let defined_parameter = defined_parameters[i];
                         let invoked_parameter = invoked_parameters[i];
                         let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let variable = Variable::new(members, defined_parameter.node.source.to_string());
+                        let variable = Variable::new(members, defined_parameter.node.source.to_string(), Variable::normalize_type(invoked_parameter));
                         let label = DataLinkLabel::OutTo(fc_id);
                         let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
                         ret.insert(link);
@@ -113,7 +113,8 @@ impl<'a> Network<'a> {
                     let invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
                     for invoked_parameter in invoked_parameters {
                         let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let variable = Variable::new(members, invoked_parameter.node.source.to_string());
+                        let source = invoked_parameter.node.source.to_string();
+                        let variable = Variable::new(members, source, Variable::normalize_type(invoked_parameter));
                         let label = DataLinkLabel::BuiltIn;
                         let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
                         ret.insert(link);
@@ -122,8 +123,8 @@ impl<'a> Network<'a> {
             };
             // Connect to object which call function
             let members = vec![Member::Reference(walkers[0].node.id)];
-            let source = walkers[0].node.source;
-            let variable = Variable::new(members, source.to_string());
+            let source = walkers[0].node.source.to_string();
+            let variable = Variable::new(members, source.to_string(), Variable::normalize_type(&walkers[0]));
             let label = DataLinkLabel::Executor;
             let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
             ret.insert(link);

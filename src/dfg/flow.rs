@@ -148,7 +148,9 @@ impl<'a> DataFlowGraph<'a> {
                 }
             }
             for var in variables {
+                println!("var: {:?}", var);
                 for var in var.flatten(dict) {
+                    println!("flat: {:?}", var);
                     new_actions.push(Action::Use(var, id));
                 }
             }
