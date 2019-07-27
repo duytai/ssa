@@ -39,16 +39,7 @@ impl Variable {
     }
 
     pub fn normalize_type(walker: &Walker) -> Option<String> {
-        // type: (contract|struct)* <TypeName>([]?) String*
-        walker.node.attributes["type"].as_str().map(|kind| {
-            let mut ret = vec![];
-            for (index, v) in kind.split(" ").enumerate() {
-                if index <= 1 {
-                    ret.push(v);
-                }
-            }
-            ret.join(" ")
-        })
+        walker.node.attributes["type"].as_str().map(|x| x.to_string())
     } 
 
     /// Find all variables of the walker, we need the dictionary to identify `Member::Global`
