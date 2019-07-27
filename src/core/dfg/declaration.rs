@@ -34,16 +34,12 @@ impl Declaration {
             }
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
-            let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "FunctionCall"
             || walker.node.name == "ModifierInvocation"
             || walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
             || walker.node.name == "IndexAccess"
             || walker.node.name == "Assignment"
-            || operator == "++"
-            || operator == "--"
-            || operator == "delete"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
             declarations.push(Declaration::parse_one(&walker, dict));

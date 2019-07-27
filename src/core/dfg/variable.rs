@@ -53,14 +53,10 @@ impl Variable {
             || walker.node.name == "Identifier"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
-            let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "FunctionCall"
             || walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
-            || operator == "++"
-            || operator == "--"
-            || operator == "delete"
         };
         for walker in walker.walk(true, ig, fi) {
             Variable::parse_one(&walker, dict).map(|variable| {
