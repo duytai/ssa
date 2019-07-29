@@ -39,7 +39,19 @@ impl Variable {
     }
 
     pub fn normalize_type(walker: &Walker) -> Option<String> {
-        walker.node.attributes["type"].as_str().map(|x| x.to_string())
+        // Data location: memory, storage, calldata
+        // Origin: pointer, ref 
+        walker.node.attributes["type"].as_str().map(|type_str| {
+            let mut norm_type = type_str.to_string();
+            for keyword in vec!["memory", "storage", "calldata", "pointer", "ref"] {
+                let temp = norm_type.clone();
+                norm_type.clear();
+                for item in temp.split(keyword) {
+                    norm_type.push_str(item.trim());
+                }
+            }
+            norm_type
+        })
     } 
 
     /// Find all variables of the walker, we need the dictionary to identify `Member::Global`
@@ -67,15 +79,16 @@ impl Variable {
     }
 
     fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
-        let mut variable = Variable {
-            members: vec![],
-            source: walker.node.source.to_string(),
-            kind: Variable::normalize_type(walker),
-        };
-        variable.members = Variable::find_members(walker, dict);
-        match variable.members.len() > 0 {
-            true => Some(variable),
-            false => None,
+        let members = Variable::find_members(walker, dict);
+        if !members.is_empty() {
+            let variable = Variable {
+                members,
+                source: walker.node.source.to_string(),
+                kind: Variable::normalize_type(walker),
+            };
+            Some(variable)
+        } else {
+            None
         }
     }
 
