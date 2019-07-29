@@ -6,7 +6,6 @@ use crate::core::{
     Action,
     DataLink,
 };
-use crate::dfg::Alias;
 use crate::dfg::utils;
 
 /// Data flow graph
@@ -89,7 +88,6 @@ impl<'a> DataFlowGraph<'a> {
     ///
     /// The loop will stop if no sequence changes happen
     pub fn find_links(&mut self) -> HashSet<DataLink> {
-        let alias = Alias::new(&self.cfg);
         let dict = self.cfg.get_dict();
         let stop = self.cfg.get_stop();
         let mut stack: Vec<(u32, u32, Vec<Action>)> = vec![];
@@ -148,9 +146,7 @@ impl<'a> DataFlowGraph<'a> {
                 }
             }
             for var in variables {
-                println!("var: {:?}", var);
                 for var in var.flatten(dict) {
-                    println!("flat: {:?}", var);
                     new_actions.push(Action::Use(var, id));
                 }
             }

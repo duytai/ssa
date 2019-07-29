@@ -256,30 +256,16 @@ impl Variable {
     }
 
     /// Whether a variable can has alias or not
-    pub fn can_has_alias(&self, dict: &Dictionary) -> bool {
-        let mut members = self.members.clone();
-        let mut index_access_count = 0;
-        while !members.is_empty() {
-            match members.remove(0) {
-                Member::Reference(reference) => {
-                    if let Some(walker) = dict.lookup(reference) {
-                        if walker.node.name == "VariableDeclaration" {
-                            let mut walker = walker.clone();
-                            while index_access_count >= 0 {
-                                walker = walker.direct_childs(|_| true)[0].clone();
-                                index_access_count -= 1;
-                            }
-                            return walker.node.name != "ElementaryTypeName";
-                        }
-                    }
-                    break;
-                },
-                Member::IndexAccess => {
-                    index_access_count += 1;
-                },
-                _ => break,
-            }
+    /// A variable can has alias when 
+    /// + It is array
+    /// + It is contract
+    /// + It is struct
+    pub fn can_has_alias(&self) -> bool {
+        match &self.kind {
+            Some(kind) => kind.contains("[]")
+                || kind.starts_with("contract")
+                || kind.starts_with("struct"),
+            None => false,
         }
-        false
     }
 }
