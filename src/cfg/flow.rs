@@ -25,6 +25,7 @@ pub struct ControlFlowGraph<'a> {
     dict: &'a Dictionary<'a>,
     start: u32,
     stop: u32,
+    execution_paths: Vec<Vec<u32>>,
 }
 
 /// The type of breaking loop statement
@@ -47,11 +48,13 @@ impl<'a> ControlFlowGraph<'a> {
         let mut cfg = ControlFlowGraph {
             edges: HashSet::new(),
             vertices: HashSet::new(),
+            execution_paths: vec![],
             dict,
             start: 0,
             stop: 0,
         };
         cfg.start_at(entry_id);
+        cfg.update_execution_paths(cfg.start, vec![]);
         cfg
     }
 
@@ -410,52 +413,26 @@ impl<'a> ControlFlowGraph<'a> {
         }
     }
 
-    /// Find all paths of current cfg
-    /// from starting point to the end 
-    pub fn find_execution_paths(&self, start_at: u32, paths: &mut Vec<Vec<u32>>) {
-        if paths.is_empty() {
-            paths.push(vec![start_at]);
-        }
-        let mut childs = vec![];
-        for edge in self.edges.iter() {
-            if edge.get_from() == start_at {
-                childs.push(edge.get_to());
-            }
-        }
-        if !childs.is_empty() {
-            let mut is_extensible = false;
-            let prev_paths = paths.clone();
-            paths.clear();
-            for path in prev_paths {
-                let prev_path_len = paths.len();
-                if path.last().unwrap() == &start_at {
-                    for child in childs.iter() {
-                        // path vector is stored or not 
-                        if let Some(pos) = path.iter().position(|x| x == child) {
-                            if path[pos - 1] != start_at {
-                                let mut new_path = path.clone();
-                                new_path.push(*child);
-                                paths.push(new_path);
-                                is_extensible = true;
-                            }
-                        } else {
-                            let mut new_path = path.clone();
-                            new_path.push(*child);
-                            paths.push(new_path);
-                            is_extensible = true;
-                        }
+    fn update_execution_paths(&mut self, from: u32, mut execution_path: Vec<u32>) {
+        if from == self.stop {
+            execution_path.push(from);
+            self.execution_paths.push(execution_path.clone());
+        } else {
+            let mut next_edges = vec![];
+            let num_dups = execution_path.iter()
+                .filter(|x| *x == &from)
+                .count();
+            if num_dups < 10 {
+                execution_path.push(from);
+                for edge in self.edges.iter() {
+                    if edge.get_from() == from {
+                        next_edges.push(edge.get_to());
                     }
                 }
-                if paths.len() == prev_path_len {
-                    paths.push(path);
-                }
-            }
-            if is_extensible {
-                for child in childs {
-                    self.find_execution_paths(child, paths);
+                for next_edge in next_edges {
+                    self.update_execution_paths(next_edge, execution_path.clone());
                 }
             }
         }
     }
-
 }
