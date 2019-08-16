@@ -70,6 +70,10 @@ impl<'a> ControlFlowGraph<'a> {
         self.dict
     }
 
+    pub fn get_execution_paths(&self) -> &Vec<Vec<u32>> {
+        &self.execution_paths
+    }
+
     pub fn get_vertices(&self) -> &HashSet<Vertex> {
         &self.vertices
     }

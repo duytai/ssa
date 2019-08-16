@@ -1,3 +1,4 @@
+use crate::dfg::Alias;
 use std::collections::{ HashSet, HashMap };
 use crate::cfg::ControlFlowGraph;
 use crate::core::{
@@ -18,11 +19,12 @@ pub struct DataFlowGraph<'a> {
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
     new_actions: HashMap<u32, Vec<Action>>,
+    alias: Alias,
 }
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(cfg: ControlFlowGraph<'a>) -> Self {
+    pub fn new(cfg: ControlFlowGraph<'a>, alias: Alias) -> Self {
         let vertices = cfg.get_vertices();
         let edges = cfg.get_edges();
         let mut tables = HashMap::new();
@@ -40,6 +42,7 @@ impl<'a> DataFlowGraph<'a> {
         }
         DataFlowGraph {
             cfg,
+            alias,
             parents,
             tables,
             visited: HashSet::new(),
@@ -127,11 +130,13 @@ impl<'a> DataFlowGraph<'a> {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
+                            self.alias.find_references(id, &l);
                             for l in l.flatten(dict) {
                                 new_actions.push(Action::Kill(l, id));
                             }
                         },
                         Operator::Other => {
+                            self.alias.find_references(id, &l);
                             for l in l.flatten(dict) {
                                 new_actions.push(Action::Kill(l.clone(), id));
                                 new_actions.push(Action::Use(l, id));
@@ -140,12 +145,14 @@ impl<'a> DataFlowGraph<'a> {
                     }
                 }
                 for r in assignment.get_rhs().clone() {
+                    self.alias.find_references(id, &r);
                     for r in r.flatten(dict) {
                         new_actions.push(Action::Use(r, id));
                     }
                 }
             }
             for var in variables {
+                self.alias.find_references(id, &var);
                 for var in var.flatten(dict) {
                     new_actions.push(Action::Use(var, id));
                 }

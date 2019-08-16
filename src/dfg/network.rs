@@ -1,4 +1,5 @@
 use crate::dot::Dot;
+use crate::dfg::Alias;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
@@ -140,13 +141,15 @@ impl<'a> Network<'a> {
         let walkers = self.dict.lookup_functions(LookupInputType::ContractId(self.entry_id));
         if walkers.is_empty() {
             let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
-            let mut dfg = DataFlowGraph::new(cfg);
+            let alias = Alias::new(&cfg);
+            let mut dfg = DataFlowGraph::new(cfg, alias);
             links.extend(dfg.find_links());
             self.dfgs.insert(self.entry_id, dfg);
         } else {
             for walker in walkers {
                 let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
-                let mut dfg = DataFlowGraph::new(cfg);
+                let alias = Alias::new(&cfg);
+                let mut dfg = DataFlowGraph::new(cfg, alias);
                 links.extend(dfg.find_links());
                 self.dfgs.insert(walker.node.id, dfg);
             }
