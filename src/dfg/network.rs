@@ -1,7 +1,9 @@
 use crate::dot::Dot;
+use crate::dfg::Alias;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
+    LookupInputType,
     DataLink,
     DataLinkLabel,
     Dictionary,
@@ -54,29 +56,16 @@ impl<'a> Network<'a> {
         let mut ret = HashSet::new();
         let function_calls = self.dict.lookup_function_calls(self.entry_id);
         for walker in function_calls.iter() {
-            let walkers = walker.direct_childs(|_| true);
-            let source = walker.node.source;
+            let fc_source = walker.node.source;
             let fc_id = walker.node.id;
-            let reference = walker.node
-                .attributes["type"]
-                .as_str()
-                .and_then(|return_type| {
-                    if return_type.starts_with("contract") {
-                        let contract_id = self.dict.lookup_contract_by_name(&return_type[9..]);
-                        // TODO: Do something here 
-                        None
-                    } else {
-                        walkers[0].node.attributes["referencedDeclaration"]
-                            .as_u32()
-                            .and_then(|reference| match self.dict.lookup(reference) {
-                                Some(walker) => match walker.node.name {
-                                    "EventDefinition" => None,
-                                    _ => Some(reference),
-                                },
-                                None => None,
-                            })
-                    }
-                });
+            let walkers = walker.direct_childs(|_| true);
+            let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32().and_then(|reference| match self.dict.lookup(reference) {
+                Some(walker) => match walker.node.name {
+                    "EventDefinition" => None,
+                    _ => Some(reference),
+                },
+                None => None,
+            });
             match reference {
                 // User defined functions
                 // Connect invoked_parameters to defined_parameters 
@@ -84,13 +73,17 @@ impl<'a> Network<'a> {
                 Some(reference) => {
                     for walker in self.dict.lookup_returns(reference) {
                         let members = vec![Member::Reference(walker.node.id)];
-                        let variable = Variable::new(members, source.to_string());
+                        let variable = Variable::new(
+                            members,
+                            fc_source.to_string(),
+                            Variable::normalize_type(walker)
+                        );
                         let label = DataLinkLabel::InFrom(fc_id);
                         let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
                         ret.insert(link);
                     }
-                    let defined_parameters = self.dict.lookup_parameters(reference);
-                    let mut invoked_parameters = self.dict.lookup_parameters(fc_id);
+                    let defined_parameters = self.dict.lookup_parameters(LookupInputType::FunctionId(reference));
+                    let mut invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
                     if invoked_parameters.len() < defined_parameters.len() {
                         invoked_parameters.insert(0, &walkers[0]);
                     }
@@ -98,7 +91,12 @@ impl<'a> Network<'a> {
                         let defined_parameter = defined_parameters[i];
                         let invoked_parameter = invoked_parameters[i];
                         let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let variable = Variable::new(members, defined_parameter.node.source.to_string());
+                        let source = defined_parameter.node.source.to_string();
+                        let variable = Variable::new(
+                            members,
+                            source,
+                            Variable::normalize_type(invoked_parameter)
+                        );
                         let label = DataLinkLabel::OutTo(fc_id);
                         let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
                         ret.insert(link);
@@ -108,10 +106,15 @@ impl<'a> Network<'a> {
                 // Global functions
                 // Connect function_calls to parameters
                 None => {
-                    let invoked_parameters = self.dict.lookup_parameters(fc_id);
+                    let invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
                     for invoked_parameter in invoked_parameters {
                         let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let variable = Variable::new(members, invoked_parameter.node.source.to_string());
+                        let source = invoked_parameter.node.source.to_string();
+                        let variable = Variable::new(
+                            members,
+                            source,
+                            Variable::normalize_type(invoked_parameter)
+                        );
                         let label = DataLinkLabel::BuiltIn;
                         let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
                         ret.insert(link);
@@ -120,8 +123,12 @@ impl<'a> Network<'a> {
             };
             // Connect to object which call function
             let members = vec![Member::Reference(walkers[0].node.id)];
-            let source = walkers[0].node.source;
-            let variable = Variable::new(members, source.to_string());
+            let source = walkers[0].node.source.to_string();
+            let variable = Variable::new(
+                members,
+                source,
+                Variable::normalize_type(&walkers[0])
+            );
             let label = DataLinkLabel::Executor;
             let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
             ret.insert(link);
@@ -131,16 +138,18 @@ impl<'a> Network<'a> {
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        let walkers = self.dict.lookup_functions_by_contract_id(self.entry_id);
+        let walkers = self.dict.lookup_functions(LookupInputType::ContractId(self.entry_id));
         if walkers.is_empty() {
             let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
-            let mut dfg = DataFlowGraph::new(cfg);
+            let alias = Alias::new(&cfg);
+            let mut dfg = DataFlowGraph::new(cfg, alias);
             links.extend(dfg.find_links());
             self.dfgs.insert(self.entry_id, dfg);
         } else {
             for walker in walkers {
                 let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
-                let mut dfg = DataFlowGraph::new(cfg);
+                let alias = Alias::new(&cfg);
+                let mut dfg = DataFlowGraph::new(cfg, alias);
                 links.extend(dfg.find_links());
                 self.dfgs.insert(walker.node.id, dfg);
             }
@@ -153,6 +162,7 @@ impl<'a> Network<'a> {
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);
+        // Find all sub networks 
     }
 
     /// Find all paths

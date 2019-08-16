@@ -34,16 +34,12 @@ impl Declaration {
             }
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
-            let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "FunctionCall"
             || walker.node.name == "ModifierInvocation"
             || walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
             || walker.node.name == "IndexAccess"
             || walker.node.name == "Assignment"
-            || operator == "++"
-            || operator == "--"
-            || operator == "delete"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
             declarations.push(Declaration::parse_one(&walker, dict));
@@ -60,12 +56,12 @@ impl Declaration {
         if walker.node.name == "VariableDeclaration" {
             let members = vec![Member::Reference(walker.node.id)];
             let source = walker.node.source.to_string();
-            let variable = Variable::new(members, source);
+            let variable = Variable::new(members, source, Variable::normalize_type(walker));
             lhs.insert(variable);
         } else {
             let members = vec![Member::Reference(walkers[0].node.id)];
             let source = walkers[0].node.source.to_string();
-            let variable = Variable::new(members, source);
+            let variable = Variable::new(members, source, Variable::normalize_type(&walkers[0]));
             lhs.insert(variable);
         }
         if walkers.len() >= 2 {

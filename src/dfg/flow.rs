@@ -1,3 +1,4 @@
+use crate::dfg::Alias;
 use std::collections::{ HashSet, HashMap };
 use crate::cfg::ControlFlowGraph;
 use crate::core::{
@@ -18,11 +19,12 @@ pub struct DataFlowGraph<'a> {
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
     new_actions: HashMap<u32, Vec<Action>>,
+    alias: Alias,
 }
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(cfg: ControlFlowGraph<'a>) -> Self {
+    pub fn new(cfg: ControlFlowGraph<'a>, alias: Alias) -> Self {
         let vertices = cfg.get_vertices();
         let edges = cfg.get_edges();
         let mut tables = HashMap::new();
@@ -40,6 +42,7 @@ impl<'a> DataFlowGraph<'a> {
         }
         DataFlowGraph {
             cfg,
+            alias,
             parents,
             tables,
             visited: HashSet::new(),
@@ -127,20 +130,32 @@ impl<'a> DataFlowGraph<'a> {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
-                            new_actions.push(Action::Kill(l, id));
+                            self.alias.find_references(id, &l);
+                            for l in l.flatten(dict) {
+                                new_actions.push(Action::Kill(l, id));
+                            }
                         },
                         Operator::Other => {
-                            new_actions.push(Action::Kill(l.clone(), id));
-                            new_actions.push(Action::Use(l, id));
+                            self.alias.find_references(id, &l);
+                            for l in l.flatten(dict) {
+                                new_actions.push(Action::Kill(l.clone(), id));
+                                new_actions.push(Action::Use(l, id));
+                            }
                         }
                     }
                 }
                 for r in assignment.get_rhs().clone() {
-                    new_actions.push(Action::Use(r, id));
+                    self.alias.find_references(id, &r);
+                    for r in r.flatten(dict) {
+                        new_actions.push(Action::Use(r, id));
+                    }
                 }
             }
             for var in variables {
-                new_actions.push(Action::Use(var, id));
+                self.alias.find_references(id, &var);
+                for var in var.flatten(dict) {
+                    new_actions.push(Action::Use(var, id));
+                }
             }
             self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
@@ -170,15 +185,14 @@ impl<'a> DataFlowGraph<'a> {
                                                 false
                                             },
                                             VariableComparison::Partial => {
-                                                if kill_var.get_members().len() > variable.get_members().len() {
-                                                    let data_link = DataLink::new(*id, kill_id, kill_var.clone());
-                                                    links.insert(data_link);
-                                                } else {
+                                                // Only kill by using parent
+                                                if kill_var.get_members().len() < variable.get_members().len() {
                                                     let data_link = DataLink::new(*id, kill_id, variable.clone());
                                                     links.insert(data_link);
+                                                    false
+                                                } else {
+                                                    true
                                                 }
-                                                cur_table.remove(action);
-                                                false
                                             },
                                             VariableComparison::NotEqual => {
                                                 true

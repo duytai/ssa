@@ -72,11 +72,7 @@ impl Assignment {
     pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Assignment> {
         let mut assignments = vec![];
         let fi = |walker: &Walker, _: &Vec<Walker>| {
-            let operator = walker.node.attributes["operator"].as_str().unwrap_or("");
             walker.node.name == "Assignment"
-            || operator == "++"
-            || operator == "--"
-            || operator == "delete"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "FunctionCall"

@@ -10,9 +10,11 @@ pub struct ContractProp {
 }
 
 #[derive(Debug)]
-pub enum StateLookup {
+pub enum LookupInputType<'a> {
     FunctionId(u32),
+    FunctionCallId(u32),
     ContractId(u32),
+    ContractName(&'a str),
 }
 
 /// Allow searching by node id 
@@ -116,11 +118,10 @@ impl<'a> Dictionary<'a> {
     }
 
     /// Find all parameters of a function definition or function call
-    pub fn lookup_parameters(&self, id: u32) -> Vec<&Walker> {
-        self.entries
-            .get(&id)
-            .and_then(|walker|  match walker.node.name {
-                "FunctionDefinition" | "ModifierDefinition" => {
+    pub fn lookup_parameters(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
+        match lookup_input {
+            LookupInputType::FunctionId(id) => {
+                self.entries.get(&id).and_then(|walker| {
                     let mut ret = vec![];
                     for (index, walker) in walker.direct_childs(|_| true).iter().enumerate() {
                         if index == 0 && walker.node.name == "ParameterList" {
@@ -130,8 +131,16 @@ impl<'a> Dictionary<'a> {
                         }
                     }
                     Some(ret)
-                },
-                "FunctionCall" | "ModifierInvocation" => {
+                }).and_then(|ids| {
+                    let ret = ids.iter()
+                        .map(|id| { self.lookup(*id)})
+                        .filter_map(|w| w)
+                        .collect::<Vec<&Walker>>();
+                    Some(ret)
+                }).unwrap_or(vec![])
+            },
+            LookupInputType::FunctionCallId(id) => {
+                self.entries.get(&id).and_then(|walker| {
                     let mut ret = vec![];
                     for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
                         if index > 0 {
@@ -139,56 +148,65 @@ impl<'a> Dictionary<'a> {
                         }
                     }
                     Some(ret)
-                },
-                _ => Some(vec![])
-            })
-            .and_then(|ids| {
-                let ret = ids.iter()
-                    .map(|id| { self.lookup(*id)})
-                    .filter_map(|w| w)
-                    .collect::<Vec<&Walker>>();
-                Some(ret)
-            })
-            .unwrap_or(vec![])
+                }).and_then(|ids| {
+                    let ret = ids.iter()
+                        .map(|id| { self.lookup(*id)})
+                        .filter_map(|w| w)
+                        .collect::<Vec<&Walker>>();
+                    Some(ret)
+                }).unwrap_or(vec![])
+            },
+            _ => vec![],
+        }
     }
 
     /// Find contract based on function call return type
-    pub fn lookup_contract_by_name(&self, name: &str) -> u32 {
+    pub fn lookup_contract(&self, lookup_input: LookupInputType) -> u32 {
         let mut contract_id = None;
-        for (id, _) in self.contracts.iter() {
-            self.lookup(*id)
-                .and_then(|walker| walker.node.attributes["name"].as_str())
-                .map(|contract_name| {
-                    if name == contract_name {
-                        contract_id = Some(*id);
-                    }
-                });
+        match lookup_input {
+            LookupInputType::ContractName(name) => {
+                for (id, _) in self.contracts.iter() {
+                    self.lookup(*id)
+                        .and_then(|walker| walker.node.attributes["name"].as_str())
+                        .map(|contract_name| {
+                            if name == contract_name {
+                                contract_id = Some(*id);
+                            }
+                        });
+                }
+            },
+            _ => {},
         }
         contract_id.expect("Contract must exists")
     }
 
     /// Find scoped functions from id of contract
     /// Start from ContractDefinition node
-    pub fn lookup_functions_by_contract_id(&self, id: u32) -> Vec<&Walker> {
+    pub fn lookup_functions(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
         let mut ret = vec![];
-        if let Some(prop) = self.contracts.get(&id) {
-            for index in (0..prop.functions.len()).rev() {
-                ret.push(prop.functions[index]);
-            }
-            let mut parents = prop.parents.clone();
-            loop {
-                match parents.pop() {
-                    Some(contract_id) => {
-                        if let Some(prop) = self.contracts.get(&contract_id) {
-                            for index in (0..prop.functions.len()).rev() {
-                                ret.push(prop.functions[index]);
-                            }
-                            parents.extend_from_slice(&prop.parents[..]);
+        match lookup_input {
+            LookupInputType::ContractId(id) => {
+                if let Some(prop) = self.contracts.get(&id) {
+                    for index in (0..prop.functions.len()).rev() {
+                        ret.push(prop.functions[index]);
+                    }
+                    let mut parents = prop.parents.clone();
+                    loop {
+                        match parents.pop() {
+                            Some(contract_id) => {
+                                if let Some(prop) = self.contracts.get(&contract_id) {
+                                    for index in (0..prop.functions.len()).rev() {
+                                        ret.push(prop.functions[index]);
+                                    }
+                                    parents.extend_from_slice(&prop.parents[..]);
+                                }
+                            },
+                            None => { break; }
                         }
-                    },
-                    None => { break; }
+                    }
                 }
-            }
+            },
+            _ => {},
         }
         ret.reverse();
         ret.iter()
@@ -199,10 +217,10 @@ impl<'a> Dictionary<'a> {
 
     /// Find a list of states from function_id
     /// Include inherited states
-    pub fn lookup_states(&self, state_lookup: StateLookup) -> Vec<&Walker> {
+    pub fn lookup_states(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
         let mut ret = vec![];
-        match state_lookup {
-            StateLookup::FunctionId(id) => {
+        match lookup_input {
+            LookupInputType::FunctionId(id) => {
                 for (_, prop) in self.contracts.iter() {
                     if prop.functions.contains(&id) {
                         for index in (0..prop.states.len()).rev() {
@@ -226,7 +244,7 @@ impl<'a> Dictionary<'a> {
                     }
                 }
             },
-            StateLookup::ContractId(id) => {
+            LookupInputType::ContractId(id) => {
                 if let Some(prop) = self.contracts.get(&id) {
                     for index in (0..prop.states.len()).rev() {
                         ret.push(prop.states[index]);
@@ -247,6 +265,7 @@ impl<'a> Dictionary<'a> {
                     }
                 }
             },
+            _ => {},
         }
         ret.reverse();
         ret.iter()
