@@ -69,12 +69,12 @@ impl Alias {
     }
 
     pub fn find_references(&self, id: u32, var: &Variable) {
-        println!("find-reference for: {:?} at {}", var, id);
+        // println!("find-reference for: {:?} at {}", var, id);
         for execution_table in self.execution_tables.iter() {
             for (id, table) in execution_table {
                 for (l_var, r_var) in table {
-                    println!("id: {}", id);
-                    println!("v: {}", id);
+                    // println!("id: {}", id);
+                    // println!("v: {}", id);
                 }
             }
         }
