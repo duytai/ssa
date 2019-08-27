@@ -213,7 +213,7 @@ impl Variable {
                         let source = String::from("$");
                         path.push((Member::IndexAccess, source));
                     },
-                    "ElementaryTypeName" => {
+                    "ElementaryTypeName" | "Mapping" => {
                         paths.push((path.clone(), kind));
                         break;
                     },

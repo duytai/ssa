@@ -1,4 +1,5 @@
 use crate::dfg::Network;
+use crate::core::Walker;
 use crate::oracle::IntegerOverflow;
 
 pub enum OracleAction {
@@ -14,12 +15,9 @@ impl<'a> Oracle<'a> {
         Oracle { network }
     }
 
-    pub fn run(&mut self, action: OracleAction) {
+    pub fn run(&mut self, action: OracleAction) -> Vec<(Walker, String)> {
         match action {
-            OracleAction::IntegerOverflow=> {
-                let overflow = IntegerOverflow::new(&self.network);
-                overflow.analyze();
-            },
+            OracleAction::IntegerOverflow => IntegerOverflow::analyze(&self.network)
         } 
     }
 
