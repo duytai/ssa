@@ -1,7 +1,9 @@
 use crate::dfg::Network;
+use crate::core::Walker;
+use crate::oracle::IntegerOverflow;
 
 pub enum OracleAction {
-    GaslessSend,
+    IntegerOverflow,
 }
 
 pub struct Oracle<'a> {
@@ -13,8 +15,10 @@ impl<'a> Oracle<'a> {
         Oracle { network }
     }
 
-    pub fn run(&mut self, action: OracleAction) {
-        let dict = self.network.get_dict();
+    pub fn run(&mut self, action: OracleAction) -> Vec<(Walker, String)> {
+        match action {
+            OracleAction::IntegerOverflow => IntegerOverflow::analyze(&self.network)
+        } 
     }
 
     pub fn format(&mut self) -> String {

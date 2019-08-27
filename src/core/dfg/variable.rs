@@ -78,7 +78,7 @@ impl Variable {
         ret
     }
 
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
+    pub fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
         let members = Variable::find_members(walker, dict);
         if !members.is_empty() {
             let variable = Variable {
@@ -213,7 +213,7 @@ impl Variable {
                         let source = String::from("$");
                         path.push((Member::IndexAccess, source));
                     },
-                    "ElementaryTypeName" => {
+                    "ElementaryTypeName" | "Mapping" => {
                         paths.push((path.clone(), kind));
                         break;
                     },
