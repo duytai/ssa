@@ -6,24 +6,22 @@ use crate::core::{
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::utils;
 
-type AliasTable = HashMap<Variable, Variable>;
-type AliasTables = HashMap<u32, AliasTable>;
-
 pub struct Alias {
-    execution_tables: Vec<AliasTables>,
+    execution_tables: Vec<HashMap<u32, HashMap<Variable, Variable>>>,
 }
 
 impl Alias {
     pub fn new(cfg: &ControlFlowGraph) -> Self {
+        let vertices = cfg.get_vertices();
         let execution_paths = cfg.get_execution_paths();
         let dict = cfg.get_dict();
         let mut execution_tables = vec![];
         for execution_path in execution_paths {
             let mut prev_id = None;
-            let mut tables: AliasTables = HashMap::new();
+            let mut tables: HashMap<u32, HashMap<Variable, Variable>> = HashMap::new();
             for id in execution_path {
                 // Copy table from prev node
-                let mut table: AliasTable = HashMap::new(); 
+                let mut table = HashMap::new(); 
                 if let Some(prev_id) = prev_id {
                     table = tables.get(prev_id).unwrap().clone();
                 }
@@ -37,10 +35,10 @@ impl Alias {
                 for assignment in assignments {
                     for l in assignment.get_lhs() {
                         for r in assignment.get_rhs() {
-                            let alias_able = l.can_has_alias() && r.can_has_alias();
+                            let aliasable = l.can_has_alias() && r.can_has_alias();
                             let same_type = l.get_type() == r.get_type();
                             let mut kill_vars = vec![];
-                            if alias_able && same_type {
+                            if aliasable && same_type {
                                 // Alias assignment is here
                                 for (prev_l, _) in table.clone() {
                                     if let VariableComparison::Partial = l.contains(&prev_l) {
@@ -50,13 +48,13 @@ impl Alias {
                                         }
                                     }
                                 }
+                                // Delete all childs 
+                                for kill_var in kill_vars.iter() {
+                                    table.remove(kill_var);
+                                }
+                                // Insert l_var to current table
+                                table.insert(l.clone(), r.clone());
                             }
-                            // Delete all childs 
-                            for kill_var in kill_vars.iter() {
-                                table.remove(kill_var);
-                            }
-                            // Insert l_var to current table
-                            table.insert(l.clone(), r.clone());
                         }
                     }
                 }
@@ -69,14 +67,21 @@ impl Alias {
     }
 
     pub fn find_references(&self, id: u32, var: &Variable) {
-        // println!("find-reference for: {:?} at {}", var, id);
-        for execution_table in self.execution_tables.iter() {
-            for (id, table) in execution_table {
-                for (l_var, r_var) in table {
-                    // println!("id: {}", id);
-                    // println!("v: {}", id);
-                }
-            }
-        }
+        // println!("\tid  : {}", id);
+        // println!("\tvar : {:?}", var);
+        // for execution_table in self.execution_tables.iter() {
+            // if let Some(table) = execution_table.get(&id) {
+                // for (l_var, r_var) in table {
+                    // match l_var.contains(var) {
+                        // VariableComparison::Partial => {
+                        // },
+                        // VariableComparison::Equal => {
+                        // },
+                        // _ => {},
+                    // }
+                // }
+            // }
+        // }
+        // panic!();
     }
 }
