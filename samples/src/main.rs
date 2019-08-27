@@ -29,15 +29,21 @@ fn main() -> Result<()> {
     };
     let solidity = Solidity::new(option);
     let solidity_output = solidity.compile()?;
-    let entry = 25;
+    // ContractDefinitionNode of HumanStandardToken
+    let entry = 362;
     match solidity_output {
         SolidityOutput::AST(SolidityASTOutput { ast, sources }) => {
             let ast_json = json::parse(&ast).expect("Invalid json format");
             let dict = Dictionary::new(&ast_json, &sources);
             let network = Network::new(&dict, entry);
             let mut oracle = Oracle::new(network);
-            oracle.run(OracleAction::GaslessSend);
             println!("{}", oracle.format());
+            println!("==> Overflow Check");
+            for (walker, reason) in oracle.run(OracleAction::IntegerOverflow) {
+                println!("----");
+                println!("exp\t: {}", walker.node.source);
+                println!("reason\t: {}", reason);
+            }
         }
     }
     Ok(())
