@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::core::{
     Variable,
     VariableComparison,
+    Dictionary,
 };
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::utils;
@@ -66,22 +67,44 @@ impl Alias {
         Alias { execution_tables }
     }
 
-    pub fn find_references(&self, id: u32, var: &Variable) {
-        // println!("\tid  : {}", id);
-        // println!("\tvar : {:?}", var);
-        // for execution_table in self.execution_tables.iter() {
-            // if let Some(table) = execution_table.get(&id) {
-                // for (l_var, r_var) in table {
-                    // match l_var.contains(var) {
-                        // VariableComparison::Partial => {
-                        // },
-                        // VariableComparison::Equal => {
-                        // },
-                        // _ => {},
-                    // }
-                // }
-            // }
-        // }
-        // panic!();
+    pub fn find_references(&self, id: u32, var: &Variable, dict: &Dictionary) -> Vec<Variable> {
+        let mut references = vec![];
+        for execution_table in self.execution_tables.iter() {
+            if let Some(table) = execution_table.get(&id) {
+                let mut stack: Vec<&Variable> = vec![var];
+                let mut path_references: Vec<&Variable> = vec![];
+                while stack.len() > 0 {
+                    let var = stack.pop().unwrap();
+                    for (left_var, right_var) in table {
+                        if left_var.contains(var) == VariableComparison::Partial {
+                            if left_var.get_members().len() < var.get_members().len() {
+                                if !path_references.contains(&right_var) {
+                                    stack.push(right_var);
+                                }
+                            }
+                        }
+                        if right_var.contains(var) == VariableComparison::Partial {
+                            if right_var.get_members().len() < var.get_members().len() {
+                                if !path_references.contains(&left_var) {
+                                    stack.push(left_var);
+                                }
+                            }
+                        }
+                    } 
+                    path_references.push(var);
+                }
+                path_references.remove(0);
+                references.append(&mut path_references);
+            }
+        }
+        let mut ret: Vec<Variable> = vec![];
+        for reference in references {
+            for r in reference.flatten(dict) {
+                if r.get_members()[0] == var.get_members()[0] {
+                    ret.push(r);
+                }
+            }
+        }
+        ret
     }
 }

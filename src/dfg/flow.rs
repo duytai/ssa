@@ -130,13 +130,13 @@ impl<'a> DataFlowGraph<'a> {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
-                            self.alias.find_references(id, &l);
+                            self.alias.find_references(id, &l, dict);
                             for l in l.flatten(dict) {
                                 new_actions.push(Action::Kill(l, id));
                             }
                         },
                         Operator::Other => {
-                            self.alias.find_references(id, &l);
+                            self.alias.find_references(id, &l, dict);
                             for l in l.flatten(dict) {
                                 new_actions.push(Action::Kill(l.clone(), id));
                                 new_actions.push(Action::Use(l, id));
@@ -145,14 +145,14 @@ impl<'a> DataFlowGraph<'a> {
                     }
                 }
                 for r in assignment.get_rhs().clone() {
-                    self.alias.find_references(id, &r);
+                    self.alias.find_references(id, &r, dict);
                     for r in r.flatten(dict) {
                         new_actions.push(Action::Use(r, id));
                     }
                 }
             }
             for var in variables {
-                self.alias.find_references(id, &var);
+                self.alias.find_references(id, &var, dict);
                 for var in var.flatten(dict) {
                     new_actions.push(Action::Use(var, id));
                 }
