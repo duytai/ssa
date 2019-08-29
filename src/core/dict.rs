@@ -79,6 +79,20 @@ impl<'a> Dictionary<'a> {
         self.entries.get(&id)
     }
 
+    /// Find contract constructor
+    pub fn lookup_constructor(&self, lookup_input: LookupInputType) -> Option<Walker> {
+        if let LookupInputType::ContractId(id) = lookup_input {
+            if let Some(walker) = self.lookup(id) {
+                return walker.direct_childs(|_| true).into_iter()
+                    .find(|w| match w.node.attributes["isConstructor"].as_bool() {
+                        Some(true) => true,
+                        _ => false,
+                    });
+            }
+        }
+        None
+    }
+
     /// Find return statements
     pub fn lookup_returns(&self, id: u32) -> Vec<&Walker> {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
