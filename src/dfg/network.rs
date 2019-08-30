@@ -59,13 +59,29 @@ impl<'a> Network<'a> {
             let fc_source = walker.node.source;
             let fc_id = walker.node.id;
             let walkers = walker.direct_childs(|_| true);
-            let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32().and_then(|reference| match self.dict.lookup(reference) {
-                Some(walker) => match walker.node.name {
-                    "EventDefinition" => None,
-                    _ => Some(reference),
+            // Find functiond definition 
+            let mut reference = None;
+            match walkers[0].node.name {
+                "NewExpression" => {
+                    let walkers = walkers[0].direct_childs(|_| true);
+                    let contract_id = walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                    if let Some(contract_id) = contract_id {
+                        let walker = self.dict.lookup_constructor(LookupInputType::ContractId(contract_id));
+                        reference = walker.map(|w| w.node.id);
+                    }
                 },
-                None => None,
-            });
+                _ => {
+                    reference = walkers[0].node.attributes["referencedDeclaration"]
+                        .as_u32()
+                        .and_then(|reference| match self.dict.lookup(reference) {
+                            Some(walker) => match walker.node.name {
+                                "EventDefinition" => None,
+                                _ => Some(reference),
+                            },
+                            None => None,
+                        });
+                }
+            }
             match reference {
                 // User defined functions
                 // Connect invoked_parameters to defined_parameters 

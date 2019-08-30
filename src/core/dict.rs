@@ -1,5 +1,6 @@
 use crate::core::walker::Walker;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Keep inheritance tree and function entry
 #[derive(Debug)]
@@ -76,6 +77,20 @@ impl<'a> Dictionary<'a> {
     /// Find walker by node id
     pub fn lookup(&self, id: u32) -> Option<&Walker> {
         self.entries.get(&id)
+    }
+
+    /// Find contract constructor
+    pub fn lookup_constructor(&self, lookup_input: LookupInputType) -> Option<Walker> {
+        if let LookupInputType::ContractId(id) = lookup_input {
+            if let Some(walker) = self.lookup(id) {
+                return walker.direct_childs(|_| true).into_iter()
+                    .find(|w| match w.node.attributes["isConstructor"].as_bool() {
+                        Some(true) => true,
+                        _ => false,
+                    });
+            }
+        }
+        None
     }
 
     /// Find return statements
@@ -184,35 +199,55 @@ impl<'a> Dictionary<'a> {
     /// Start from ContractDefinition node
     pub fn lookup_functions(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
         let mut ret = vec![];
-        match lookup_input {
-            LookupInputType::ContractId(id) => {
-                if let Some(prop) = self.contracts.get(&id) {
-                    for index in (0..prop.functions.len()).rev() {
-                        ret.push(prop.functions[index]);
-                    }
-                    let mut parents = prop.parents.clone();
-                    loop {
-                        match parents.pop() {
-                            Some(contract_id) => {
-                                if let Some(prop) = self.contracts.get(&contract_id) {
-                                    for index in (0..prop.functions.len()).rev() {
-                                        ret.push(prop.functions[index]);
-                                    }
-                                    parents.extend_from_slice(&prop.parents[..]);
+        if let LookupInputType::ContractId(id) = lookup_input {
+            let mut first_stage_ret = vec![];
+            if let Some(prop) = self.contracts.get(&id) {
+                for index in (0..prop.functions.len()).rev() {
+                    first_stage_ret.push(prop.functions[index]);
+                }
+                let mut parents = prop.parents.clone();
+                loop {
+                    match parents.pop() {
+                        Some(contract_id) => {
+                            if let Some(prop) = self.contracts.get(&contract_id) {
+                                for index in (0..prop.functions.len()).rev() {
+                                    first_stage_ret.push(prop.functions[index]);
                                 }
-                            },
-                            None => { break; }
-                        }
+                                parents.extend_from_slice(&prop.parents[..]);
+                            }
+                        },
+                        None => { break; }
                     }
                 }
-            },
-            _ => {},
+            }
+            first_stage_ret.reverse();
+            ret = first_stage_ret.iter()
+                .map(|id| { self.lookup(*id)})
+                .filter_map(|w| w)
+                .collect::<Vec<&Walker>>();
+            // Find whether a contract is initialized
+            if let Some(walker) = self.lookup(id) {
+                let mut contract_ids = HashSet::new();
+                let fi = |walker: &Walker, _: &Vec<Walker>| {
+                    let type_attr = walker.node.attributes["type"].as_str();
+                    match type_attr {
+                        Some(type_attr) => walker.node.name == "UserDefinedTypeName" && type_attr.starts_with("contract"),
+                        None => false,
+                    }
+                };
+                let ig = |_: &Walker, _: &Vec<Walker>| false;
+                for walker in walker.walk(false, ig, fi) {
+                    let contract_id = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
+                    if contract_id != id {
+                        contract_ids.insert(contract_id);
+                    }
+                }
+                for contract_id in contract_ids {
+                    ret.append(&mut self.lookup_functions(LookupInputType::ContractId(contract_id)));
+                }
+            }
         }
-        ret.reverse();
-        ret.iter()
-           .map(|id| { self.lookup(*id)})
-           .filter_map(|w| w)
-           .collect::<Vec<&Walker>>()
+        ret
     }
 
     /// Find a list of states from function_id
