@@ -188,36 +188,45 @@ impl Variable {
             let source = walker.node.attributes["name"].as_str().unwrap_or("*").to_string();
             path.push((Member::Reference(walker.node.id), source));
             loop {
-                walker = walker.direct_childs(|_| true)[0].clone();
-                let kind = Variable::normalize_type(&walker);
-                match walker.node.name {
-                    "UserDefinedTypeName" => {
-                        let reference = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
-                        let walker = dict.lookup(reference).unwrap();
-                        match walker.node.name {
-                            "StructDefinition" => {
-                                let walkers = walker.direct_childs(|_| true);
-                                for walker in walkers {
-                                    self.flatten_variable(walker, dict, path.clone(), paths);
-                                }
-                                break;
-                            },
-                            "ContractDefinition" => {
-                                paths.push((path.clone(), kind));
-                                break;
-                            },
-                            _ => unimplemented!(),
-                        }
-                    },
-                    "ArrayTypeName" => {
-                        let source = String::from("$");
-                        path.push((Member::IndexAccess, source));
-                    },
-                    "ElementaryTypeName" | "Mapping" => {
-                        paths.push((path.clone(), kind));
-                        break;
-                    },
-                    _ => unimplemented!(),
+                if walker.direct_childs(|_| true).len() == 0 {
+                    // TODO: Handle this case later
+                    // Use keyword var, dynamic type
+                    let kind = Variable::normalize_type(&walker);
+                    paths.push((path.clone(), kind));
+                    break;
+                } else {
+                    // Specific type
+                    walker = walker.direct_childs(|_| true)[0].clone();
+                    let kind = Variable::normalize_type(&walker);
+                    match walker.node.name {
+                        "UserDefinedTypeName" => {
+                            let reference = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
+                            let walker = dict.lookup(reference).unwrap();
+                            match walker.node.name {
+                                "StructDefinition" => {
+                                    let walkers = walker.direct_childs(|_| true);
+                                    for walker in walkers {
+                                        self.flatten_variable(walker, dict, path.clone(), paths);
+                                    }
+                                    break;
+                                },
+                                "ContractDefinition" => {
+                                    paths.push((path.clone(), kind));
+                                    break;
+                                },
+                                _ => unimplemented!(),
+                            }
+                        },
+                        "ArrayTypeName" => {
+                            let source = String::from("$");
+                            path.push((Member::IndexAccess, source));
+                        },
+                        "ElementaryTypeName" | "Mapping" => {
+                            paths.push((path.clone(), kind));
+                            break;
+                        },
+                        _ => unimplemented!(),
+                    }
                 }
             }
         }
