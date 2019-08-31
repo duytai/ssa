@@ -195,59 +195,68 @@ impl<'a> Dictionary<'a> {
         contract_id.expect("Contract must exists")
     }
 
-    /// Find scoped functions from id of contract
-    /// Start from ContractDefinition node
-    pub fn lookup_functions(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
-        let mut ret = vec![];
-        if let LookupInputType::ContractId(id) = lookup_input {
-            let mut first_stage_ret = vec![];
-            if let Some(prop) = self.contracts.get(&id) {
-                for index in (0..prop.functions.len()).rev() {
-                    first_stage_ret.push(prop.functions[index]);
-                }
-                let mut parents = prop.parents.clone();
-                loop {
-                    match parents.pop() {
-                        Some(contract_id) => {
-                            if let Some(prop) = self.contracts.get(&contract_id) {
-                                for index in (0..prop.functions.len()).rev() {
-                                    first_stage_ret.push(prop.functions[index]);
-                                }
-                                parents.extend_from_slice(&prop.parents[..]);
+    /// Find relative functions of a contract
+    /// + functionDefinition of current contract
+    /// + functionDefinition of its parents then parents of parents
+    /// + functionDefinition of contract which is initialized in current contract
+    fn lookup_contract_functions(&self, id: u32, mut contract_ids: HashSet<u32>) -> Vec<&Walker> {
+        // functionDefinitions of current contract and its parents 
+        let mut first_stage_ret = vec![];
+        if let Some(prop) = self.contracts.get(&id) {
+            for index in (0..prop.functions.len()).rev() {
+                first_stage_ret.push(prop.functions[index]);
+            }
+            let mut parents = prop.parents.clone();
+            loop {
+                match parents.pop() {
+                    Some(contract_id) => {
+                        if let Some(prop) = self.contracts.get(&contract_id) {
+                            for index in (0..prop.functions.len()).rev() {
+                                first_stage_ret.push(prop.functions[index]);
                             }
-                        },
-                        None => { break; }
-                    }
+                            parents.extend_from_slice(&prop.parents[..]);
+                        }
+                    },
+                    None => { break; }
                 }
             }
-            first_stage_ret.reverse();
-            ret = first_stage_ret.iter()
-                .map(|id| { self.lookup(*id)})
-                .filter_map(|w| w)
-                .collect::<Vec<&Walker>>();
-            // Find whether a contract is initialized
-            if let Some(walker) = self.lookup(id) {
-                let mut contract_ids = HashSet::new();
-                let fi = |walker: &Walker, _: &Vec<Walker>| {
-                    let type_attr = walker.node.attributes["type"].as_str();
-                    match type_attr {
-                        Some(type_attr) => walker.node.name == "UserDefinedTypeName" && type_attr.starts_with("contract"),
-                        None => false,
-                    }
-                };
-                let ig = |_: &Walker, _: &Vec<Walker>| false;
-                for walker in walker.walk(false, ig, fi) {
-                    let contract_id = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
-                    if contract_id != id {
-                        contract_ids.insert(contract_id);
-                    }
+        }
+        first_stage_ret.reverse();
+        let mut ret = first_stage_ret.iter()
+            .map(|id| { self.lookup(*id)})
+            .filter_map(|w| w)
+            .collect::<Vec<&Walker>>();
+
+        // FunctionDefinitions of contract which is initialized in the current contract
+        if let Some(walker) = self.lookup(id) {
+            let fi = |walker: &Walker, _: &Vec<Walker>| {
+                let type_attr = walker.node.attributes["type"].as_str();
+                match type_attr {
+                    Some(type_attr) => walker.node.name == "UserDefinedTypeName" && type_attr.starts_with("contract"),
+                    None => false,
                 }
-                for contract_id in contract_ids {
-                    ret.append(&mut self.lookup_functions(LookupInputType::ContractId(contract_id)));
+            };
+            let ig = |_: &Walker, _: &Vec<Walker>| false;
+            for walker in walker.walk(false, ig, fi) {
+                let contract_id = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
+                if contract_ids.insert(contract_id) {
+                    ret.append(&mut self.lookup_contract_functions(contract_id, contract_ids.clone()));
                 }
             }
         }
         ret
+    }
+
+    /// Find scoped functions from id of contract
+    /// Start from ContractDefinition node
+    pub fn lookup_functions(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
+        if let LookupInputType::ContractId(id) = lookup_input {
+            let mut contract_ids = HashSet::new();
+            contract_ids.insert(id);
+            self.lookup_contract_functions(id, contract_ids)
+        } else {
+            vec![]
+        }
     }
 
     /// Find a list of states from function_id
