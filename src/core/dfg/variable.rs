@@ -179,51 +179,66 @@ impl Variable {
 
     fn flatten_variable(
         &self,
-        mut walker: Walker,
+        walker: Walker,
         dict: &Dictionary,
         mut path: Vec<(Member, String)>,
         paths: &mut Vec<(Vec<(Member, String)>, Option<String>)>
     ) {
         if walker.node.name == "VariableDeclaration" {
-            let source = walker.node.attributes["name"].as_str().unwrap_or("*").to_string();
-            path.push((Member::Reference(walker.node.id), source));
-            loop {
-                if walker.direct_childs(|_| true).len() == 0 {
-                    // TODO: Handle this case later
-                    // Use keyword var, dynamic type
-                    let kind = Variable::normalize_type(&walker);
-                    paths.push((path.clone(), kind));
-                    break;
-                } else {
-                    // Specific type
-                    walker = walker.direct_childs(|_| true)[0].clone();
-                    let kind = Variable::normalize_type(&walker);
-                    match walker.node.name {
+            let prop_name = walker.node
+                .attributes["name"]
+                .as_str()
+                .unwrap_or("*")
+                .to_string();
+            path.push((Member::Reference(walker.node.id), prop_name));
+            let ctx_walkers = walker.direct_childs(|_| true);
+            if ctx_walkers.is_empty() {
+                // TODO: var keyword
+                paths.push((path.clone(), Variable::normalize_type(&walker)));
+            } else {
+                let mut ctx_walker = ctx_walkers[0].clone();
+                let mut ctx_kind = Variable::normalize_type(&ctx_walker); 
+                loop {
+                    match ctx_walker.node.name {
                         "UserDefinedTypeName" => {
-                            let reference = walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
-                            let walker = dict.lookup(reference).unwrap();
-                            match walker.node.name {
-                                "StructDefinition" => {
-                                    let walkers = walker.direct_childs(|_| true);
-                                    for walker in walkers {
-                                        self.flatten_variable(walker, dict, path.clone(), paths);
-                                    }
-                                    break;
-                                },
-                                "ContractDefinition" => {
-                                    paths.push((path.clone(), kind));
-                                    break;
-                                },
-                                _ => unimplemented!(),
+                            let w = ctx_walker.node
+                                .attributes["referencedDeclaration"]
+                                .as_u32()
+                                .and_then(|reference| dict.lookup(reference));
+                            if let Some(w) = w {
+                                match w.node.name {
+                                    "StructDefinition" => {
+                                        for w in w.direct_childs(|_| true) {
+                                            self.flatten_variable(w, dict, path.clone(), paths);
+                                        }
+                                        break;
+                                    },
+                                    "ContractDefinition" => {
+                                        paths.push((path.clone(), ctx_kind.clone()));
+                                        ctx_walker = ctx_walker.direct_childs(|_| true)[0].clone();
+                                        ctx_kind = Variable::normalize_type(&ctx_walker); 
+                                    },
+                                    "EnumDefinition" => {
+                                        paths.push((path.clone(), ctx_kind.clone()));
+                                        break;
+                                    },
+                                    _ => unimplemented!(),
+                                }
                             }
                         },
                         "ArrayTypeName" => {
-                            let source = String::from("$");
-                            path.push((Member::IndexAccess, source));
+                            path.push((Member::IndexAccess, String::from("$")));
+                            ctx_walker = ctx_walker.direct_childs(|_| true)[0].clone();
+                            ctx_kind = Variable::normalize_type(&ctx_walker); 
                         },
-                        "ElementaryTypeName" | "Mapping" => {
-                            paths.push((path.clone(), kind));
+                        "ElementaryTypeName" => {
+                            paths.push((path.clone(), ctx_kind));
                             break;
+                        },
+                        "Mapping" => {
+                            path.push((Member::IndexAccess, String::from("$")));
+                            ctx_walker = ctx_walker.direct_childs(|_| true)[1].clone();
+                            ctx_kind = Variable::normalize_type(&ctx_walker); 
                         },
                         _ => unimplemented!(),
                     }
