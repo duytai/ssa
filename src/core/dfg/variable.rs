@@ -249,30 +249,34 @@ impl Variable {
 
     pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
         let mut flat_variables = vec![];
-        if let Some(Member::Reference(reference)) = self.members.first() {
-            if let Some(walker) = dict.lookup(*reference) {
-                let mut paths = vec![];
-                self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
-                for (mut path, kind) in paths {
-                    let mut members = vec![];
-                    let mut sources = vec![];
-                    path.remove(0);
-                    for (member, source) in path {
-                        members.push(member);
-                        sources.push(source);
+        for (index, member) in self.members.iter().enumerate() {
+            let short_members = &self.members[index..];
+            if let Member::Reference(reference) = member {
+                if let Some(walker) = dict.lookup(*reference) {
+                    let mut paths = vec![];
+                    self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
+                    for (mut path, kind) in paths {
+                        let mut members = vec![];
+                        let mut sources = vec![];
+                        path.remove(0);
+                        for (member, source) in path {
+                            members.push(member);
+                            sources.push(source);
+                        }
+                        members.reverse();
+                        members.append(&mut short_members.to_vec());
+                        sources.insert(0, self.source.clone());
+                        let variable = Variable {
+                            members,
+                            source: sources.join("."),
+                            kind,
+                        };
+                        flat_variables.push(variable);
                     }
-                    members.reverse();
-                    members.append(&mut self.members.clone());
-                    sources.insert(0, self.source.clone());
-                    let variable = Variable {
-                        members,
-                        source: sources.join("."),
-                        kind,
-                    };
-                    flat_variables.push(variable);
                 }
+                break;
             }
-        }
+        } 
         if flat_variables.is_empty() {
             flat_variables.push(self.clone());
         }
