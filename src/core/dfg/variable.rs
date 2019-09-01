@@ -215,8 +215,7 @@ impl Variable {
                                     },
                                     "ContractDefinition" => {
                                         paths.push((path.clone(), ctx_kind.clone()));
-                                        ctx_walker = ctx_walker.direct_childs(|_| true)[0].clone();
-                                        ctx_kind = Variable::normalize_type(&ctx_walker); 
+                                        break;
                                     },
                                     "EnumDefinition" => {
                                         paths.push((path.clone(), ctx_kind.clone()));
