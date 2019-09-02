@@ -75,7 +75,11 @@ impl<'a> Network<'a> {
                         .as_u32()
                         .and_then(|reference| match self.dict.lookup(reference) {
                             Some(walker) => match walker.node.name {
-                                "EventDefinition" => None,
+                                "EventDefinition" 
+                                    | "StructDefinition"
+                                    | "ContractDefinition"
+                                    | "VariableDeclaration"
+                                    | "EnumDefinition" => None,
                                 _ => Some(reference),
                             },
                             None => None,
@@ -98,8 +102,11 @@ impl<'a> Network<'a> {
                         let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
                         ret.insert(link);
                     }
-                    let defined_parameters = self.dict.lookup_parameters(LookupInputType::FunctionId(reference));
-                    let mut invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
+                    let defined_parameters = self.dict
+                        .lookup_parameters(LookupInputType::FunctionId(reference));
+                    let mut invoked_parameters = self.dict
+                        .lookup_parameters(LookupInputType::FunctionCallId(fc_id));
+                    // Library invokcation 
                     if invoked_parameters.len() < defined_parameters.len() {
                         invoked_parameters.insert(0, &walkers[0]);
                     }

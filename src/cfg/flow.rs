@@ -426,7 +426,7 @@ impl<'a> ControlFlowGraph<'a> {
             let num_dups = execution_path.iter()
                 .filter(|x| *x == &from)
                 .count();
-            if num_dups < 10 {
+            if num_dups < 2 {
                 execution_path.push(from);
                 for edge in self.edges.iter() {
                     if edge.get_from() == from {
