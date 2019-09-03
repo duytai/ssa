@@ -1,6 +1,7 @@
 use crate::dfg::Network;
 use crate::core::Walker;
 use crate::oracle::IntegerOverflow;
+use crate::oracle::Permission;
 
 pub enum OracleAction {
     IntegerOverflow,
@@ -12,6 +13,8 @@ pub struct Oracle<'a> {
 
 impl<'a> Oracle<'a> {
     pub fn new(network: Network<'a>) -> Self {
+        let permission = Permission::new(&network);
+        permission.create_table();
         Oracle { network }
     }
 

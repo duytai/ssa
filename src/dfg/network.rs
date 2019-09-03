@@ -184,7 +184,7 @@ impl<'a> Network<'a> {
         let internal_links = self.find_internal_links();
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
-        self.links.extend(external_links);
+        // self.links.extend(external_links);
         // Find all sub networks 
     }
 
