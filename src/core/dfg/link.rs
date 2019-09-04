@@ -14,21 +14,23 @@ pub enum DataLinkLabel {
 pub struct DataLink {
     /// Start at from
     from: u32,
+    from_var: Variable,
     /// Stop at to
     to: u32,
-    /// What variable that link describes
-    var: Variable,
+    to_var: Variable,
     /// label
     label: DataLinkLabel,
 }
 
 impl DataLink {
-    pub fn new(from: u32, to: u32, var: Variable) -> Self {
-        DataLink { from, to, var, label: DataLinkLabel::Internal }
-    }
-
-    pub fn new_with_label(from: u32, to: u32, var: Variable, label: DataLinkLabel) -> Self {
-        DataLink { from, to, var, label }
+    pub fn new(
+        from: u32,
+        from_var: Variable,
+        to: u32,
+        to_var: Variable,
+        label: DataLinkLabel
+    ) -> Self {
+        DataLink { from, from_var, to, to_var, label }
     }
 
     pub fn get_from(&self) -> u32 {
@@ -39,8 +41,12 @@ impl DataLink {
         self.to
     }
 
-    pub fn get_var(&self) -> &Variable {
-        &self.var
+    pub fn get_from_var(&self) -> &Variable {
+        &self.from_var
+    }
+
+    pub fn get_to_var(&self) -> &Variable {
+        &self.to_var
     }
 
     pub fn get_label(&self) -> &DataLinkLabel {

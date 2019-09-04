@@ -6,6 +6,7 @@ use crate::core::{
     Operator,
     Action,
     DataLink,
+    DataLinkLabel,
 };
 use crate::dfg::utils;
 
@@ -188,7 +189,13 @@ impl<'a> DataFlowGraph<'a> {
                                     if let Action::Use(variable, id) = action {
                                         match kill_var.contains(variable) {
                                             VariableComparison::Equal => {
-                                                let data_link = DataLink::new(*id, kill_id, variable.clone());
+                                                let data_link = DataLink::new(
+                                                    *id,
+                                                    variable.clone(),
+                                                    kill_id,
+                                                    kill_var.clone(),
+                                                    DataLinkLabel::Internal,
+                                                );
                                                 links.insert(data_link);
                                                 cur_table.remove(action);
                                                 false
@@ -196,7 +203,14 @@ impl<'a> DataFlowGraph<'a> {
                                             VariableComparison::Partial => {
                                                 // Only kill by using parent
                                                 if kill_var.get_members().len() < variable.get_members().len() {
-                                                    let data_link = DataLink::new(*id, kill_id, variable.clone());
+                                                    // let data_link = DataLink::new(*id, kill_id, variable.clone());
+                                                    let data_link = DataLink::new(
+                                                        *id,
+                                                        variable.clone(),
+                                                        kill_id,
+                                                        kill_var.clone(),
+                                                        DataLinkLabel::Internal,
+                                                    );
                                                     links.insert(data_link);
                                                     false
                                                 } else {
