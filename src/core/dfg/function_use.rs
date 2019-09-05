@@ -22,7 +22,7 @@ impl FunctionUse {
         &self.variables
     }
 
-    pub fn parse(walker: &Walker, _: &Dictionary) -> Vec<FunctionUse> {
+    pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<FunctionUse> {
         let mut function_use = FunctionUse {
             assignments: vec![],
             variables: HashSet::new(),
@@ -35,19 +35,39 @@ impl FunctionUse {
             let mut lhs = HashSet::new();
             let rhs = HashSet::new();
             let op = Operator::Equal;
-            lhs.insert(FunctionUse::to_var(walker));
+            lhs.insert(FunctionUse::to_var(walker, dict));
             function_use.assignments.push(Assignment::new(lhs, rhs, op));
         } else {
             for walker in walker.walk(true, ig, fi).into_iter() {
-                function_use.variables.insert(FunctionUse::to_var(&walker));
+                function_use.variables.insert(FunctionUse::to_var(&walker, dict));
             }
         }
         vec![function_use]
     }
 
-    pub fn to_var(walker: &Walker) -> Variable {
-        let members = vec![Member::Reference(walker.node.id)];
+    pub fn to_var(walker: &Walker, dict: &Dictionary) -> Variable {
         let source = walker.node.source;
-        Variable::new(members, source.to_string(), Variable::normalize_type(walker))
+        let mut variable = Variable::new(
+            vec![Member::Reference(walker.node.id)],
+            walker.node.source.to_string(),
+            Variable::normalize_type(walker)
+        );
+        let walker = walker.direct_childs(|_| true).get(0)
+            .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
+            .and_then(|reference| dict.lookup(reference))
+            .and_then(|walker| walker.direct_childs(|_| true).get(1).map(|x| x.clone()))
+            .and_then(|walker| match walker.node.name {
+                "ParameterList" => walker.direct_childs(|_| true).get(0).map(|x| x.clone()),
+                _ => None,
+            })
+            .and_then(|walker| Some(walker));
+        if let Some(walker) = &walker {
+            variable = Variable::new(
+                vec![Member::Reference(walker.node.id)],
+                source.to_string(),
+                Variable::normalize_type(walker)
+            );
+        }
+        variable
     }
 }
