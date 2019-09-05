@@ -9,7 +9,9 @@ use crate::core::{
     Dictionary,
     Member,
     Variable,
+    Action,
 };
+use crate::dfg::utils;
 use std::collections::{
     HashMap,
     HashSet,
@@ -54,107 +56,50 @@ impl<'a> Network<'a> {
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
         let mut ret = HashSet::new();
-        let function_calls = self.dict.lookup_function_calls(self.entry_id);
-        for walker in function_calls.iter() {
-            let fc_source = walker.node.source;
-            let fc_id = walker.node.id;
-            let walkers = walker.direct_childs(|_| true);
-            // Find functiond definition 
-            let mut reference = None;
-            match walkers[0].node.name {
-                "NewExpression" => {
-                    let walkers = walkers[0].direct_childs(|_| true);
-                    let contract_id = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                    if let Some(contract_id) = contract_id {
-                        let walker = self.dict.lookup_constructor(LookupInputType::ContractId(contract_id));
-                        reference = walker.map(|w| w.node.id);
-                    }
-                },
-                _ => {
-                    reference = walkers[0].node.attributes["referencedDeclaration"]
-                        .as_u32()
-                        .and_then(|reference| match self.dict.lookup(reference) {
-                            Some(walker) => match walker.node.name {
-                                "EventDefinition" 
-                                    | "StructDefinition"
-                                    | "ContractDefinition"
-                                    | "VariableDeclaration"
-                                    | "EnumDefinition" => None,
-                                _ => Some(reference),
-                            },
-                            None => None,
+        for function_use in utils::find_function_use(self.entry_id, self.dict) {
+            for variable in function_use.get_variables() {
+                let flat_variables = variable.flatten(self.dict);
+                if let Some(Member::Reference(id)) = variable.get_members().last() {
+                    let reference = self.dict.lookup(*id)
+                        .and_then(|walker| walker.direct_childs(|_| true).get(0).map(|x| x.clone()))
+                        .and_then(|walker| match walker.node.name {
+                            "NewExpression" => walker.direct_childs(|_| true).get(0)
+                                .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
+                                .and_then(|contract_id| self.dict.lookup_constructor(LookupInputType::ContractId(contract_id)))
+                                .and_then(|walker| Some(walker.node.id))
+                            ,
+                            _ => walker.node.attributes["referencedDeclaration"].as_u32()
+                                .and_then(|id| self.dict.lookup(id))
+                                .and_then(|walker| match walker.node.name {
+                                    "EventDefinition"
+                                        | "StructDefinition"
+                                        | "ContractDefinition"
+                                        | "VariableDeclaration"
+                                        | "EnumDefinition" => None,
+                                    _ => Some(walker.node.id),
+                                })
                         });
+                    match reference {
+                        Some(reference) => {
+                            for return_walker in self.dict.lookup_returns(reference) {
+                                for (_, dfg) in self.dfgs.iter() {
+                                    for actions in dfg.get_new_actions().get(&return_walker.node.id) {
+                                        for action in actions {
+                                            if let Action::Use(return_variable, _) = action {
+                                                // TODO: How to link here 
+                                                // println!("flat_variables: {:?}", flat_variables);
+                                                // println!("return_variable: {:?}", return_variable);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        None => {
+                        },
+                    }
                 }
             }
-            match reference {
-                // User defined functions
-                // Connect invoked_parameters to defined_parameters 
-                // Connect function_call to return statement
-                Some(reference) => {
-                    for walker in self.dict.lookup_returns(reference) {
-                        let members = vec![Member::Reference(walker.node.id)];
-                        let variable = Variable::new(
-                            members,
-                            fc_source.to_string(),
-                            Variable::normalize_type(walker)
-                        );
-                        let label = DataLinkLabel::InFrom(fc_id);
-                        let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
-                        ret.insert(link);
-                    }
-                    let defined_parameters = self.dict
-                        .lookup_parameters(LookupInputType::FunctionId(reference));
-                    let mut invoked_parameters = self.dict
-                        .lookup_parameters(LookupInputType::FunctionCallId(fc_id));
-                    // Library invokcation 
-                    if invoked_parameters.len() < defined_parameters.len() {
-                        invoked_parameters.insert(0, &walkers[0]);
-                    }
-                    for i in 0..invoked_parameters.len() {
-                        let defined_parameter = defined_parameters[i];
-                        let invoked_parameter = invoked_parameters[i];
-                        let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let source = defined_parameter.node.source.to_string();
-                        let variable = Variable::new(
-                            members,
-                            source,
-                            Variable::normalize_type(invoked_parameter)
-                        );
-                        let label = DataLinkLabel::OutTo(fc_id);
-                        let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
-                        ret.insert(link);
-                    }
-                },
-                // Emit event
-                // Global functions
-                // Connect function_calls to parameters
-                None => {
-                    let invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
-                    for invoked_parameter in invoked_parameters {
-                        let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let source = invoked_parameter.node.source.to_string();
-                        let variable = Variable::new(
-                            members,
-                            source,
-                            Variable::normalize_type(invoked_parameter)
-                        );
-                        let label = DataLinkLabel::BuiltIn;
-                        let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
-                        ret.insert(link);
-                    }
-                },
-            };
-            // Connect to object which call function
-            let members = vec![Member::Reference(walkers[0].node.id)];
-            let source = walkers[0].node.source.to_string();
-            let variable = Variable::new(
-                members,
-                source,
-                Variable::normalize_type(&walkers[0])
-            );
-            let label = DataLinkLabel::Executor;
-            let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
-            ret.insert(link);
         }
         ret
     } 

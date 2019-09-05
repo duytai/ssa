@@ -115,12 +115,6 @@ impl<'a> DataFlowGraph<'a> {
             for declaration in utils::find_declarations(id, dict) {
                 assignments.push(declaration.get_assignment().clone());
             }
-            for index_access in utils::find_index_accesses(id, dict) {
-                let mut agns = index_access.get_assignments().clone();
-                let vars = index_access.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            }
             for function_use in utils::find_function_use(id, dict) {
                 let mut agns = function_use.get_assignments().clone();
                 let vars = function_use.get_variables().clone();

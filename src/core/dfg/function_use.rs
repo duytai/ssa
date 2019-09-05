@@ -47,8 +47,9 @@ impl FunctionUse {
 
     pub fn to_var(walker: &Walker, dict: &Dictionary) -> Variable {
         let source = walker.node.source;
+        let fc_id = walker.node.id;
         let mut variable = Variable::new(
-            vec![Member::Reference(walker.node.id)],
+            vec![Member::Reference(fc_id)],
             walker.node.source.to_string(),
             Variable::normalize_type(walker)
         );
@@ -63,7 +64,7 @@ impl FunctionUse {
             .and_then(|walker| Some(walker));
         if let Some(walker) = &walker {
             variable = Variable::new(
-                vec![Member::Reference(walker.node.id)],
+                vec![Member::Reference(walker.node.id), Member::Reference(fc_id)],
                 source.to_string(),
                 Variable::normalize_type(walker)
             );
