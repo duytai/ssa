@@ -60,8 +60,7 @@ impl Variable {
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
         let mut ret = HashSet::new();
         let fi = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "IndexAccess"
-            || walker.node.name == "MemberAccess"
+            walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
@@ -69,6 +68,7 @@ impl Variable {
             || walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
+            || walker.node.name == "IndexAccess"
         };
         for walker in walker.walk(true, ig, fi) {
             Variable::parse_one(&walker, dict).map(|variable| {
@@ -162,17 +162,6 @@ impl Variable {
                 }
                 ret
             },
-            "IndexAccess" => {
-                let mut ret = vec![];
-                for (index, walker) in walker.direct_childs(|_| true).into_iter().enumerate() {
-                    if index == 0 {
-                        ret.append(&mut Variable::find_members(&walker, dict));
-                    } else if index == 1 {
-                        ret.insert(0, Member::IndexAccess);
-                    }
-                }
-                ret
-            },
             _ => vec![],
         }
     }
@@ -249,34 +238,30 @@ impl Variable {
     pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
         println!(">> {:?}", self);
         let mut flat_variables = vec![];
-        for (index, member) in self.members.iter().enumerate() {
-            let short_members = &self.members[index..];
-            if let Member::Reference(reference) = member {
-                if let Some(walker) = dict.lookup(*reference) {
-                    let mut paths = vec![];
-                    self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
-                    for (mut path, kind) in paths {
-                        let mut members = vec![];
-                        let mut sources = vec![];
-                        path.remove(0);
-                        for (member, source) in path {
-                            members.push(member);
-                            sources.push(source);
-                        }
-                        members.reverse();
-                        members.append(&mut short_members.to_vec());
-                        sources.insert(0, self.source.clone());
-                        let variable = Variable {
-                            members,
-                            source: sources.join("."),
-                            kind,
-                        };
-                        flat_variables.push(variable);
+        if let Some(Member::Reference(reference)) = self.members.first() {
+            if let Some(walker) = dict.lookup(*reference) {
+                let mut paths = vec![];
+                self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
+                for (mut path, kind) in paths {
+                    let mut members = vec![];
+                    let mut sources = vec![];
+                    path.remove(0);
+                    for (member, source) in path {
+                        members.push(member);
+                        sources.push(source);
                     }
+                    members.reverse();
+                    members.append(&mut self.members.clone());
+                    sources.insert(0, self.source.clone());
+                    let variable = Variable {
+                        members,
+                        source: sources.join("."),
+                        kind,
+                    };
+                    flat_variables.push(variable);
                 }
-                break;
             }
-        } 
+        }
         if flat_variables.is_empty() {
             flat_variables.push(self.clone());
         }
