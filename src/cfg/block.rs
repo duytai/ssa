@@ -28,6 +28,7 @@ pub enum SimpleBlockNode<'a> {
     ModifierInvocation(Walker<'a>),
     FunctionCall(Walker<'a>),
     Unit(Walker<'a>),
+    IndexAccess(Walker<'a>),
     None,
 }
 

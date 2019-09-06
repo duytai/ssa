@@ -118,6 +118,10 @@ impl<'a> Graph<'a> {
                     let node = SimpleBlockNode::ModifierInvocation(walker);
                     function_calls.push(node);
                 },
+                "IndexAccess" => {
+                    let node = SimpleBlockNode::IndexAccess(walker);
+                    function_calls.push(node);
+                },
                 _ => {},
             }
         }

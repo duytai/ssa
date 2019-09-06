@@ -86,6 +86,7 @@ impl<'a> Network<'a> {
                                     for actions in dfg.get_new_actions().get(&return_walker.node.id) {
                                         for action in actions {
                                             if let Action::Use(return_variable, _) = action {
+                                                println!("return_variable: {:?}", return_variable);
                                                 // TODO: How to link here 
                                                 // println!("flat_variables: {:?}", flat_variables);
                                                 // println!("return_variable: {:?}", return_variable);
@@ -127,9 +128,9 @@ impl<'a> Network<'a> {
 
     fn find_links(&mut self) {
         let internal_links = self.find_internal_links();
-        // let external_links = self.find_external_links();
+        let external_links = self.find_external_links();
         self.links.extend(internal_links);
-        // self.links.extend(external_links);
+        self.links.extend(external_links);
         // Find all sub networks 
     }
 
