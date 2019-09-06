@@ -179,8 +179,7 @@ impl<'a> ControlFlowGraph<'a> {
                     predecessors = vec![];
                 },
                 SimpleBlockNode::FunctionCall(walker)
-                    | SimpleBlockNode::ModifierInvocation(walker)
-                    | SimpleBlockNode::IndexAccess(walker) => {
+                    | SimpleBlockNode::ModifierInvocation(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
                         .iter()
