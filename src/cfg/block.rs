@@ -27,6 +27,7 @@ pub enum SimpleBlockNode<'a> {
     Selfdestruct(Walker<'a>),
     ModifierInvocation(Walker<'a>),
     FunctionCall(Walker<'a>),
+    IndexAccess(Walker<'a>),
     Unit(Walker<'a>),
     None,
 }

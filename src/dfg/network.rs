@@ -111,14 +111,14 @@ impl<'a> Network<'a> {
             let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
             let alias = Alias::new(&cfg);
             let mut dfg = DataFlowGraph::new(cfg, alias);
-            links.extend(dfg.find_links());
+            // links.extend(dfg.find_links());
             self.dfgs.insert(self.entry_id, dfg);
         } else {
             for walker in walkers {
                 let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
                 let alias = Alias::new(&cfg);
                 let mut dfg = DataFlowGraph::new(cfg, alias);
-                links.extend(dfg.find_links());
+                // links.extend(dfg.find_links());
                 self.dfgs.insert(walker.node.id, dfg);
             }
         }
@@ -127,7 +127,7 @@ impl<'a> Network<'a> {
 
     fn find_links(&mut self) {
         let internal_links = self.find_internal_links();
-        let external_links = self.find_external_links();
+        // let external_links = self.find_external_links();
         self.links.extend(internal_links);
         // self.links.extend(external_links);
         // Find all sub networks 

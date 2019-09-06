@@ -247,6 +247,7 @@ impl Variable {
     }
 
     pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
+        println!(">> {:?}", self);
         let mut flat_variables = vec![];
         for (index, member) in self.members.iter().enumerate() {
             let short_members = &self.members[index..];
