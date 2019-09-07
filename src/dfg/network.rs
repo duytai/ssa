@@ -86,8 +86,8 @@ impl<'a> Network<'a> {
                                     for actions in dfg.get_new_actions().get(&return_walker.node.id) {
                                         for action in actions {
                                             if let Action::Use(return_variable, _) = action {
-                                                println!("return_variable: {:?}", return_variable);
                                                 // TODO: How to link here 
+                                                // println!("return_variable: {:?}", return_variable);
                                                 // println!("flat_variables: {:?}", flat_variables);
                                                 // println!("return_variable: {:?}", return_variable);
                                             }

@@ -120,7 +120,13 @@ impl<'a> DataFlowGraph<'a> {
                 let vars = function_use.get_variables().clone();
                 assignments.append(&mut agns);
                 variables.extend(vars);
-            } 
+            }
+            for index_use in utils::find_index_use(id, dict) {
+                let mut agns = index_use.get_assignments().clone();
+                let vars = index_use.get_variables().clone();
+                assignments.append(&mut agns);
+                variables.extend(vars);
+            }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
@@ -128,19 +134,12 @@ impl<'a> DataFlowGraph<'a> {
                             for l in l.flatten(dict) {
                                 new_actions.push(Action::Kill(l, id));
                             }
-                            // for l in self.alias.find_references(id, &l, dict) {
-                                // new_actions.push(Action::Kill(l, id));
-                            // }
                         },
                         Operator::Other => {
                             for l in l.flatten(dict) {
                                 new_actions.push(Action::Kill(l.clone(), id));
                                 new_actions.push(Action::Use(l, id));
                             }
-                            // for l in self.alias.find_references(id, &l, dict) {
-                                // new_actions.push(Action::Kill(l.clone(), id));
-                                // new_actions.push(Action::Use(l, id));
-                            // }
                         }
                     }
                 }
@@ -148,18 +147,12 @@ impl<'a> DataFlowGraph<'a> {
                     for r in r.flatten(dict) {
                         new_actions.push(Action::Use(r, id));
                     }
-                    // for r in self.alias.find_references(id, &r, dict) {
-                        // new_actions.push(Action::Use(r, id));
-                    // }
                 }
             }
             for var in variables {
                 for var in var.flatten(dict) {
                     new_actions.push(Action::Use(var, id));
                 }
-                // for var in self.alias.find_references(id, &var, dict) {
-                    // new_actions.push(Action::Use(var, id));
-                // }
             }
             self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());

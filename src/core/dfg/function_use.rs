@@ -49,7 +49,7 @@ impl FunctionUse {
         let source = walker.node.source;
         let fc_id = walker.node.id;
         let mut variable = Variable::new(
-            vec![Member::Reference(fc_id)],
+            vec![Member::Global(fc_id.to_string())],
             walker.node.source.to_string(),
             Variable::normalize_type(walker)
         );
