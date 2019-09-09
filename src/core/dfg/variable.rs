@@ -78,7 +78,7 @@ impl Variable {
         ret
     }
 
-    pub fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
+    fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
         let members = Variable::find_members(walker, dict);
         if !members.is_empty() {
             let variable = Variable {
