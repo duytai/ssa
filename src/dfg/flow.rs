@@ -115,18 +115,6 @@ impl<'a> DataFlowGraph<'a> {
             for declaration in utils::find_declarations(id, dict) {
                 assignments.push(declaration.get_assignment().clone());
             }
-            for function_use in utils::find_function_use(id, dict) {
-                let mut agns = function_use.get_assignments().clone();
-                let vars = function_use.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            }
-            for index_use in utils::find_index_use(id, dict) {
-                let mut agns = index_use.get_assignments().clone();
-                let vars = index_use.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            }
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
@@ -190,7 +178,6 @@ impl<'a> DataFlowGraph<'a> {
                                             VariableComparison::Partial => {
                                                 // Only kill by using parent
                                                 if kill_var.get_members().len() < variable.get_members().len() {
-                                                    // let data_link = DataLink::new(*id, kill_id, variable.clone());
                                                     let data_link = DataLink::new(
                                                         *id,
                                                         variable.clone(),

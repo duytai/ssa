@@ -4,8 +4,6 @@ use crate::core::{
     Assignment,
     Dictionary,
     Declaration,
-    FunctionUse,
-    IndexUse,
 };
 
 pub fn find_declarations(id: u32, dict: &Dictionary) -> Vec<Declaration> {
@@ -24,16 +22,4 @@ pub fn find_variables(id: u32, dict: &Dictionary) -> HashSet<Variable> {
     dict.lookup(id)
         .map(|walker| Variable::parse(walker, dict))
         .unwrap_or(HashSet::new())
-}
-
-pub fn find_function_use(id: u32, dict: &Dictionary) -> Vec<FunctionUse> {
-    dict.lookup(id)
-        .map(|walker| FunctionUse::parse(walker, dict))
-        .unwrap_or(vec![])
-}
-
-pub fn find_index_use(id: u32, dict: &Dictionary) -> Vec<IndexUse> {
-    dict.lookup(id)
-        .map(|walker| IndexUse::parse(walker, dict))
-        .unwrap_or(vec![])
 }

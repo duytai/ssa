@@ -56,52 +56,52 @@ impl<'a> Network<'a> {
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
         let mut ret = HashSet::new();
-        for function_use in utils::find_function_use(self.entry_id, self.dict) {
-            for variable in function_use.get_variables() {
-                let flat_variables = variable.flatten(self.dict);
-                if let Some(Member::Reference(id)) = variable.get_members().last() {
-                    let reference = self.dict.lookup(*id)
-                        .and_then(|walker| walker.direct_childs(|_| true).get(0).map(|x| x.clone()))
-                        .and_then(|walker| match walker.node.name {
-                            "NewExpression" => walker.direct_childs(|_| true).get(0)
-                                .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
-                                .and_then(|contract_id| self.dict.lookup_constructor(LookupInputType::ContractId(contract_id)))
-                                .and_then(|walker| Some(walker.node.id))
-                            ,
-                            _ => walker.node.attributes["referencedDeclaration"].as_u32()
-                                .and_then(|id| self.dict.lookup(id))
-                                .and_then(|walker| match walker.node.name {
-                                    "EventDefinition"
-                                        | "StructDefinition"
-                                        | "ContractDefinition"
-                                        | "VariableDeclaration"
-                                        | "EnumDefinition" => None,
-                                    _ => Some(walker.node.id),
-                                })
-                        });
-                    match reference {
-                        Some(reference) => {
-                            for return_walker in self.dict.lookup_returns(reference) {
-                                for (_, dfg) in self.dfgs.iter() {
-                                    for actions in dfg.get_new_actions().get(&return_walker.node.id) {
-                                        for action in actions {
-                                            if let Action::Use(return_variable, _) = action {
-                                                // TODO: How to link here 
+        // for function_use in utils::find_function_use(self.entry_id, self.dict) {
+            // for variable in function_use.get_variables() {
+                // let flat_variables = variable.flatten(self.dict);
+                // if let Some(Member::Reference(id)) = variable.get_members().last() {
+                    // let reference = self.dict.lookup(*id)
+                        // .and_then(|walker| walker.direct_childs(|_| true).get(0).map(|x| x.clone()))
+                        // .and_then(|walker| match walker.node.name {
+                            // "NewExpression" => walker.direct_childs(|_| true).get(0)
+                                // .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
+                                // .and_then(|contract_id| self.dict.lookup_constructor(LookupInputType::ContractId(contract_id)))
+                                // .and_then(|walker| Some(walker.node.id))
+                            // ,
+                            // _ => walker.node.attributes["referencedDeclaration"].as_u32()
+                                // .and_then(|id| self.dict.lookup(id))
+                                // .and_then(|walker| match walker.node.name {
+                                    // "EventDefinition"
+                                        // | "StructDefinition"
+                                        // | "ContractDefinition"
+                                        // | "VariableDeclaration"
+                                        // | "EnumDefinition" => None,
+                                    // _ => Some(walker.node.id),
+                                // })
+                        // });
+                    // match reference {
+                        // Some(reference) => {
+                            // for return_walker in self.dict.lookup_returns(reference) {
+                                // for (_, dfg) in self.dfgs.iter() {
+                                    // for actions in dfg.get_new_actions().get(&return_walker.node.id) {
+                                        // for action in actions {
+                                            // if let Action::Use(return_variable, _) = action {
+                                                // TODO: How to link here
                                                 // println!("return_variable: {:?}", return_variable);
                                                 // println!("flat_variables: {:?}", flat_variables);
                                                 // println!("return_variable: {:?}", return_variable);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        None => {
-                        },
-                    }
-                }
-            }
-        }
+                                            // }
+                                        // }
+                                    // }
+                                // }
+                            // }
+                        // },
+                        // None => {
+                        // },
+                    // }
+                // }
+            // }
+        // }
         ret
     } 
 

@@ -71,7 +71,7 @@ impl<'a> Graph<'a> {
         };
         // Split parameters to other nodes
         for walker in walker.walk(true, ig, fi).into_iter() {
-            for walker in walker.direct_childs(|_| true).into_iter() {
+            for walker in walker.direct_childs(|_| true).into_iter().rev() {
                 function_calls.append(&mut Graph::split(walker));
             }
             match walker.node.name {
