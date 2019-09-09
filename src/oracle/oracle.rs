@@ -13,7 +13,6 @@ pub struct Oracle<'a> {
 impl<'a> Oracle<'a> {
     pub fn new(network: Network<'a>) -> Self {
         let permission = Permission::new(&network);
-        permission.create_table();
         Oracle { network }
     }
 

@@ -236,7 +236,6 @@ impl Variable {
     }
 
     pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
-        // println!("var: {:?}", self);
         let mut flat_variables = vec![];
         if let Some(Member::Reference(reference)) = self.members.first() {
             if let Some(walker) = dict.lookup(*reference) {
