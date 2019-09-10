@@ -15,6 +15,7 @@ use crate::core::{
 /// - `Global Access`: `members` will contains at least one `Member::Global`
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Variable {
+    id: u32,
     members: Vec<Member>,
     source: String,
     kind: Option<String>,
@@ -22,8 +23,8 @@ pub struct Variable {
 
 impl Variable {
 
-    pub fn new(members: Vec<Member>, source: String, kind: Option<String>) -> Self {
-        Variable { members, source, kind }
+    pub fn new(id: u32, members: Vec<Member>, source: String, kind: Option<String>) -> Self {
+        Variable { id, members, source, kind }
     }
 
     pub fn get_members(&self) -> &Vec<Member> {
@@ -82,6 +83,7 @@ impl Variable {
         let members = Variable::find_members(walker, dict);
         if !members.is_empty() {
             let variable = Variable {
+                id: walker.node.id,
                 members,
                 source: walker.node.source.to_string(),
                 kind: Variable::normalize_type(walker),
@@ -253,6 +255,7 @@ impl Variable {
                     members.append(&mut self.members.clone());
                     sources.insert(0, self.source.clone());
                     let variable = Variable {
+                        id: self.id,
                         members,
                         source: sources.join("."),
                         kind,
@@ -263,6 +266,10 @@ impl Variable {
         }
         if flat_variables.is_empty() {
             flat_variables.push(self.clone());
+        }
+        println!("==");
+        for f in flat_variables.iter() {
+            println!("f: {:?}", f);
         }
         flat_variables
     }

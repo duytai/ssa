@@ -56,12 +56,24 @@ impl Declaration {
         if walker.node.name == "VariableDeclaration" {
             let members = vec![Member::Reference(walker.node.id)];
             let source = walker.node.source.to_string();
-            let variable = Variable::new(members, source, Variable::normalize_type(walker));
+            let variable = Variable::new(
+                walker.node.id,
+                members,
+                source,
+                Variable::normalize_type(walker)
+            );
             lhs.insert(variable);
         } else {
-            let members = vec![Member::Reference(walkers[0].node.id)];
+            let members = vec![
+                Member::Reference(walkers[0].node.id)
+            ];
             let source = walkers[0].node.source.to_string();
-            let variable = Variable::new(members, source, Variable::normalize_type(&walkers[0]));
+            let variable = Variable::new(
+                walkers[0].node.id,
+                members,
+                source,
+                Variable::normalize_type(&walkers[0])
+            );
             lhs.insert(variable);
         }
         if walkers.len() >= 2 {
