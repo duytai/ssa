@@ -3,15 +3,11 @@ use crate::dfg::Alias;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
-    LookupInputType,
     DataLink,
     DataLinkLabel,
     Dictionary,
-    Member,
-    Variable,
-    Action,
+    SmartContractQuery,
 };
-use crate::dfg::utils;
 use std::collections::{
     HashMap,
     HashSet,
@@ -55,28 +51,32 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
-        let mut ret = HashSet::new();
-        ret
+        HashSet::new()
     } 
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        let walkers = self.dict.lookup_functions(LookupInputType::ContractId(self.entry_id));
-        if walkers.is_empty() {
-            let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
-            let alias = Alias::new(&cfg);
-            let mut dfg = DataFlowGraph::new(cfg, alias);
-            links.extend(dfg.find_links());
-            self.dfgs.insert(self.entry_id, dfg);
-        } else {
-            for walker in walkers {
-                let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
-                let alias = Alias::new(&cfg);
-                let mut dfg = DataFlowGraph::new(cfg, alias);
-                links.extend(dfg.find_links());
-                self.dfgs.insert(walker.node.id, dfg);
-            }
-        }
+        self.dict.find(SmartContractQuery::FunctionsByContractId(self.entry_id))
+            .map(|function_ids| match function_ids.is_empty() {
+                true => {
+                    let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
+                    let alias = Alias::new(&cfg);
+                    let mut dfg = DataFlowGraph::new(cfg, alias);
+                    links.extend(dfg.find_links());
+                    vec![(self.entry_id, dfg)]
+                },
+                false => {
+                    function_ids.into_iter().map(|function_id| {
+                        let cfg = ControlFlowGraph::new(self.dict, *function_id);
+                        let alias = Alias::new(&cfg);
+                        let mut dfg = DataFlowGraph::new(cfg, alias);
+                        links.extend(dfg.find_links());
+                        (*function_id, dfg)
+                    })
+                    .collect::<Vec<(u32, DataFlowGraph)>>()
+                }
+            })
+        .map(|funcs| funcs.into_iter().map(|(id, dfg)| self.dfgs.insert(id, dfg)));
         links
     }
 
@@ -85,7 +85,6 @@ impl<'a> Network<'a> {
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);
-        // Find all sub networks 
     }
 
     /// Find all paths

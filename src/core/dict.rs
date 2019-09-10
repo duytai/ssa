@@ -1,13 +1,8 @@
-use crate::core::walker::Walker;
+use crate::core::Walker;
+use crate::core::SmartContract;
+use crate::core::SmartContractQuery;
 use std::collections::HashMap;
-
-/// Keep inheritance tree and function entry
-#[derive(Debug)]
-pub struct ContractProp {
-    states: Vec<u32>,
-    functions: Vec<u32>,
-    parents: Vec<u32>,
-}
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub enum LookupInputType<'a> {
@@ -21,7 +16,7 @@ pub enum LookupInputType<'a> {
 #[derive(Debug)]
 pub struct Dictionary<'a> {
     entries: HashMap<u32, Walker<'a>>,
-    contracts: HashMap<u32, ContractProp>,
+    smart_contract: SmartContract,
 }
 
 impl<'a> Dictionary<'a> {
@@ -29,48 +24,29 @@ impl<'a> Dictionary<'a> {
     pub fn new(value: &'a json::JsonValue, sources: &'a HashMap<String, String>) -> Self {
         let mut dict = Dictionary {
             entries: HashMap::new(),
-            contracts: HashMap::new(),
+            smart_contract: SmartContract::new(), 
         };
         for (name, source) in sources {
             let ast_one = &value["sources"][name]["AST"];
             let walker = Walker::new(ast_one, source);
             dict.traverse(&walker);
         }
+        let contract_walkers = dict.entries.iter().map(|(_, walker)| walker)
+            .filter(|walker| walker.node.name == "ContractDefinition")
+            .collect::<Vec<&Walker>>();
+        dict.smart_contract.update(contract_walkers);
         dict
     }
 
-    /// Traverse AST and save data for later searches
-    pub fn traverse(&mut self, walker: &Walker<'a>) {
-        if walker.node.name == "ContractDefinition" {
-            let mut prop = ContractProp {
-                states: Vec::new(),
-                functions: Vec::new(),
-                parents: Vec::new(),
-            };
-            for walker in walker.direct_childs(|_| true).into_iter() {
-                match walker.node.name {
-                    "InheritanceSpecifier" | "UsingForDirective" => {
-                        let walkers = walker.direct_childs(|_| true);
-                        let reference = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                        if let Some(reference) = reference {
-                            prop.parents.push(reference);
-                        }
-                    },
-                    "FunctionDefinition" | "ModifierDefinition" => {
-                        prop.functions.push(walker.node.id);
-                    },
-                    "VariableDeclaration" => {
-                        prop.states.push(walker.node.id);
-                    },
-                    _ => {},
-                }
-            }
-            self.contracts.insert(walker.node.id, prop);
-        }
+    fn traverse(&mut self, walker: &Walker<'a>) {
         for walker in walker.direct_childs(|_| true).into_iter() {
             self.traverse(&walker);
             self.entries.insert(walker.node.id, walker);
         }
+    }
+
+    pub fn find(&self, query: SmartContractQuery) -> Option<&Vec<u32>> {
+        self.smart_contract.find(query)
     }
 
     /// Find walker by node id
@@ -78,4 +54,45 @@ impl<'a> Dictionary<'a> {
         self.entries.get(&id)
     }
 
+    /// Filter by
+    pub fn filter_by(&self, name: &str) -> Vec<&Walker>  {
+        self.entries.iter()
+            .map(|(_, walker)| walker)
+            .filter(|walker| walker.node.name == name)
+            .collect::<Vec<&Walker>>()
+    }
+
+    /// Find contract constructor
+    pub fn lookup_constructor(&self, lookup_input: LookupInputType) -> Option<Walker> {
+        None
+    }
+
+    /// Find return statements
+    pub fn lookup_returns(&self, id: u32) -> Vec<&Walker> {
+        vec![]
+    } 
+
+    /// Find all parameters of a function definition or function call
+    pub fn lookup_parameters(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
+        vec![]
+    }
+
+    /// Find contract based on function call return type
+    pub fn lookup_contract(&self, lookup_input: LookupInputType) -> u32 {
+        0
+    }
+
+    /// Find relative functions of a contract
+    /// + functionDefinition of current contract
+    /// + functionDefinition of its parents then parents of parents
+    /// + functionDefinition of contract which is initialized in current contract
+    fn lookup_contract_functions(&self, id: u32, mut contract_ids: HashSet<u32>) -> Vec<&Walker> {
+        vec![]
+    }
+
+    /// Find a list of states from function_id
+    /// Include inherited states
+    pub fn lookup_states(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
+        vec![]
+    }
 }

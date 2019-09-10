@@ -361,6 +361,7 @@ impl<'a> ControlFlowGraph<'a> {
         let walker = self.dict.lookup(entry_id).expect("must exist").clone();
         self.start = entry_id * 100000;
         self.stop = self.start + 1;
+        println!("start_at: {}", entry_id);
         match walker.node.name {
             "FunctionDefinition" | "ModifierDefinition" => {
                 let mut graph = Graph::new(walker);
