@@ -18,17 +18,17 @@ pub struct Network<'a> {
     links: HashSet<DataLink>,
     dfgs: HashMap<u32, DataFlowGraph<'a>>,
     dot: Dot,
-    entry_id: u32,
+    contract_id: u32,
 }
 
 impl<'a> Network<'a> {
-    pub fn new(dict: &'a Dictionary, entry_id: u32) -> Self {
+    pub fn new(dict: &'a Dictionary, contract_id: u32) -> Self {
         let mut network = Network {
             dict,
             links: HashSet::new(),
             dfgs: HashMap::new(),
             dot: Dot::new(),
-            entry_id,
+            contract_id,
         };
         network.find_links();
         network
@@ -46,8 +46,8 @@ impl<'a> Network<'a> {
         &self.dict
     }
 
-    pub fn get_entry_id(&self) -> u32 {
-        self.entry_id
+    pub fn get_contract_id(&self) -> u32 {
+        self.contract_id
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
@@ -56,24 +56,13 @@ impl<'a> Network<'a> {
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        let function_ids = self.dict.find_ids(SmartContractQuery::FunctionsByContractId(self.entry_id));
-        match function_ids.is_empty() {
-            true => {
-                let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
-                let alias = Alias::new(&cfg);
-                let mut dfg = DataFlowGraph::new(cfg, alias);
-                links.extend(dfg.find_links());
-                self.dfgs.insert(self.entry_id, dfg);
-            },
-            false => {
-                for function_id in function_ids {
-                    let cfg = ControlFlowGraph::new(self.dict, function_id);
-                    let alias = Alias::new(&cfg);
-                    let mut dfg = DataFlowGraph::new(cfg, alias);
-                    links.extend(dfg.find_links());
-                    self.dfgs.insert(function_id, dfg);
-                }
-            }
+        let function_ids = self.dict.find_ids(SmartContractQuery::FunctionsByContractId(self.contract_id));
+        for function_id in function_ids {
+            let cfg = ControlFlowGraph::new(self.dict, self.contract_id, function_id);
+            let alias = Alias::new(&cfg);
+            let mut dfg = DataFlowGraph::new(cfg, alias);
+            links.extend(dfg.find_links());
+            self.dfgs.insert(function_id, dfg);
         }
         links
     }

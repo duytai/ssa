@@ -44,7 +44,7 @@ pub struct LoopBreaker {
 
 impl<'a> ControlFlowGraph<'a> {
     /// Create a new cfg from dictionary
-    pub fn new(dict: &'a Dictionary, entry_id: u32) -> Self {
+    pub fn new(dict: &'a Dictionary, contract_id: u32, function_id: u32) -> Self {
         let mut cfg = ControlFlowGraph {
             edges: HashSet::new(),
             vertices: HashSet::new(),
@@ -53,7 +53,7 @@ impl<'a> ControlFlowGraph<'a> {
             start: 0,
             stop: 0,
         };
-        cfg.start_at(entry_id);
+        cfg.start_at(contract_id, function_id);
         cfg.update_execution_paths(cfg.start, vec![]);
         cfg
     }
@@ -357,52 +357,29 @@ impl<'a> ControlFlowGraph<'a> {
     }
 
     /// Build a cfg, the cfg starts at FunctionDefinition, ModifierDefinition `entry_id`
-    pub fn start_at(&mut self, entry_id: u32) {
-        let walker = self.dict.walker_at(entry_id).expect("must exist").clone();
-        self.start = entry_id * 100000;
+    pub fn start_at(&mut self, contract_id: u32, function_id: u32) {
+        self.start = function_id * 100000;
         self.stop = self.start + 1;
-        println!("start_at: {}", entry_id);
-        match walker.node.name {
-            "FunctionDefinition" | "ModifierDefinition" => {
-                let mut graph = Graph::new(walker);
-                let root = graph.update();
-                let states = self.dict.find_walkers(SmartContractQuery::StatesByContractId(entry_id));
-                if let BlockNode::Root(blocks) = root {
-                    for id in vec![self.start, self.stop] {
-                        let vertex = Vertex::new(id, "", Shape::Point);
-                        self.vertices.insert(vertex);
-                    }
-                    let last_id = states.iter().fold(self.start, |prev, cur| {
-                        let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
-                        let edge = Edge::new(prev, cur.node.id);
-                        self.vertices.insert(vertex);
-                        self.edges.insert(edge);
-                        cur.node.id
-                    });
-                    let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
-                    for predecessor in predecessors.iter() {
-                        let edge = Edge::new(*predecessor, self.stop);
-                        self.edges.insert(edge);
-                    }
-                }
-            },
-            "ContractDefinition" => {
-                let states = self.dict.find_walkers(SmartContractQuery::StatesByContractId(entry_id));
-                for id in vec![self.start, self.stop] {
-                    let vertex = Vertex::new(id, "", Shape::Point);
-                    self.vertices.insert(vertex);
-                }
-                let last_id = states.iter().fold(self.start, |prev, cur| {
-                    let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
-                    let edge = Edge::new(prev, cur.node.id);
-                    self.vertices.insert(vertex);
-                    self.edges.insert(edge);
-                    cur.node.id
-                });
-                let edge = Edge::new(last_id, self.stop);
+        let mut graph = Graph::new(self.dict.walker_at(function_id).unwrap().clone());
+        let root = graph.update();
+        let states = self.dict.find_walkers(SmartContractQuery::StatesByContractId(contract_id));
+        if let BlockNode::Root(blocks) = root {
+            for id in vec![self.start, self.stop] {
+                let vertex = Vertex::new(id, "", Shape::Point);
+                self.vertices.insert(vertex);
+            }
+            let last_id = states.iter().fold(self.start, |prev, cur| {
+                let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box);
+                let edge = Edge::new(prev, cur.node.id);
+                self.vertices.insert(vertex);
                 self.edges.insert(edge);
-            },
-            _ => {},
+                cur.node.id
+            });
+            let predecessors = self.traverse(blocks, vec![last_id], &mut vec![]);
+            for predecessor in predecessors.iter() {
+                let edge = Edge::new(*predecessor, self.stop);
+                self.edges.insert(edge);
+            }
         }
     }
 
