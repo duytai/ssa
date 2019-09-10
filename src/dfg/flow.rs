@@ -165,10 +165,8 @@ impl<'a> DataFlowGraph<'a> {
                                         match kill_var.contains(variable) {
                                             VariableComparison::Equal => {
                                                 let data_link = DataLink::new(
-                                                    *id,
-                                                    variable.clone(),
-                                                    kill_id,
-                                                    kill_var.clone(),
+                                                    (variable.clone(), *id),
+                                                    (kill_var.clone(), kill_id),
                                                     DataLinkLabel::Internal,
                                                 );
                                                 links.insert(data_link);
@@ -179,10 +177,8 @@ impl<'a> DataFlowGraph<'a> {
                                                 // Only kill by using parent
                                                 if kill_var.get_members().len() < variable.get_members().len() {
                                                     let data_link = DataLink::new(
-                                                        *id,
-                                                        variable.clone(),
-                                                        kill_id,
-                                                        kill_var.clone(),
+                                                        (variable.clone(), *id),
+                                                        (kill_var.clone(), kill_id),
                                                         DataLinkLabel::Internal,
                                                     );
                                                     links.insert(data_link);
