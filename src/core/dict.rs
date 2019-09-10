@@ -45,12 +45,23 @@ impl<'a> Dictionary<'a> {
         }
     }
 
-    pub fn find(&self, query: SmartContractQuery) -> Option<&Vec<u32>> {
-        self.smart_contract.find(query)
+    pub fn find_ids(&self, query: SmartContractQuery) -> Vec<u32> {
+        self.smart_contract.find(query).unwrap_or(vec![])
+    }
+
+    pub fn find_walkers(&self, query: SmartContractQuery) -> Vec<&Walker> {
+        self.smart_contract
+            .find(query)
+            .map(|ids| {
+                ids.into_iter()
+                   .map(|id| self.entries.get(&id).unwrap())
+                   .collect::<Vec<&Walker>>()
+            })
+            .unwrap_or(vec![])
     }
 
     /// Find walker by node id
-    pub fn lookup(&self, id: u32) -> Option<&Walker> {
+    pub fn walker_at(&self, id: u32) -> Option<&Walker> {
         self.entries.get(&id)
     }
 
@@ -60,39 +71,5 @@ impl<'a> Dictionary<'a> {
             .map(|(_, walker)| walker)
             .filter(|walker| walker.node.name == name)
             .collect::<Vec<&Walker>>()
-    }
-
-    /// Find contract constructor
-    pub fn lookup_constructor(&self, lookup_input: LookupInputType) -> Option<Walker> {
-        None
-    }
-
-    /// Find return statements
-    pub fn lookup_returns(&self, id: u32) -> Vec<&Walker> {
-        vec![]
-    } 
-
-    /// Find all parameters of a function definition or function call
-    pub fn lookup_parameters(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
-        vec![]
-    }
-
-    /// Find contract based on function call return type
-    pub fn lookup_contract(&self, lookup_input: LookupInputType) -> u32 {
-        0
-    }
-
-    /// Find relative functions of a contract
-    /// + functionDefinition of current contract
-    /// + functionDefinition of its parents then parents of parents
-    /// + functionDefinition of contract which is initialized in current contract
-    fn lookup_contract_functions(&self, id: u32, mut contract_ids: HashSet<u32>) -> Vec<&Walker> {
-        vec![]
-    }
-
-    /// Find a list of states from function_id
-    /// Include inherited states
-    pub fn lookup_states(&self, lookup_input: LookupInputType) -> Vec<&Walker> {
-        vec![]
     }
 }

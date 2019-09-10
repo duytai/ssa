@@ -131,7 +131,7 @@ impl Variable {
                 let mut ret = vec![];
                 match reference {
                     Some(reference) => {
-                        if dict.lookup(reference).is_some() {
+                        if dict.walker_at(reference).is_some() {
                             ret.push(Member::Reference(reference));
                         } else {
                             ret.push(Member::Global(value.to_string()));
@@ -147,7 +147,7 @@ impl Variable {
                 let mut ret = vec![];
                 match reference {
                     Some(reference) => {
-                        if dict.lookup(reference).is_some() {
+                        if dict.walker_at(reference).is_some() {
                             ret.push(Member::Reference(reference));
                         } else {
                             ret.push(Member::Global(member_name.to_string()));
@@ -193,7 +193,7 @@ impl Variable {
                             let w = ctx_walker.node
                                 .attributes["referencedDeclaration"]
                                 .as_u32()
-                                .and_then(|reference| dict.lookup(reference));
+                                .and_then(|reference| dict.walker_at(reference));
                             if let Some(w) = w {
                                 match w.node.name {
                                     "StructDefinition" => {
@@ -238,7 +238,7 @@ impl Variable {
     pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
         let mut flat_variables = vec![];
         if let Some(Member::Reference(reference)) = self.members.first() {
-            if let Some(walker) = dict.lookup(*reference) {
+            if let Some(walker) = dict.walker_at(*reference) {
                 let mut paths = vec![];
                 self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
                 for (mut path, kind) in paths {

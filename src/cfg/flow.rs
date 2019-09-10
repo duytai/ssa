@@ -10,7 +10,7 @@ use crate::cfg::{
     ForStatement,
 };
 use crate::core::{
-    LookupInputType,
+    SmartContractQuery,
     Dictionary,
     Node,
     Vertex,
@@ -358,7 +358,7 @@ impl<'a> ControlFlowGraph<'a> {
 
     /// Build a cfg, the cfg starts at FunctionDefinition, ModifierDefinition `entry_id`
     pub fn start_at(&mut self, entry_id: u32) {
-        let walker = self.dict.lookup(entry_id).expect("must exist").clone();
+        let walker = self.dict.walker_at(entry_id).expect("must exist").clone();
         self.start = entry_id * 100000;
         self.stop = self.start + 1;
         println!("start_at: {}", entry_id);
@@ -366,7 +366,7 @@ impl<'a> ControlFlowGraph<'a> {
             "FunctionDefinition" | "ModifierDefinition" => {
                 let mut graph = Graph::new(walker);
                 let root = graph.update();
-                let states = self.dict.lookup_states(LookupInputType::FunctionId(entry_id));
+                let states = self.dict.find_walkers(SmartContractQuery::StatesByContractId(entry_id));
                 if let BlockNode::Root(blocks) = root {
                     for id in vec![self.start, self.stop] {
                         let vertex = Vertex::new(id, "", Shape::Point);
@@ -387,7 +387,7 @@ impl<'a> ControlFlowGraph<'a> {
                 }
             },
             "ContractDefinition" => {
-                let states = self.dict.lookup_states(LookupInputType::ContractId(entry_id));
+                let states = self.dict.find_walkers(SmartContractQuery::StatesByContractId(entry_id));
                 for id in vec![self.start, self.stop] {
                     let vertex = Vertex::new(id, "", Shape::Point);
                     self.vertices.insert(vertex);

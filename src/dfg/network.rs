@@ -56,27 +56,25 @@ impl<'a> Network<'a> {
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        self.dict.find(SmartContractQuery::FunctionsByContractId(self.entry_id))
-            .map(|function_ids| match function_ids.is_empty() {
-                true => {
-                    let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
+        let function_ids = self.dict.find_ids(SmartContractQuery::FunctionsByContractId(self.entry_id));
+        match function_ids.is_empty() {
+            true => {
+                let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
+                let alias = Alias::new(&cfg);
+                let mut dfg = DataFlowGraph::new(cfg, alias);
+                links.extend(dfg.find_links());
+                self.dfgs.insert(self.entry_id, dfg);
+            },
+            false => {
+                for function_id in function_ids {
+                    let cfg = ControlFlowGraph::new(self.dict, function_id);
                     let alias = Alias::new(&cfg);
                     let mut dfg = DataFlowGraph::new(cfg, alias);
                     links.extend(dfg.find_links());
-                    vec![(self.entry_id, dfg)]
-                },
-                false => {
-                    function_ids.into_iter().map(|function_id| {
-                        let cfg = ControlFlowGraph::new(self.dict, *function_id);
-                        let alias = Alias::new(&cfg);
-                        let mut dfg = DataFlowGraph::new(cfg, alias);
-                        links.extend(dfg.find_links());
-                        (*function_id, dfg)
-                    })
-                    .collect::<Vec<(u32, DataFlowGraph)>>()
+                    self.dfgs.insert(function_id, dfg);
                 }
-            })
-        .map(|funcs| funcs.into_iter().map(|(id, dfg)| self.dfgs.insert(id, dfg)));
+            }
+        }
         links
     }
 

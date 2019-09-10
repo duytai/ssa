@@ -31,13 +31,13 @@ impl SmartContract {
         }
     }
 
-    pub fn find(&self, query: SmartContractQuery) -> Option<&Vec<u32>> {
+    pub fn find(&self, query: SmartContractQuery) -> Option<Vec<u32>> {
         match query {
             SmartContractQuery::FunctionsByContractId(contract_id) => {
-                self.contracts.get(&contract_id)
+                self.contracts.get(&contract_id).map(|x| x.clone())
             },
             SmartContractQuery::StatesByContractId(contract_id) => {
-                self.states.get(&contract_id)
+                self.states.get(&contract_id).map(|x| x.clone())
             },
         }
     }
