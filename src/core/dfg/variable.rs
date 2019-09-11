@@ -63,13 +63,13 @@ impl Variable {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
+            || walker.node.name == "FunctionCall"
+            || walker.node.name == "IndexAccess"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "FunctionCall"
-            || walker.node.name == "VariableDeclaration"
+            walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
-            || walker.node.name == "IndexAccess"
         };
         for walker in walker.walk(true, ig, fi) {
             Variable::parse_one(&walker, dict).map(|variable| {
@@ -163,6 +163,7 @@ impl Variable {
                 }
                 ret
             },
+            "FunctionCall" | "IndexAccess" => vec![Member::Shortcut(walker.node.id)],
             _ => vec![],
         }
     }

@@ -29,6 +29,8 @@ pub enum Member {
     Global(String),
     /// Accesses a member in an array
     IndexAccess,
+    /// Shortcut to other variables
+    Shortcut(u32),
 }
 
 /// Operator in an assignment statement

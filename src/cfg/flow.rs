@@ -194,9 +194,23 @@ impl<'a> ControlFlowGraph<'a> {
                     }
                     predecessors.dedup();
                 },
-                SimpleBlockNode::FunctionCall(_)
-                    | SimpleBlockNode::ModifierInvocation(_)
-                    | SimpleBlockNode::IndexAccess(_) => {
+                SimpleBlockNode::FunctionCall(walker)
+                    | SimpleBlockNode::ModifierInvocation(walker)
+                    | SimpleBlockNode::IndexAccess(walker) => {
+                        let Node { id, source, .. } = walker.node;
+                        predecessors = predecessors
+                            .iter()
+                            .filter_map(|predecessor| {
+                                let edge = Edge::new(*predecessor, id);
+                                if !self.edges.insert(edge) { return None; }
+                                Some(id)
+                            })
+                        .collect::<Vec<u32>>();
+                        if !predecessors.is_empty() {
+                            let vertice = Vertex::new(id, source, Shape::DoubleCircle);
+                            self.vertices.insert(vertice);
+                        }
+                        predecessors.dedup();
                 },
                 SimpleBlockNode::None => unimplemented!(),
             }
