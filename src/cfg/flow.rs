@@ -25,8 +25,6 @@ pub struct ControlFlowGraph<'a> {
     dict: &'a Dictionary<'a>,
     start: u32,
     stop: u32,
-    idx_accesses: Vec<u32>,
-    func_calls: Vec<u32>,
     execution_paths: Vec<Vec<u32>>,
 }
 
@@ -50,8 +48,6 @@ impl<'a> ControlFlowGraph<'a> {
         let mut cfg = ControlFlowGraph {
             edges: HashSet::new(),
             vertices: HashSet::new(),
-            idx_accesses: vec![],
-            func_calls: vec![],
             execution_paths: vec![],
             dict,
             start: 0,
@@ -84,14 +80,6 @@ impl<'a> ControlFlowGraph<'a> {
 
     pub fn get_edges(&self) -> &HashSet<Edge> {
         &self.edges
-    }
-
-    pub fn get_idx_accesses(&self) -> &Vec<u32> {
-        &self.idx_accesses
-    }
-
-    pub fn get_func_calls(&self) -> &Vec<u32> {
-        &self.func_calls
     }
 
     /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
@@ -206,7 +194,9 @@ impl<'a> ControlFlowGraph<'a> {
                     }
                     predecessors.dedup();
                 },
-                SimpleBlockNode::IndexAccess(walker) => {
+                SimpleBlockNode::FunctionCall(walker)
+                    | SimpleBlockNode::ModifierInvocation(walker)
+                    | SimpleBlockNode::IndexAccess(walker) => {
                     let Node { id, source, .. } = walker.node;
                     predecessors = predecessors
                         .iter()
@@ -221,24 +211,6 @@ impl<'a> ControlFlowGraph<'a> {
                         self.vertices.insert(vertice);
                     }
                     predecessors.dedup();
-                    self.idx_accesses.push(id);
-                },
-                SimpleBlockNode::FunctionCall(walker) | SimpleBlockNode::ModifierInvocation(walker) => {
-                    let Node { id, source, .. } = walker.node;
-                    predecessors = predecessors
-                        .iter()
-                        .filter_map(|predecessor| {
-                            let edge = Edge::new(*predecessor, id);
-                            if !self.edges.insert(edge) { return None; }
-                            Some(id)
-                        })
-                    .collect::<Vec<u32>>();
-                    if !predecessors.is_empty() {
-                        let vertice = Vertex::new(id, source, Shape::DoubleCircle);
-                        self.vertices.insert(vertice);
-                    }
-                    predecessors.dedup();
-                    self.func_calls.push(id);
                 },
                 SimpleBlockNode::None => unimplemented!(),
             }

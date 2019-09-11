@@ -49,10 +49,6 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
-        // Link IndexAccess
-        for (_, dfg) in self.dfgs.iter() {
-            let cfg = dfg.get_cfg();
-        }
         HashSet::new()
     } 
 
