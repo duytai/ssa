@@ -125,39 +125,38 @@ impl Variable {
     ///
     /// A member is reference to place where it is declared , global index, index access of array
     fn find_members(walker: &Walker, dict: &Dictionary) -> Vec<Member> {
-        let reference = walker.node.attributes["referencedDeclaration"].as_u32();
-        let member_name = walker.node.attributes["member_name"].as_str().unwrap_or("");
-        let value = walker.node.attributes["value"].as_str().unwrap_or("");
+        let attributes = walker.node.attributes;
+        let reference = attributes["referencedDeclaration"].as_u32();
+        let prop = (
+            reference,
+            reference.and_then(|reference| dict.walker_at(reference)),
+            attributes["member_name"].as_str().unwrap_or(""),
+            attributes["value"].as_str().unwrap_or(""),
+        );
         match walker.node.name {
             "Identifier" => {
                 let mut ret = vec![];
-                match reference {
-                    Some(reference) => {
-                        if dict.walker_at(reference).is_some() {
-                            ret.push(Member::Reference(reference));
-                        } else {
-                            ret.push(Member::Global(value.to_string()));
+                match prop {
+                    (Some(reference), walker, _, value) => {
+                        match walker {
+                            Some(_) => ret.push(Member::Reference(reference)),
+                            None => ret.push(Member::Global(value.to_string())),
                         }
                     },
-                    None => {
-                        ret.push(Member::Global(member_name.to_string()));
-                    },
+                    (None, _, member_name, _) => ret.push(Member::Global(member_name.to_string())),
                 }
                 ret
             },
             "MemberAccess" => {
                 let mut ret = vec![];
-                match reference {
-                    Some(reference) => {
-                        if dict.walker_at(reference).is_some() {
-                            ret.push(Member::Reference(reference));
-                        } else {
-                            ret.push(Member::Global(member_name.to_string()));
+                match prop {
+                    (Some(reference), walker, member_name, _) => {
+                        match walker {
+                            Some(_) => ret.push(Member::Reference(reference)),
+                            None => ret.push(Member::Global(member_name.to_string())),
                         }
                     },
-                    None => {
-                        ret.push(Member::Global(member_name.to_string()));
-                    }
+                    (None, _, member_name, _) => ret.push(Member::Global(member_name.to_string())),
                 }
                 for walker in walker.direct_childs(|_| true).into_iter() {
                     ret.append(&mut Variable::find_members(&walker, dict));
