@@ -2,7 +2,8 @@ use crate::core::Variable;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DataLinkLabel {
-    Internal, // Inside current function
+    SameType,
+    SwitchType,
 }
 
 /// Data dependency link between to node

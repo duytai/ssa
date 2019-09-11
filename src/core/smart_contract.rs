@@ -15,6 +15,8 @@ pub struct ContractProp {
 pub enum SmartContractQuery {
     FunctionsByContractId(u32),
     StatesByContractId(u32),
+    IndexesByContractId(u32),
+    IndexParamsByIndexAccess(u32),
 }
 
 #[derive(Debug)]
@@ -55,6 +57,12 @@ impl SmartContract {
             },
             SmartContractQuery::StatesByContractId(contract_id) => {
                 self.states.get(&contract_id).map(|x| x.clone())
+            },
+            SmartContractQuery::IndexesByContractId(contract_id) => {
+                self.indexes.get(&contract_id).map(|x| x.clone())
+            },
+            SmartContractQuery::IndexParamsByIndexAccess(contract_id) => {
+                self.idx_params.get(&contract_id).map(|x| x.clone())
             },
         }
     }

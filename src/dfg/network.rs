@@ -5,6 +5,7 @@ use crate::core::{
     DataLink,
     Dictionary,
     SmartContractQuery,
+    Action,
 };
 use std::collections::{
     HashMap,
@@ -49,6 +50,24 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
+        // let mut actions = HashMap::new();
+        // for (_, dfg) in self.dfgs.iter() {
+            // actions.extend(dfg.get_new_actions());
+        // }
+        // let index_ids = self.dict.find_ids(SmartContractQuery::IndexesByContractId(self.contract_id));
+        // for index_id in index_ids {
+            // actions.get(&index_id)
+                // .and_then(|actions| actions.get(0))
+                // .and_then(|action| match action {
+                    // Action::Use(var, _) => Some(var),
+                    // _ => None,
+                // })
+                // .map(|_| {
+                    // let param_ids = self.dict.find_ids(SmartContractQuery::IndexParamsByIndexAccess(index_id));
+                    // for param_id in param_ids {
+                    // }
+                // });
+        // }
         HashSet::new()
     } 
 
