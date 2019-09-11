@@ -116,16 +116,21 @@ impl<'a> DataFlowGraph<'a> {
                     assignments.push(declaration.get_assignment().clone());
                 }
             });
+            println!(">>>>>> id: {:?}", id);
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
+                            println!("left: {:?}", l);
                             for l in l.flatten(dict) {
+                                println!("\t+ {:?}", l);
                                 new_actions.push(Action::Kill(l, id));
                             }
                         },
                         Operator::Other => {
+                            println!("left: {:?}", l);
                             for l in l.flatten(dict) {
+                                println!("\t+ {:?}", l);
                                 new_actions.push(Action::Kill(l.clone(), id));
                                 new_actions.push(Action::Use(l, id));
                             }
@@ -133,13 +138,17 @@ impl<'a> DataFlowGraph<'a> {
                     }
                 }
                 for r in assignment.get_rhs().clone() {
+                    println!("right: {:?}", r);
                     for r in r.flatten(dict) {
+                        println!("\t+ {:?}", r);
                         new_actions.push(Action::Use(r, id));
                     }
                 }
             }
             for var in variables {
+                println!("var: {:?}", var);
                 for var in var.flatten(dict) {
+                    println!("\t+ {:?}", var);
                     new_actions.push(Action::Use(var, id));
                 }
             }

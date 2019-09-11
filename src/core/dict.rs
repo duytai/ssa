@@ -2,15 +2,6 @@ use crate::core::Walker;
 use crate::core::SmartContract;
 use crate::core::SmartContractQuery;
 use std::collections::HashMap;
-use std::collections::HashSet;
-
-#[derive(Debug)]
-pub enum LookupInputType<'a> {
-    FunctionId(u32),
-    FunctionCallId(u32),
-    ContractId(u32),
-    ContractName(&'a str),
-}
 
 /// Allow searching by node id 
 #[derive(Debug)]

@@ -21,8 +21,6 @@ pub struct SmartContract {
     contracts: HashMap<u32, Vec<u32>>,
     /// contract_id => vec<state_id> 
     states: HashMap<u32, Vec<u32>>,
-    /// index_access
-    indexes: HashMap<u32, Vec<u32>>,
 }
 
 impl SmartContract {
@@ -30,7 +28,6 @@ impl SmartContract {
         SmartContract {
             contracts: HashMap::new(),
             states: HashMap::new(),
-            indexes: HashMap::new(),
         }
     }
 
@@ -50,9 +47,9 @@ impl SmartContract {
         for contract_walker in contract_walkers {
             let mut prop = ContractProp {
                 id: contract_walker.node.id,
-                states: Vec::new(),
-                functions: Vec::new(),
-                parents: Vec::new(),
+                states: vec![],
+                functions: vec![],
+                parents: vec![],
             };
             for walker in contract_walker.direct_childs(|_| true).into_iter() {
                 match walker.node.name {

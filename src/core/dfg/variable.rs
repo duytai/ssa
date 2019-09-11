@@ -264,10 +264,6 @@ impl Variable {
         if flat_variables.is_empty() {
             flat_variables.push(self.clone());
         }
-        println!("==");
-        for f in flat_variables.iter() {
-            println!("f: {:?}", f);
-        }
         flat_variables
     }
 
