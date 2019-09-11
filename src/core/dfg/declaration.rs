@@ -57,7 +57,6 @@ impl Declaration {
             let members = vec![Member::Reference(walker.node.id)];
             let source = walker.node.source.to_string();
             let variable = Variable::new(
-                walker.node.id,
                 members,
                 source,
                 Variable::normalize_type(walker)
@@ -69,7 +68,6 @@ impl Declaration {
             ];
             let source = walkers[0].node.source.to_string();
             let variable = Variable::new(
-                walkers[0].node.id,
                 members,
                 source,
                 Variable::normalize_type(&walkers[0])
