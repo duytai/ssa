@@ -20,6 +20,7 @@ pub struct DataFlowGraph<'a> {
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
+    all_variables: HashMap<u32, HashSet<Variable>>,
 }
 
 impl<'a> DataFlowGraph<'a> {
@@ -45,11 +46,16 @@ impl<'a> DataFlowGraph<'a> {
             parents,
             tables,
             visited: HashSet::new(),
+            all_variables: HashMap::new(),
         }
     }
 
     pub fn get_cfg(&self) -> &ControlFlowGraph {
         &self.cfg
+    }
+
+    pub fn get_all_variables(&self) -> &HashMap<u32, HashSet<Variable>> {
+        &self.all_variables
     }
 
     /// Find data dependency links
@@ -103,6 +109,7 @@ impl<'a> DataFlowGraph<'a> {
             let mut new_actions = vec![];
             let mut assignments = vec![];
             let mut variables = HashSet::new();
+            let mut all_variables = HashSet::new();
             dict.walker_at(id).map(|walker| {
                 variables.extend(Variable::parse(walker, dict));
                 assignments.extend(Assignment::parse(walker, dict));
@@ -115,11 +122,13 @@ impl<'a> DataFlowGraph<'a> {
                     match assignment.get_op() {
                         Operator::Equal => {
                             for l in l.flatten(dict) {
+                                all_variables.insert(l.clone());
                                 new_actions.push(Action::Kill(l, id));
                             }
                         },
                         Operator::Other => {
                             for l in l.flatten(dict) {
+                                all_variables.insert(l.clone());
                                 new_actions.push(Action::Kill(l.clone(), id));
                                 new_actions.push(Action::Use(l, id));
                             }
@@ -128,15 +137,18 @@ impl<'a> DataFlowGraph<'a> {
                 }
                 for r in assignment.get_rhs().clone() {
                     for r in r.flatten(dict) {
+                        all_variables.insert(r.clone());
                         new_actions.push(Action::Use(r, id));
                     }
                 }
             }
             for var in variables {
                 for var in var.flatten(dict) {
+                    all_variables.insert(var.clone());
                     new_actions.push(Action::Use(var, id));
                 }
             }
+            self.all_variables.insert(id, all_variables);
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
