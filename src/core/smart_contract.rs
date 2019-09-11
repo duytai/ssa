@@ -21,6 +21,8 @@ pub struct SmartContract {
     contracts: HashMap<u32, Vec<u32>>,
     /// contract_id => vec<state_id> 
     states: HashMap<u32, Vec<u32>>,
+    /// index_access
+    indexes: HashMap<u32, Vec<u32>>,
 }
 
 impl SmartContract {
@@ -28,6 +30,7 @@ impl SmartContract {
         SmartContract {
             contracts: HashMap::new(),
             states: HashMap::new(),
+            indexes: HashMap::new(),
         }
     }
 

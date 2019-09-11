@@ -7,8 +7,10 @@ use crate::core::{
     Action,
     DataLink,
     DataLinkLabel,
+    Variable,
+    Assignment,
+    Declaration,
 };
-use crate::dfg::utils;
 
 /// Data flow graph
 ///
@@ -110,11 +112,13 @@ impl<'a> DataFlowGraph<'a> {
             let mut new_actions = vec![];
             let mut assignments = vec![];
             let mut variables = HashSet::new();
-            variables.extend(utils::find_variables(id, dict));
-            assignments.append(&mut utils::find_assignments(id, dict));
-            for declaration in utils::find_declarations(id, dict) {
-                assignments.push(declaration.get_assignment().clone());
-            }
+            dict.walker_at(id).map(|walker| {
+                variables.extend(Variable::parse(walker, dict));
+                assignments.extend(Assignment::parse(walker, dict));
+                for declaration in Declaration::parse(walker, dict) {
+                    assignments.push(declaration.get_assignment().clone());
+                }
+            });
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {

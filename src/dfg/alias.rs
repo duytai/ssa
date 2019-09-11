@@ -3,9 +3,10 @@ use crate::core::{
     Variable,
     VariableComparison,
     Dictionary,
+    Declaration,
+    Assignment,
 };
 use crate::cfg::ControlFlowGraph;
-use crate::dfg::utils;
 
 pub struct Alias {
     execution_tables: Vec<HashMap<u32, HashMap<Variable, Variable>>>,
@@ -13,7 +14,6 @@ pub struct Alias {
 
 impl Alias {
     pub fn new(cfg: &ControlFlowGraph) -> Self {
-        let vertices = cfg.get_vertices();
         let execution_paths = cfg.get_execution_paths();
         let dict = cfg.get_dict();
         let mut execution_tables = vec![];
@@ -28,10 +28,12 @@ impl Alias {
                 }
                 // Find all assignments in current node
                 let mut assignments = vec![];
-                assignments.append(&mut utils::find_assignments(*id, dict));
-                for declaration in utils::find_declarations(*id, dict) {
-                    assignments.push(declaration.get_assignment().clone());
-                }
+                dict.walker_at(*id).map(|walker| {
+                    assignments.extend(Assignment::parse(walker, dict));
+                    for declaration in Declaration::parse(walker, dict) {
+                        assignments.push(declaration.get_assignment().clone());
+                    }
+                });
                 // Indentify whether a variable can has alias or not
                 for assignment in assignments {
                     for l in assignment.get_lhs() {
