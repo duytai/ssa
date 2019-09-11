@@ -1,5 +1,4 @@
 use crate::dot::Dot;
-use crate::dfg::Alias;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
@@ -58,8 +57,7 @@ impl<'a> Network<'a> {
         let function_ids = self.dict.find_ids(SmartContractQuery::FunctionsByContractId(self.contract_id));
         for function_id in function_ids {
             let cfg = ControlFlowGraph::new(self.dict, self.contract_id, function_id);
-            let alias = Alias::new(&cfg);
-            let mut dfg = DataFlowGraph::new(cfg, alias);
+            let mut dfg = DataFlowGraph::new(cfg);
             links.extend(dfg.find_links());
             self.dfgs.insert(function_id, dfg);
         }

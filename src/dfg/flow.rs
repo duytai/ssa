@@ -1,4 +1,3 @@
-use crate::dfg::Alias;
 use std::collections::{ HashSet, HashMap };
 use crate::cfg::ControlFlowGraph;
 use crate::core::{
@@ -22,12 +21,11 @@ pub struct DataFlowGraph<'a> {
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
     new_actions: HashMap<u32, Vec<Action>>,
-    alias: Alias,
 }
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(cfg: ControlFlowGraph<'a>, alias: Alias) -> Self {
+    pub fn new(cfg: ControlFlowGraph<'a>) -> Self {
         let vertices = cfg.get_vertices();
         let edges = cfg.get_edges();
         let mut tables = HashMap::new();
@@ -45,7 +43,6 @@ impl<'a> DataFlowGraph<'a> {
         }
         DataFlowGraph {
             cfg,
-            alias,
             parents,
             tables,
             visited: HashSet::new(),

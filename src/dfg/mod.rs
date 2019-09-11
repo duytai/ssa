@@ -2,8 +2,6 @@
 //!
 mod flow;
 mod network;
-mod alias;
 
 pub use flow::*;
 pub use network::*;
-pub use alias::*;
