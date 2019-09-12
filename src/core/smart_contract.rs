@@ -35,6 +35,8 @@ pub struct SmartContract {
     call_params: HashMap<u32, Vec<u32>>,
     /// function_id => vec<param_id>
     func_defs: HashMap<u32, Vec<u32>>,
+    /// name => struct_id
+    struct_defs: HashMap<String, u32>,
 }
 
 impl SmartContract {
@@ -47,6 +49,7 @@ impl SmartContract {
             idx_params: HashMap::new(),
             call_params: HashMap::new(),
             func_defs: HashMap::new(),
+            struct_defs: HashMap::new(),
         }
     }
 
@@ -117,6 +120,11 @@ impl SmartContract {
                     },
                     "VariableDeclaration" => {
                         prop.states.push(walker.node.id);
+                    },
+                    "StructDefinition" => {
+                        walker.node.attributes["canonicalName"].as_str().map(|struct_name| {
+                            self.struct_defs.insert(struct_name.to_string(), walker.node.id);
+                        });
                     },
                     _ => {},
                 }

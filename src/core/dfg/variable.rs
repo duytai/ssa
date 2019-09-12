@@ -17,12 +17,12 @@ use crate::core::{
 pub struct Variable {
     members: Vec<Member>,
     source: String,
-    kind: Option<String>,
+    kind: String,
 }
 
 impl Variable {
 
-    pub fn new(members: Vec<Member>, source: String, kind: Option<String>) -> Self {
+    pub fn new(members: Vec<Member>, source: String, kind: String) -> Self {
         Variable { members, source, kind }
     }
 
@@ -34,24 +34,23 @@ impl Variable {
         &self.source
     }
 
-    pub fn get_type(&self) -> &Option<String> {
+    pub fn get_type(&self) -> &str {
         &self.kind
     }
 
-    pub fn normalize_type(walker: &Walker) -> Option<String> {
+    pub fn normalize_type(walker: &Walker) -> String {
         // Data location: memory, storage, calldata
         // Origin: pointer, ref 
-        walker.node.attributes["type"].as_str().map(|type_str| {
-            let mut norm_type = type_str.to_string();
-            for keyword in vec!["memory", "storage", "calldata", "pointer", "ref"] {
-                let temp = norm_type.clone();
-                norm_type.clear();
-                for item in temp.split(keyword) {
-                    norm_type.push_str(item.trim());
-                }
+        let type_str = walker.node.attributes["type"].as_str().unwrap_or("");
+        let mut norm_type = type_str.to_string();
+        for keyword in vec!["memory", "storage", "calldata", "pointer", "ref"] {
+            let temp = norm_type.clone();
+            norm_type.clear();
+            for item in temp.split(keyword) {
+                norm_type.push_str(item.trim());
             }
-            norm_type
-        })
+        }
+        norm_type
     } 
 
     /// Find all variables of the walker, we need the dictionary to identify `Member::Global`
