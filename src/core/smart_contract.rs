@@ -17,6 +17,8 @@ pub enum SmartContractQuery {
     StatesByContractId(u32),
     IndexesByContractId(u32),
     IndexParamsByIndexAccess(u32),
+    StructByName(String),
+    ContractByName(String),
 }
 
 #[derive(Debug)]
@@ -37,6 +39,8 @@ pub struct SmartContract {
     func_defs: HashMap<u32, Vec<u32>>,
     /// name => struct_id
     struct_defs: HashMap<String, u32>,
+    /// name => contract_id
+    contract_defs: HashMap<String, u32>,
 }
 
 impl SmartContract {
@@ -50,6 +54,7 @@ impl SmartContract {
             call_params: HashMap::new(),
             func_defs: HashMap::new(),
             struct_defs: HashMap::new(),
+            contract_defs: HashMap::new(),
         }
     }
 
@@ -67,6 +72,12 @@ impl SmartContract {
             SmartContractQuery::IndexParamsByIndexAccess(contract_id) => {
                 self.idx_params.get(&contract_id).map(|x| x.clone())
             },
+            SmartContractQuery::StructByName(struct_name) => {
+                self.struct_defs.get(&struct_name).map(|x| vec![x.clone()])
+            },
+            SmartContractQuery::ContractByName(contract_name) => {
+                self.contract_defs.get(&contract_name).map(|x| vec![x.clone()])
+            },
         }
     }
 
@@ -81,6 +92,10 @@ impl SmartContract {
                 indexes: vec![],
                 calls: vec![],
             };
+            let contract_name = contract_walker.node.attributes["name"]
+                .as_str()
+                .unwrap_or("");
+            self.contract_defs.insert(contract_name.to_string(), contract_walker.node.id);
             for walker in contract_walker.direct_childs(|_| true).into_iter() {
                 match walker.node.name {
                     "InheritanceSpecifier"

@@ -137,6 +137,7 @@ impl<'a> DataFlowGraph<'a> {
                 }
             }
             for var in variables {
+                println!("\t {:?}", var);
                 all_variables.insert(var.clone());
                 new_actions.push(Action::Use(var, id));
             }
