@@ -2,13 +2,14 @@ pub mod Utils {
     use crate::core::Walker;
     use crate::core::Dictionary;
 
-    pub fn find_root_kind(walker: &Walker, dict: &Dictionary) -> String {
+    pub fn find_root_walker<'a>(walker: &'a Walker, dict: &'a Dictionary) -> Walker<'a> {
         if walker.direct_childs(|_| true).is_empty() {
-            normalize_kind(walker)
+            walker.clone()
         } else {
-            walker.direct_childs(|_| true).get(0)
-                .map(|walker| find_root_kind(&walker, dict))
-                .unwrap_or(String::from(""))
+            let walker = walker.direct_childs(|_| true).get(0)
+                .and_then(|walker| dict.walker_at(walker.node.id))
+                .unwrap();
+            find_root_walker(&walker, dict)
         }
     }
 

@@ -16,7 +16,12 @@ pub struct FlatVariable<'a> {
 impl<'a> FlatVariable<'a> {
     pub fn new(walker: &Walker, dict: &'a Dictionary) -> Self {
         let mut flat_variable = FlatVariable { dict, flats: vec![] };
-        flat_variable.update(&Utils::find_root_kind(walker, dict), vec![], vec![]);
+        let root_walker = Utils::find_root_walker(walker, dict);
+        let declaration = root_walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
+        let attribute = root_walker.node.attributes["value"].as_str().unwrap();
+        let members = vec![Member::Reference(declaration)];
+        let attributes = vec![attribute.to_string()];
+        flat_variable.update(&Utils::normalize_kind(&root_walker), members, attributes);
         for flat in flat_variable.flats.iter() {
             println!("\t{:?}", flat);
         }
@@ -87,12 +92,13 @@ impl<'a> FlatVariable<'a> {
                                     members.push(Member::Reference(walker.node.id));
                                     attributes.push(name.to_string());
                                     walker.direct_childs(|_| true).get(1).map(|walker| {
-                                        walker.direct_childs(|_| true).get(0).map(|walker| {
-                                            let name = walker.node.attributes["name"].as_str().unwrap_or("");
-                                            members.push(Member::Reference(walker.node.id));
-                                            attributes.push(name.to_string());
+                                        let walkers = walker.direct_childs(|_| true);
+                                        if walkers.is_empty() {
+                                            self.update("void", members, attributes);
+                                        } else {
+                                            let walker = &walkers[0];
                                             self.update(&Utils::normalize_kind(&walker), members, attributes);
-                                        });
+                                        }
                                     });
                                 },
                                 _ => {},
