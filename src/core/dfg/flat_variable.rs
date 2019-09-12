@@ -11,25 +11,30 @@ use crate::core::{
 pub struct FlatVariable<'a> {
     dict: &'a Dictionary<'a>,
     flats: Vec<(Vec<Member>, String, String)>,
+    norm: String,
 }
 
 impl<'a> FlatVariable<'a> {
     pub fn new(walker: &Walker, dict: &'a Dictionary) -> Self {
-        let mut flat_variable = FlatVariable { dict, flats: vec![] };
+        let mut flat_variable = FlatVariable { dict, flats: vec![], norm: String::from("") };
         let root_walker = Utils::find_root_walker(walker, dict);
         let declaration = root_walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
         let attribute = root_walker.node.attributes["value"].as_str().unwrap();
         let members = vec![Member::Reference(declaration)];
         let attributes = vec![attribute.to_string()];
-        flat_variable.update(&Utils::normalize_kind(&root_walker), members, attributes);
+        flat_variable.update_flats(&Utils::normalize_kind(&root_walker), members, attributes);
+        flat_variable.update_norm(root_walker.node.source);
         for flat in flat_variable.flats.iter() {
             println!("\t{:?}", flat);
         }
         flat_variable
     }
 
+    fn update_norm(&mut self, source: &str) {
+        println!("source: {}", source);
+    }
 
-    fn update(&mut self, kind: &str, mut members: Vec<Member>, mut attributes: Vec<String>) {
+    fn update_flats(&mut self, kind: &str, mut members: Vec<Member>, mut attributes: Vec<String>) {
         let struct_regex = Regex::new(r"^struct ([^\[\]]*)((\[\])*)").unwrap();
         let mapping_regex = Regex::new(r"^mapping\(([^=>]+)\s+=>\s+([^=>]+)\)((\[\])*)").unwrap();
         let contract_regex = Regex::new(r"^contract ([^\[\]]*)((\[\])*)").unwrap();
@@ -50,7 +55,7 @@ impl<'a> FlatVariable<'a> {
                             let name = walker.node.attributes["name"].as_str().unwrap_or("");
                             members.push(Member::Reference(walker.node.id));
                             attributes.push(name.to_string());
-                            self.update(&Utils::normalize_kind(&walker), members, attributes);
+                            self.update_flats(&Utils::normalize_kind(&walker), members, attributes);
                         }
                     });
                 }
@@ -63,7 +68,7 @@ impl<'a> FlatVariable<'a> {
                         members.push(Member::IndexAccess);
                         attributes.push(String::from("$"));
                     }
-                    self.update(&mapping_kind, members.clone(), attributes.clone());
+                    self.update_flats(&mapping_kind, members.clone(), attributes.clone());
                 }
             },
             (_, _, true) => {
@@ -83,7 +88,7 @@ impl<'a> FlatVariable<'a> {
                                     let name = walker.node.attributes["name"].as_str().unwrap_or("");
                                     members.push(Member::Reference(walker.node.id));
                                     attributes.push(name.to_string());
-                                    self.update(&Utils::normalize_kind(&walker), members, attributes);
+                                    self.update_flats(&Utils::normalize_kind(&walker), members, attributes);
                                 },
                                 "FunctionDefinition" => {
                                     let mut members = members.clone();
@@ -94,10 +99,10 @@ impl<'a> FlatVariable<'a> {
                                     walker.direct_childs(|_| true).get(1).map(|walker| {
                                         let walkers = walker.direct_childs(|_| true);
                                         if walkers.is_empty() {
-                                            self.update("void", members, attributes);
+                                            self.update_flats("void", members, attributes);
                                         } else {
                                             let walker = &walkers[0];
-                                            self.update(&Utils::normalize_kind(&walker), members, attributes);
+                                            self.update_flats(&Utils::normalize_kind(&walker), members, attributes);
                                         }
                                     });
                                 },
