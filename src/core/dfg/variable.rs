@@ -71,25 +71,17 @@ impl Variable {
             || walker.node.name == "FunctionCall"
         };
         for walker in walker.walk(true, ig, fi) {
-            Variable::parse_one(&walker, dict).map(|variable| {
+            let members = Variable::find_members(&walker, dict);
+            if !members.is_empty() {
+                let variable = Variable {
+                    members,
+                    source: walker.node.source.to_string(),
+                    kind: Variable::normalize_type(&walker),
+                };
                 ret.insert(variable);
-            });
+            }
         }
         ret
-    }
-
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Option<Self> {
-        let members = Variable::find_members(walker, dict);
-        if !members.is_empty() {
-            let variable = Variable {
-                members,
-                source: walker.node.source.to_string(),
-                kind: Variable::normalize_type(walker),
-            };
-            Some(variable)
-        } else {
-            None
-        }
     }
 
     /// Use this to find the relationship between two variables

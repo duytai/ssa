@@ -42,42 +42,37 @@ impl Declaration {
             || walker.node.name == "Assignment"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
-            declarations.push(Declaration::parse_one(&walker, dict));
+            let op = Operator::Equal;
+            let mut lhs = HashSet::new();
+            let mut rhs = HashSet::new();
+            let walkers = walker.direct_childs(|_| true);
+            if walker.node.name == "VariableDeclaration" {
+                let members = vec![Member::Reference(walker.node.id)];
+                let source = walker.node.source.to_string();
+                let variable = Variable::new(
+                    members,
+                    source,
+                    Variable::normalize_type(&walker)
+                );
+                lhs.insert(variable);
+            } else {
+                let members = vec![
+                    Member::Reference(walkers[0].node.id)
+                ];
+                let source = walkers[0].node.source.to_string();
+                let variable = Variable::new(
+                    members,
+                    source,
+                    Variable::normalize_type(&walkers[0])
+                    );
+                lhs.insert(variable);
+            }
+            if walkers.len() >= 2 {
+                rhs.extend(Variable::parse(&walkers[1], dict));
+            }
+            let assignment = Assignment::new(lhs, rhs, op);
+            declarations.push(Declaration { assignment });
         }
         declarations
-    }
-
-    // Find a assignment of current walker
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Declaration {
-        let op = Operator::Equal;
-        let mut lhs = HashSet::new();
-        let mut rhs = HashSet::new();
-        let walkers = walker.direct_childs(|_| true);
-        if walker.node.name == "VariableDeclaration" {
-            let members = vec![Member::Reference(walker.node.id)];
-            let source = walker.node.source.to_string();
-            let variable = Variable::new(
-                members,
-                source,
-                Variable::normalize_type(walker)
-            );
-            lhs.insert(variable);
-        } else {
-            let members = vec![
-                Member::Reference(walkers[0].node.id)
-            ];
-            let source = walkers[0].node.source.to_string();
-            let variable = Variable::new(
-                members,
-                source,
-                Variable::normalize_type(&walkers[0])
-            );
-            lhs.insert(variable);
-        }
-        if walkers.len() >= 2 {
-            rhs.extend(Variable::parse(&walkers[1], dict));
-        }
-        let assignment = Assignment::new(lhs, rhs, op);
-        Declaration { assignment }
     }
 }
