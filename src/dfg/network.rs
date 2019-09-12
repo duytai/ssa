@@ -50,24 +50,18 @@ impl<'a> Network<'a> {
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
-        // let mut actions = HashMap::new();
-        // for (_, dfg) in self.dfgs.iter() {
-            // actions.extend(dfg.get_new_actions());
-        // }
-        // let index_ids = self.dict.find_ids(SmartContractQuery::IndexesByContractId(self.contract_id));
-        // for index_id in index_ids {
-            // actions.get(&index_id)
-                // .and_then(|actions| actions.get(0))
-                // .and_then(|action| match action {
-                    // Action::Use(var, _) => Some(var),
-                    // _ => None,
-                // })
-                // .map(|_| {
-                    // let param_ids = self.dict.find_ids(SmartContractQuery::IndexParamsByIndexAccess(index_id));
-                    // for param_id in param_ids {
-                    // }
-                // });
-        // }
+        let mut all_variables = HashMap::new();
+        for (_, dfg) in self.dfgs.iter() {
+            all_variables.extend(dfg.get_all_variables());
+        }
+        for index_id in self.dict.find_ids(SmartContractQuery::IndexesByContractId(self.contract_id)) {
+            all_variables.get(&index_id).map(|index_variables| {
+                for param_id in self.dict.find_ids(SmartContractQuery::IndexParamsByIndexAccess(index_id)) {
+                    all_variables.get(&param_id).map(|param_variables| {
+                    });
+                }
+            });
+        }
         HashSet::new()
     } 
 

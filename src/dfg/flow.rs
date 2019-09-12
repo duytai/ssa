@@ -121,32 +121,24 @@ impl<'a> DataFlowGraph<'a> {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
-                            for l in l.flatten(dict) {
-                                all_variables.insert(l.clone());
-                                new_actions.push(Action::Kill(l, id));
-                            }
+                            all_variables.insert(l.clone());
+                            new_actions.push(Action::Kill(l, id));
                         },
                         Operator::Other => {
-                            for l in l.flatten(dict) {
-                                all_variables.insert(l.clone());
-                                new_actions.push(Action::Kill(l.clone(), id));
-                                new_actions.push(Action::Use(l, id));
-                            }
+                            all_variables.insert(l.clone());
+                            new_actions.push(Action::Kill(l.clone(), id));
+                            new_actions.push(Action::Use(l, id));
                         }
                     }
                 }
                 for r in assignment.get_rhs().clone() {
-                    for r in r.flatten(dict) {
-                        all_variables.insert(r.clone());
-                        new_actions.push(Action::Use(r, id));
-                    }
+                    all_variables.insert(r.clone());
+                    new_actions.push(Action::Use(r, id));
                 }
             }
             for var in variables {
-                for var in var.flatten(dict) {
-                    all_variables.insert(var.clone());
-                    new_actions.push(Action::Use(var, id));
-                }
+                all_variables.insert(var.clone());
+                new_actions.push(Action::Use(var, id));
             }
             self.all_variables.insert(id, all_variables);
             actions.extend(new_actions.clone());

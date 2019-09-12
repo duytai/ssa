@@ -62,13 +62,13 @@ impl Variable {
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
-            || walker.node.name == "FunctionCall"
             || walker.node.name == "IndexAccess"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
+            || walker.node.name == "FunctionCall"
         };
         for walker in walker.walk(true, ig, fi) {
             Variable::parse_one(&walker, dict).map(|variable| {
@@ -161,123 +161,14 @@ impl Variable {
                 }
                 ret
             },
-            "FunctionCall" | "IndexAccess" => vec![Member::Shortcut(walker.node.id)],
+            "IndexAccess" => {
+                let mut ret = vec![];
+                let walkers = walker.direct_childs(|_| true);
+                walkers.get(1).map(|_| ret.push(Member::IndexAccess));
+                walkers.get(0).map(|walker| ret.append(&mut Variable::find_members(&walker, dict)));
+                ret
+            },
             _ => vec![],
-        }
-    }
-
-    fn flatten_variable(
-        &self,
-        walker: Walker,
-        dict: &Dictionary,
-        mut path: Vec<(Member, String)>,
-        paths: &mut Vec<(Vec<(Member, String)>, Option<String>)>
-    ) {
-        if walker.node.name == "VariableDeclaration" {
-            let prop_name = walker.node
-                .attributes["name"]
-                .as_str()
-                .unwrap_or("*")
-                .to_string();
-            path.push((Member::Reference(walker.node.id), prop_name));
-            let ctx_walkers = walker.direct_childs(|_| true);
-            if ctx_walkers.is_empty() {
-                // TODO: var keyword
-                paths.push((path.clone(), Variable::normalize_type(&walker)));
-            } else {
-                let mut ctx_walker = ctx_walkers[0].clone();
-                let mut ctx_kind = Variable::normalize_type(&ctx_walker); 
-                loop {
-                    match ctx_walker.node.name {
-                        "UserDefinedTypeName" => {
-                            let w = ctx_walker.node
-                                .attributes["referencedDeclaration"]
-                                .as_u32()
-                                .and_then(|reference| dict.walker_at(reference));
-                            if let Some(w) = w {
-                                match w.node.name {
-                                    "StructDefinition" => {
-                                        for w in w.direct_childs(|_| true) {
-                                            self.flatten_variable(w, dict, path.clone(), paths);
-                                        }
-                                        break;
-                                    },
-                                    "ContractDefinition" => {
-                                        paths.push((path.clone(), ctx_kind.clone()));
-                                        break;
-                                    },
-                                    "EnumDefinition" => {
-                                        paths.push((path.clone(), ctx_kind.clone()));
-                                        break;
-                                    },
-                                    _ => unimplemented!(),
-                                }
-                            }
-                        },
-                        "ArrayTypeName" => {
-                            path.push((Member::IndexAccess, String::from("$")));
-                            ctx_walker = ctx_walker.direct_childs(|_| true)[0].clone();
-                            ctx_kind = Variable::normalize_type(&ctx_walker); 
-                        },
-                        "ElementaryTypeName" => {
-                            paths.push((path.clone(), ctx_kind));
-                            break;
-                        },
-                        "Mapping" => {
-                            path.push((Member::IndexAccess, String::from("$")));
-                            ctx_walker = ctx_walker.direct_childs(|_| true)[1].clone();
-                            ctx_kind = Variable::normalize_type(&ctx_walker); 
-                        },
-                        _ => unimplemented!(),
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn flatten(&self, dict: &Dictionary) -> Vec<Variable> {
-        let mut flat_variables = vec![];
-        if let Some(Member::Reference(reference)) = self.members.first() {
-            if let Some(walker) = dict.walker_at(*reference) {
-                let mut paths = vec![];
-                self.flatten_variable(walker.clone(), dict, vec![], &mut paths);
-                for (mut path, kind) in paths {
-                    let mut members = vec![];
-                    let mut sources = vec![];
-                    path.remove(0);
-                    for (member, source) in path {
-                        members.push(member);
-                        sources.push(source);
-                    }
-                    members.reverse();
-                    members.append(&mut self.members.clone());
-                    sources.insert(0, self.source.clone());
-                    let variable = Variable {
-                        members,
-                        source: sources.join("."),
-                        kind,
-                    };
-                    flat_variables.push(variable);
-                }
-            }
-        }
-        if flat_variables.is_empty() {
-            flat_variables.push(self.clone());
-        }
-        flat_variables
-    }
-
-    /// Whether a variable can has alias or not
-    /// A variable can has alias when 
-    /// + It is array
-    /// + It is contract
-    /// + It is struct
-    pub fn can_has_alias(&self) -> bool {
-        match &self.kind {
-            Some(kind) => kind.contains("[]")
-                || kind.starts_with("contract")
-                || kind.starts_with("struct"),
-            None => false,
         }
     }
 }
