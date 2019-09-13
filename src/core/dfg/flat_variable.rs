@@ -1,12 +1,14 @@
 extern crate regex;
 use regex::Regex;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use crate::core::{
     Dictionary,
     SmartContractQuery,
     Member,
     Walker,
     Utils,
+    Variable,
 };
 
 pub struct FlatVariable<'a> {
@@ -31,14 +33,23 @@ impl<'a> FlatVariable<'a> {
         }
         flat_variable.update_flats(&Utils::normalize_kind(&root_walker), members, attributes);
         flat_variable.update_attributes(walker, dict);
-        println!("w: {}", walker.node.id);
-        println!("r: {}", root_walker.node.id);
-        println!("attributes: {:?}", flat_variable.attributes);
-        for flat in flat_variable.flats.iter() {
-            println!("\t{:?}", flat);
-        }
         flat_variable
     }
+
+    pub fn get_vars(&self) -> HashSet<Variable> {
+        let mut ret = HashSet::new();
+        for (members, attributes, kind) in self.flats.iter() {
+            if attributes.starts_with(&self.attributes.join(".")) {
+                let variable = Variable::new(
+                    members.clone(),
+                    attributes.clone(),
+                    kind.clone()
+                );
+                ret.insert(variable);
+            }
+        }
+        ret
+    } 
 
     fn update_attributes(&mut self, walker: &Walker, dict: &Dictionary) {
         match walker.node.name {

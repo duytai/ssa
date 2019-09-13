@@ -44,9 +44,12 @@ impl Variable {
             || walker.node.name == "Assignment"
             || walker.node.name == "FunctionCall"
         };
-        // TODO: add variables to ret
         for walker in walker.walk(true, ig, fi) {
             let flat_variable = FlatVariable::new(&walker, dict);
+            let variables = flat_variable.get_vars();
+            for var in variables {
+                println!("\t{:?}", var);
+            }
         }
         HashSet::new()
     }
