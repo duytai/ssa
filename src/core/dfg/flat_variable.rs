@@ -24,20 +24,29 @@ impl<'a> FlatVariable<'a> {
         let declaration = root_walker.node.attributes["referencedDeclaration"].as_u32();
         let mut members = vec![];
         let mut attributes = vec![];
-        let attribute = root_walker.node.attributes["value"].as_str().unwrap();
+        let attribute = root_walker.node.attributes["value"].as_str()
+            .or(root_walker.node.attributes["name"].as_str()).unwrap();
         attributes.push(attribute.to_string());
-        if declaration.map(|declaration| dict.walker_at(declaration)).is_none() {
-            members.push(Member::Global(attribute.to_string()));
+        if root_walker.node.name == "VariableDeclaration" {
+            members.push(Member::Reference(root_walker.node.id));
         } else {
-            members.push(Member::Reference(declaration.unwrap()));
+            if declaration.map(|declaration| dict.walker_at(declaration)).is_none() {
+                members.push(Member::Global(attribute.to_string()));
+            } else {
+                members.push(Member::Reference(declaration.unwrap()));
+            }
         }
         flat_variable.update_flats(&Utils::normalize_kind(&root_walker), members, attributes);
         flat_variable.update_attributes(walker, dict);
         flat_variable
     }
 
-    pub fn get_vars(&self) -> HashSet<Variable> {
+    pub fn get_variables(&self) -> HashSet<Variable> {
         let mut ret = HashSet::new();
+        println!("Found: {:?}", self.attributes);
+        for flat in self.flats.iter() {
+            println!("\t{:?}", flat);
+        }
         for (members, attributes, kind) in self.flats.iter() {
             if attributes.starts_with(&self.attributes.join(".")) {
                 let variable = Variable::new(
@@ -47,6 +56,13 @@ impl<'a> FlatVariable<'a> {
                 );
                 ret.insert(variable);
             }
+        }
+        if ret.is_empty() {
+            println!("ERROR on decode variables");
+        }
+        println!("==> Flatted Varariable <==");
+        for r in ret.iter() {
+            println!("\t{:?}", r);
         }
         ret
     } 
@@ -63,6 +79,10 @@ impl<'a> FlatVariable<'a> {
             "Identifier" => {
                 let value = walker.node.attributes["value"].as_str().unwrap();
                 self.attributes.insert(0, value.to_string());
+            },
+            "VariableDeclaration" => {
+                let name = walker.node.attributes["name"].as_str().unwrap();
+                self.attributes.insert(0, name.to_string());
             },
             _ => {}
         }

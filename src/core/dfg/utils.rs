@@ -5,7 +5,7 @@ pub mod Utils {
     use regex::Regex;
 
     pub fn find_root_walker<'a>(walker: &'a Walker, dict: &'a Dictionary) -> Walker<'a> {
-        if walker.direct_childs(|_| true).is_empty() {
+        if walker.direct_childs(|_| true).is_empty() || walker.node.name == "VariableDeclaration" {
             walker.clone()
         } else {
             let walker = walker.direct_childs(|_| true).get(0)

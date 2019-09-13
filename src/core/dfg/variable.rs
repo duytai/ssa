@@ -33,42 +33,38 @@ impl Variable {
     }
 
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
+        let mut ret = HashSet::new();
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
             || walker.node.name == "IndexAccess"
+            || walker.node.name == "FunctionCall"
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "VariableDeclaration"
             || walker.node.name == "VariableDeclarationStatement"
             || walker.node.name == "Assignment"
-            || walker.node.name == "FunctionCall"
         };
         for walker in walker.walk(true, ig, fi) {
             let flat_variable = FlatVariable::new(&walker, dict);
-            let variables = flat_variable.get_vars();
-            for var in variables {
-                println!("\t{:?}", var);
-            }
+            ret.extend(flat_variable.get_variables());
         }
-        HashSet::new()
+        ret
     }
 
 
     pub fn contains(&self, other: &Variable) -> VariableComparison {
         if other.members.len() > self.members.len() {
-            let offset = other.members.len() - self.members.len();
-            let sub = &other.members[offset..];
+            let sub = &other.members[..self.members.len()];
             match sub.iter().eq(self.members.iter()) {
                 true => VariableComparison::Partial,
                 false => VariableComparison::NotEqual,
             }
         } else {
-            let offset = self.members.len() - other.members.len();
-            let sub = &self.members[offset..];
+            let sub = &self.members[..other.members.len()];
             match sub.iter().eq(other.members.iter()) {
                 true => {
-                    match offset == 0 {
+                    match other.members.len() == self.members.len() {
                         true => VariableComparison::Equal,
                         false => VariableComparison::Partial,
                     }

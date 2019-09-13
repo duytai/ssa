@@ -4,8 +4,8 @@ use crate::core::{
     Walker,
     Dictionary,
     Operator,
-    Member,
     Assignment,
+    FlatVariable,
 };
 
 #[derive(Debug)]
@@ -22,15 +22,12 @@ impl Declaration {
     pub fn parse(walker: &Walker, dict: &Dictionary) -> Vec<Declaration> {
         let mut declarations = vec![];
         let fi = |walker: &Walker, path: &Vec<Walker>| {
-            if walker.node.name == "VariableDeclaration" {
-                if path.len() >= 2 {
-                    let w = &path[path.len() - 2];
-                    w.node.name !=  "VariableDeclarationStatement"
-                } else {
-                    true
-                }
-            } else {
-                walker.node.name == "VariableDeclarationStatement"
+            match walker.node.name {
+                "VariableDeclaration" => {
+                    !(path.len() >= 2 && path[path.len() - 2].node.name == "VariableDeclarationStatement")
+                },
+                "VariableDeclarationStatement" => true,
+                _ => false,
             }
         };
         let ig = |walker: &Walker, _: &Vec<Walker>| {
@@ -43,30 +40,10 @@ impl Declaration {
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
             let op = Operator::Equal;
-            let mut lhs = HashSet::new();
-            let mut rhs = HashSet::new();
             let walkers = walker.direct_childs(|_| true);
-            if walker.node.name == "VariableDeclaration" {
-                let members = vec![Member::Reference(walker.node.id)];
-                let source = walker.node.source.to_string();
-                // let variable = Variable::new(
-                    // members,
-                    // source,
-                    // Variable::normalize_type(&walker)
-                // );
-                // lhs.insert(variable);
-            } else {
-                let members = vec![
-                    Member::Reference(walkers[0].node.id)
-                ];
-                let source = walkers[0].node.source.to_string();
-                // let variable = Variable::new(
-                    // members,
-                    // source,
-                    // Variable::normalize_type(&walkers[0])
-                    // );
-                // lhs.insert(variable);
-            }
+            let flat_variable = FlatVariable::new(&walker, dict);
+            let lhs = flat_variable.get_variables();
+            let mut rhs = HashSet::new();
             if walkers.len() >= 2 {
                 rhs.extend(Variable::parse(&walkers[1], dict));
             }
