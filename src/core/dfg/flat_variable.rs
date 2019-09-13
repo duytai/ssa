@@ -151,7 +151,7 @@ impl<'a> FlatVariable<'a> {
                         members.push(Member::IndexAccess);
                         attributes.push(String::from("$"));
                     }
-                    self.dict.find_walkers(SmartContractQuery::ContractByName(contract_kind)).get(0).map(|walker| {
+                    self.dict.find_ids(SmartContractQuery::ContractByName(contract_kind)).get(0).map(|contract_id| {
                         {
                             let mut members = members.clone();
                             let mut attributes = attributes.clone();
@@ -159,34 +159,29 @@ impl<'a> FlatVariable<'a> {
                             attributes.push("balance".to_string());
                             self.update_flats("uint", members, attributes);
                         }
-                        for walker in walker.direct_childs(|_| true) {
-                            match walker.node.name {
-                                "VariableDeclaration" => {
-                                    let mut members = members.clone();
-                                    let mut attributes = attributes.clone();
-                                    let name = walker.node.attributes["name"].as_str().unwrap_or("");
-                                    members.push(Member::Reference(walker.node.id));
-                                    attributes.push(name.to_string());
+                        for walker in self.dict.find_walkers(SmartContractQuery::StatesByContractId(*contract_id)) {
+                            let mut members = members.clone();
+                            let mut attributes = attributes.clone();
+                            let name = walker.node.attributes["name"].as_str().unwrap_or("");
+                            members.push(Member::Reference(walker.node.id));
+                            attributes.push(name.to_string());
+                            self.update_flats(&Utils::normalize_kind(&walker), members, attributes);
+                        }
+                        for walker in self.dict.find_walkers(SmartContractQuery::FunctionsByContractId(*contract_id)) {
+                            let mut members = members.clone();
+                            let mut attributes = attributes.clone();
+                            let name = walker.node.attributes["name"].as_str().unwrap_or("");
+                            members.push(Member::Reference(walker.node.id));
+                            attributes.push(name.to_string());
+                            walker.direct_childs(|_| true).get(1).map(|walker| {
+                                let walkers = walker.direct_childs(|_| true);
+                                if walkers.is_empty() {
+                                    self.update_flats("void", members, attributes);
+                                } else {
+                                    let walker = &walkers[0];
                                     self.update_flats(&Utils::normalize_kind(&walker), members, attributes);
-                                },
-                                "FunctionDefinition" => {
-                                    let mut members = members.clone();
-                                    let mut attributes = attributes.clone();
-                                    let name = walker.node.attributes["name"].as_str().unwrap_or("");
-                                    members.push(Member::Reference(walker.node.id));
-                                    attributes.push(name.to_string());
-                                    walker.direct_childs(|_| true).get(1).map(|walker| {
-                                        let walkers = walker.direct_childs(|_| true);
-                                        if walkers.is_empty() {
-                                            self.update_flats("void", members, attributes);
-                                        } else {
-                                            let walker = &walkers[0];
-                                            self.update_flats(&Utils::normalize_kind(&walker), members, attributes);
-                                        }
-                                    });
-                                },
-                                _ => {},
-                            }
+                                }
+                            });
                         }
                     });
                 } 
