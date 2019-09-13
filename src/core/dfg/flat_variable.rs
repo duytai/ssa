@@ -30,7 +30,7 @@ impl<'a> FlatVariable<'a> {
         if root_walker.node.name == "VariableDeclaration" {
             members.push(Member::Reference(root_walker.node.id));
         } else {
-            if declaration.map(|declaration| dict.walker_at(declaration)).is_none() {
+            if declaration.and_then(|declaration| dict.walker_at(declaration)).is_none() {
                 members.push(Member::Global(attribute.to_string()));
             } else {
                 members.push(Member::Reference(declaration.unwrap()));
@@ -93,7 +93,7 @@ impl<'a> FlatVariable<'a> {
 
     fn update_flats(&mut self, kind: &str, mut members: Vec<Member>, mut attributes: Vec<String>) {
         let struct_regex = Regex::new(r"^struct ([^\[\]]*)((\[\])*)").unwrap();
-        let mapping_regex = Regex::new(r"^mapping\(([^=>]+)\s+=>\s+([^=>]+)\)((\[\])*)").unwrap();
+        let mapping_regex = Regex::new(r"^mapping\(.+\)((\[\])*)").unwrap();
         let contract_regex = Regex::new(r"^contract ([^\[\]]*)((\[\])*)").unwrap();
         let matches = (struct_regex.is_match(kind), mapping_regex.is_match(kind), contract_regex.is_match(kind));
         match matches {
@@ -118,14 +118,29 @@ impl<'a> FlatVariable<'a> {
                 }
             },
             (_, true, _) => {
+                let mut state = (0, 0, 0); // (depth, from, to)
+                for i in 0..kind.len() {
+                    if kind[0..=i].ends_with("(") {
+                        state.0 += 1;
+                    }
+                    if kind[0..=i].ends_with(")") {
+                        state.0 -= 1;
+                    }
+                    if state.0 == 1 && kind[0..=i].ends_with("=>") {
+                        state.1 = i + 1;
+                    }
+                    if state.0 == 0 && kind[0..=i].ends_with(")") {
+                       state.2 = i - 1;
+                    }
+                }
+                let mapping_kind = String::from(&kind[state.1..=state.2]);
                 for cap in mapping_regex.captures_iter(kind) {
-                    let mapping_kind = (&cap[2]).to_string();
-                    let dimension = (&cap[3]).len() / 2 + 1;
+                    let dimension = (&cap[1]).len() / 2 + 1;
                     for _ in 0..dimension {
                         members.push(Member::IndexAccess);
                         attributes.push(String::from("$"));
                     }
-                    self.update_flats(&mapping_kind, members.clone(), attributes.clone());
+                    self.update_flats(&mapping_kind.trim(), members.clone(), attributes.clone());
                 }
             },
             (_, _, true) => {

@@ -34,4 +34,5 @@ pub mod Utils {
         }
         return norm_type;
     } 
+
 }
