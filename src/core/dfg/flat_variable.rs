@@ -1,5 +1,6 @@
 extern crate regex;
 use regex::Regex;
+use std::collections::HashMap;
 use crate::core::{
     Dictionary,
     SmartContractQuery,
@@ -18,14 +19,20 @@ impl<'a> FlatVariable<'a> {
     pub fn new(walker: &Walker, dict: &'a Dictionary) -> Self {
         let mut flat_variable = FlatVariable { dict, flats: vec![], attributes: vec![] };
         let root_walker = Utils::find_root_walker(walker, dict);
-        let declaration = root_walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
+        let declaration = root_walker.node.attributes["referencedDeclaration"].as_u32();
+        let mut members = vec![];
+        let mut attributes = vec![];
         let attribute = root_walker.node.attributes["value"].as_str().unwrap();
-        flat_variable.update_flats(
-            &Utils::normalize_kind(&root_walker),
-            vec![Member::Reference(declaration)],
-            vec![attribute.to_string()],
-        );
+        attributes.push(attribute.to_string());
+        if declaration.map(|declaration| dict.walker_at(declaration)).is_none() {
+            members.push(Member::Global(attribute.to_string()));
+        } else {
+            members.push(Member::Reference(declaration.unwrap()));
+        }
+        flat_variable.update_flats(&Utils::normalize_kind(&root_walker), members, attributes);
         flat_variable.update_attributes(walker, dict);
+        println!("w: {}", walker.node.id);
+        println!("r: {}", root_walker.node.id);
         println!("attributes: {:?}", flat_variable.attributes);
         for flat in flat_variable.flats.iter() {
             println!("\t{:?}", flat);
@@ -99,6 +106,13 @@ impl<'a> FlatVariable<'a> {
                         attributes.push(String::from("$"));
                     }
                     self.dict.find_walkers(SmartContractQuery::ContractByName(contract_kind)).get(0).map(|walker| {
+                        {
+                            let mut members = members.clone();
+                            let mut attributes = attributes.clone();
+                            members.push(Member::Global("balance".to_string()));
+                            attributes.push("balance".to_string());
+                            self.update_flats("uint", members, attributes);
+                        }
                         for walker in walker.direct_childs(|_| true) {
                             match walker.node.name {
                                 "VariableDeclaration" => {
@@ -131,12 +145,55 @@ impl<'a> FlatVariable<'a> {
                     });
                 } 
             },
-            _ => match kind {
-                _ => {
+            _ => {
+                let mut properties = HashMap::new();
+                properties.insert("block", vec![
+                  ("blockhash", "bytes32"),
+                  ("coinbase", "address"),
+                  ("difficulty", "uint"),
+                  ("gaslimit", "uint"),
+                  ("number", "uint"),
+                  ("timestamp", "uint"),
+                ]);
+                properties.insert("msg", vec![
+                  ("data", "bytes"),
+                  ("gas", "uint"),
+                  ("sender", "address"),
+                  ("sig", "bytes4"),
+                  ("value", "uint"),
+                ]);
+                properties.insert("tx", vec![
+                  ("gasprice", "uint"),
+                  ("origin", "address"),
+                ]);
+                properties.insert("abi", vec![
+                  ("encode", "bytes"),
+                  ("encodePacked", "bytes"),
+                  ("encodeWithSelector", "bytes"),
+                  ("encodeWithSignature", "bytes"),
+                  ("encodeWithSelector", "bytes"),
+                ]);
+                properties.insert("address", vec![
+                  ("balance", "uint256"),
+                  ("transfer", "void"),
+                  ("send", "bool"),
+                  ("call", "bool"),
+                  ("callcode", "bool"),
+                  ("delegatecall", "bool"),
+                ]);
+                if let Some(property) = properties.get(kind) {
+                    for prop in property.iter() {
+                        let mut members = members.clone();
+                        let mut attributes = attributes.clone();
+                        members.push(Member::Global(prop.0.to_string()));
+                        attributes.push(prop.0.to_string());
+                        self.update_flats(prop.1, members, attributes);
+                    }
+                } else {
                     let flat = (members, attributes.join("."), kind.to_string());
                     self.flats.push(flat);
-                },
-            },
+                }
+            }
         }
     }
 }

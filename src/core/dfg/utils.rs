@@ -31,8 +31,7 @@ pub mod Utils {
                 return (&cap[1]).to_string();
             }
             return "void".to_string();
-        } else {
-            return norm_type;
         }
+        return norm_type;
     } 
 }
