@@ -33,7 +33,6 @@ impl Variable {
     }
 
     pub fn parse(walker: &Walker, dict: &Dictionary) -> HashSet<Self> {
-        let mut ret = HashSet::new();
         let fi = |walker: &Walker, _: &Vec<Walker>| {
             walker.node.name == "MemberAccess"
             || walker.node.name == "Identifier"
@@ -49,7 +48,7 @@ impl Variable {
         for walker in walker.walk(true, ig, fi) {
             let flat_variable = FlatVariable::new(&walker, dict);
         }
-        ret
+        HashSet::new()
     }
 
 

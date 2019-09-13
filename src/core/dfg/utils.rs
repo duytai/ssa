@@ -1,6 +1,8 @@
 pub mod Utils {
+    extern crate regex;
     use crate::core::Walker;
     use crate::core::Dictionary;
+    use regex::Regex;
 
     pub fn find_root_walker<'a>(walker: &'a Walker, dict: &'a Dictionary) -> Walker<'a> {
         if walker.direct_childs(|_| true).is_empty() {
@@ -23,6 +25,14 @@ pub mod Utils {
                 norm_type.push_str(item.trim());
             }
         }
-        norm_type
+        if type_str.starts_with("function") {
+            let func_regex = Regex::new(r"returns\s*\((.+)\)$").unwrap();
+            for cap in func_regex.captures_iter(&norm_type) {
+                return (&cap[1]).to_string();
+            }
+            return "void".to_string();
+        } else {
+            return norm_type;
+        }
     } 
 }

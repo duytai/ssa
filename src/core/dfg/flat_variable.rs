@@ -11,27 +11,46 @@ use crate::core::{
 pub struct FlatVariable<'a> {
     dict: &'a Dictionary<'a>,
     flats: Vec<(Vec<Member>, String, String)>,
-    norm: String,
+    attributes: Vec<String>,
 }
 
 impl<'a> FlatVariable<'a> {
     pub fn new(walker: &Walker, dict: &'a Dictionary) -> Self {
-        let mut flat_variable = FlatVariable { dict, flats: vec![], norm: String::from("") };
+        let mut flat_variable = FlatVariable { dict, flats: vec![], attributes: vec![] };
         let root_walker = Utils::find_root_walker(walker, dict);
         let declaration = root_walker.node.attributes["referencedDeclaration"].as_u32().unwrap();
         let attribute = root_walker.node.attributes["value"].as_str().unwrap();
-        let members = vec![Member::Reference(declaration)];
-        let attributes = vec![attribute.to_string()];
-        flat_variable.update_flats(&Utils::normalize_kind(&root_walker), members, attributes);
-        flat_variable.update_norm(root_walker.node.source);
+        flat_variable.update_flats(
+            &Utils::normalize_kind(&root_walker),
+            vec![Member::Reference(declaration)],
+            vec![attribute.to_string()],
+        );
+        flat_variable.update_attributes(walker, dict);
+        println!("attributes: {:?}", flat_variable.attributes);
         for flat in flat_variable.flats.iter() {
             println!("\t{:?}", flat);
         }
         flat_variable
     }
 
-    fn update_norm(&mut self, source: &str) {
-        println!("source: {}", source);
+    fn update_attributes(&mut self, walker: &Walker, dict: &Dictionary) {
+        match walker.node.name {
+            "IndexAccess" => {
+                self.attributes.insert(0, "$".to_string());
+            },
+            "MemberAccess" => {
+                let member_name = walker.node.attributes["member_name"].as_str().unwrap();
+                self.attributes.insert(0, member_name.to_string());
+            },
+            "Identifier" => {
+                let value = walker.node.attributes["value"].as_str().unwrap();
+                self.attributes.insert(0, value.to_string());
+            },
+            _ => {}
+        }
+        walker.direct_childs(|_| true).get(0).map(|walker| {
+            self.update_attributes(walker, dict);
+        });
     }
 
     fn update_flats(&mut self, kind: &str, mut members: Vec<Member>, mut attributes: Vec<String>) {
@@ -112,9 +131,11 @@ impl<'a> FlatVariable<'a> {
                     });
                 } 
             },
-            _ => {
-                let flat = (members, attributes.join("."), kind.to_string());
-                self.flats.push(flat);
+            _ => match kind {
+                _ => {
+                    let flat = (members, attributes.join("."), kind.to_string());
+                    self.flats.push(flat);
+                },
             },
         }
     }
