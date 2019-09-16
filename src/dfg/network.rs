@@ -101,9 +101,46 @@ impl<'a> Network<'a> {
         assignment_links
     }
 
+    fn find_index_links(&mut self) -> HashSet<DataLink> {
+        let mut index_links = HashSet::new();
+        let mut all_actions = HashMap::new();
+        for (_, dfg) in self.dfgs.iter() {
+            all_actions.extend(dfg.get_new_actions());
+        }
+        let get_variables = |index_id: u32| {
+            let mut variables = HashSet::new();
+            if let Some(actions) = all_actions.get(&index_id) {
+                for action in actions.iter() {
+                    if let Action::Use(variable, _) = action {
+                        variables.insert(variable.clone());
+                    }
+                }
+            }
+            variables
+        };
+        for index_id in self.dict.find_ids(SmartContractQuery::IndexesByContractId(self.contract_id)) {
+            let index_variables = get_variables(index_id);
+            for index_param_id in self.dict.find_ids(SmartContractQuery::IndexParamsByIndexAccess(index_id)) {
+                let param_variables = get_variables(index_param_id);
+                for index_variable in index_variables.iter() {
+                    for param_variable in param_variables.iter() {
+                        let data_link = DataLink::new(
+                            (index_variable.clone(), index_id),
+                            (param_variable.clone(), index_param_id),
+                            DataLinkLabel::SwitchType,
+                        );
+                        index_links.insert(data_link);
+                    }
+                }
+            }
+        }
+        index_links
+    }
+
     fn find_external_links(&mut self) -> HashSet<DataLink> {
         let mut external_links = HashSet::new();
-        external_links.extend(self.find_assignment_links());
+        // external_links.extend(self.find_assignment_links());
+        external_links.extend(self.find_index_links());
         external_links
     } 
 

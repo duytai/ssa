@@ -231,14 +231,15 @@ impl<'a> FlatVariable<'a> {
                   ("encodeWithSignature", "bytes"),
                   ("encodeWithSelector", "bytes"),
                 ]);
-                properties.insert("address", vec![
-                  ("balance", "uint256"),
-                  ("transfer", "void"),
-                  ("send", "bool"),
-                  ("call", "bool"),
-                  ("callcode", "bool"),
-                  ("delegatecall", "bool"),
-                ]);
+                // TODO: open later
+                // properties.insert("address", vec![
+                  // ("balance", "uint256"),
+                  // ("transfer", "void"),
+                  // ("send", "bool"),
+                  // ("call", "bool"),
+                  // ("callcode", "bool"),
+                  // ("delegatecall", "bool"),
+                // ]);
                 if let Some(property) = properties.get(kind) {
                     for prop in property.iter() {
                         let mut members = members.clone();
