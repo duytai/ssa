@@ -85,7 +85,16 @@ impl<'a> Network<'a> {
             }
             if kill_variables.len() > 1 {
                 for kill_variable in kill_variables.iter() {
-                    println!("kill_variable: {:?}", kill_variable);
+                    for use_variable in use_variables.iter() {
+                        if kill_variable.equal_property(use_variable) {
+                            let data_link = DataLink::new(
+                                (kill_variable.clone(), *vertex_id),
+                                (use_variable.clone(), *vertex_id),
+                                DataLinkLabel::SameType,
+                            );
+                            assignment_links.insert(data_link);
+                        }
+                    }
                 }
             }
         }

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::cmp;
 use crate::core::{
     Walker,
     Dictionary,
@@ -50,6 +51,28 @@ impl Variable {
             ret.extend(flat_variable.get_variables());
         }
         ret
+    }
+
+    pub fn equal_property(&self, other: &Variable) -> bool {
+        if self.get_kind() == other.get_kind() {
+            let mut members = self.members.clone();
+            let mut other_members = other.members.clone();
+            members.reverse();
+            other_members.reverse();
+            let mut idx = 0;
+            while idx < cmp::min(members.len(), other_members.len()) {
+                let member = &members[idx];
+                let other_member = &other_members[idx];
+                match member == other_member {
+                    true => match member == &Member::IndexAccess {
+                        true => idx += 1,
+                        false => return true,
+                    },
+                    false => return false,
+                }
+            }
+        }
+        false
     }
 
 
