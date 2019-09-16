@@ -2,6 +2,7 @@ use crate::dot::Dot;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
+    DataLinkLabel,
     DataLink,
     Dictionary,
     SmartContractQuery,
@@ -49,20 +50,52 @@ impl<'a> Network<'a> {
         self.contract_id
     }
 
-    fn find_external_links(&mut self) -> HashSet<DataLink> {
-        let mut all_variables = HashMap::new();
+    fn find_assignment_links(&mut self) -> HashSet<DataLink> {
+        let mut assignment_links = HashSet::new();
+        let mut all_actions = HashMap::new();
         for (_, dfg) in self.dfgs.iter() {
-            all_variables.extend(dfg.get_all_variables());
+            all_actions.extend(dfg.get_new_actions());
         }
-        for index_id in self.dict.find_ids(SmartContractQuery::IndexesByContractId(self.contract_id)) {
-            all_variables.get(&index_id).map(|index_variables| {
-                for param_id in self.dict.find_ids(SmartContractQuery::IndexParamsByIndexAccess(index_id)) {
-                    all_variables.get(&param_id).map(|param_variables| {
-                    });
+        for (vertex_id, actions) in all_actions {
+            let mut kill_variables = HashSet::new();
+            let mut use_variables = HashSet::new();
+            for action in actions {
+                match action {
+                    Action::Use(variable, _) => {
+                        use_variables.insert(variable.clone());
+                    },
+                    Action::Kill(variable, _) => {
+                        kill_variables.insert(variable.clone());
+                    },
                 }
-            });
+            }
+            if kill_variables.len() == 1 {
+                for kill_variable in kill_variables.iter() {
+                    for use_variable in use_variables.iter() {
+                        if kill_variable.get_kind() == use_variable.get_kind() {
+                            let data_link = DataLink::new(
+                                (kill_variable.clone(), *vertex_id),
+                                (use_variable.clone(), *vertex_id),
+                                DataLinkLabel::SameType,
+                            );
+                            assignment_links.insert(data_link);
+                        }
+                    }
+                }
+            }
+            if kill_variables.len() > 1 {
+                for kill_variable in kill_variables.iter() {
+                    println!("kill_variable: {:?}", kill_variable);
+                }
+            }
         }
-        HashSet::new()
+        assignment_links
+    }
+
+    fn find_external_links(&mut self) -> HashSet<DataLink> {
+        let mut external_links = HashSet::new();
+        external_links.extend(self.find_assignment_links());
+        external_links
     } 
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {

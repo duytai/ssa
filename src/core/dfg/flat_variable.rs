@@ -95,9 +95,15 @@ impl<'a> FlatVariable<'a> {
         let struct_regex = Regex::new(r"^struct ([^\[\]]*)((\[\])*)").unwrap();
         let mapping_regex = Regex::new(r"^mapping\(.+\)((\[\])*)").unwrap();
         let contract_regex = Regex::new(r"^contract ([^\[\]]*)((\[\])*)").unwrap();
-        let matches = (struct_regex.is_match(kind), mapping_regex.is_match(kind), contract_regex.is_match(kind));
+        let array_regex = Regex::new(r"([^\[]+)((\[\])+)$").unwrap();
+        let matches = (
+            struct_regex.is_match(kind),
+            mapping_regex.is_match(kind),
+            contract_regex.is_match(kind),
+            array_regex.is_match(kind),
+        );
         match matches {
-            (true, _, _) => {
+            (true, _, _, _) => {
                 for cap in struct_regex.captures_iter(kind) {
                     let struct_kind = (&cap[1]).to_string();
                     let dimension = (&cap[2]).len() / 2;
@@ -117,7 +123,7 @@ impl<'a> FlatVariable<'a> {
                     });
                 }
             },
-            (_, true, _) => {
+            (_, true, _, _) => {
                 let mut state = (0, 0, 0); // (depth, from, to)
                 for i in 0..kind.len() {
                     if kind[0..=i].ends_with("(") {
@@ -143,7 +149,7 @@ impl<'a> FlatVariable<'a> {
                     self.update_flats(&mapping_kind.trim(), members.clone(), attributes.clone());
                 }
             },
-            (_, _, true) => {
+            (_, _, true, _) => {
                 for cap in contract_regex.captures_iter(kind) {
                     let contract_kind = (&cap[1]).to_string();
                     let dimension = (&cap[2]).len() / 2;
@@ -185,6 +191,17 @@ impl<'a> FlatVariable<'a> {
                         }
                     });
                 } 
+            },
+            (_, _, _, true) => {
+                for cap in array_regex.captures_iter(kind) {
+                    let dimension = (&cap[2]).len() / 2;
+                    for _ in 0..dimension {
+                        members.push(Member::IndexAccess);
+                        attributes.push(String::from("$"));
+                    }
+                    let array_kind = (&cap[1]).to_string();
+                    self.update_flats(&array_kind, members.clone(), attributes.clone());
+                }
             },
             _ => {
                 let mut properties = HashMap::new();

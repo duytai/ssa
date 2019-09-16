@@ -20,7 +20,7 @@ pub struct DataFlowGraph<'a> {
     visited: HashSet<u32>,
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
-    all_variables: HashMap<u32, HashSet<Variable>>,
+    new_actions: HashMap<u32, Vec<Action>>,
 }
 
 impl<'a> DataFlowGraph<'a> {
@@ -46,7 +46,7 @@ impl<'a> DataFlowGraph<'a> {
             parents,
             tables,
             visited: HashSet::new(),
-            all_variables: HashMap::new(),
+            new_actions: HashMap::new(),
         }
     }
 
@@ -54,8 +54,8 @@ impl<'a> DataFlowGraph<'a> {
         &self.cfg
     }
 
-    pub fn get_all_variables(&self) -> &HashMap<u32, HashSet<Variable>> {
-        &self.all_variables
+    pub fn get_new_actions(&self) -> &HashMap<u32, Vec<Action>> {
+        &self.new_actions
     }
 
     /// Find data dependency links
@@ -109,7 +109,6 @@ impl<'a> DataFlowGraph<'a> {
             let mut new_actions = vec![];
             let mut assignments = vec![];
             let mut variables = HashSet::new();
-            let mut all_variables = HashSet::new();
             dict.walker_at(id).map(|walker| {
                 variables.extend(Variable::parse(walker, dict));
                 assignments.extend(Assignment::parse(walker, dict));
@@ -121,27 +120,24 @@ impl<'a> DataFlowGraph<'a> {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
-                            all_variables.insert(l.clone());
                             new_actions.push(Action::Kill(l, id));
                         },
                         Operator::Other => {
-                            all_variables.insert(l.clone());
                             new_actions.push(Action::Kill(l.clone(), id));
                             new_actions.push(Action::Use(l, id));
                         }
                     }
                 }
                 for r in assignment.get_rhs().clone() {
-                    all_variables.insert(r.clone());
                     new_actions.push(Action::Use(r, id));
                 }
             }
+            println!("-----{}------", id);
             for var in variables {
                 println!("\t {:?}", var);
-                all_variables.insert(var.clone());
                 new_actions.push(Action::Use(var, id));
             }
-            self.all_variables.insert(id, all_variables);
+            self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
             cur_table.extend(pre_table);
             cur_table.extend(new_actions);
