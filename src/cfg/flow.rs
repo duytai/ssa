@@ -8,6 +8,7 @@ use crate::cfg::{
     WhileStatement,
     DoWhileStatement,
     ForStatement,
+    ReturnStatement,
     Splitter,
 };
 use crate::core::{
@@ -357,11 +358,15 @@ impl<'a> ControlFlowGraph<'a> {
                                     predecessors.push(*id);
                                 });
                         },
-                        BlockNode::Return(blocks) => {
-                            predecessors = self.simple_traverse(blocks, predecessors.clone(), breakers);
-                            for predecessor in predecessors.iter() {
-                                let edge = Edge::new(*predecessor, self.stop);
-                                self.edges.insert(edge);
+                        BlockNode::ReturnStatement(ReturnStatement { body }) => {
+                            if let CodeBlock::Block(walker) = body {
+                                let splitter = Splitter::new();
+                                let simple_blocks = splitter.split(walker.clone());
+                                predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
+                                for predecessor in predecessors.iter() {
+                                    let edge = Edge::new(*predecessor, self.stop);
+                                    self.edges.insert(edge);
+                                }
                             }
                             predecessors = vec![];
                         },

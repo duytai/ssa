@@ -7,7 +7,7 @@ use crate::cfg::{
     WhileStatement,
     DoWhileStatement,
     ForStatement,
-    Splitter,
+    ReturnStatement,
 };
 
 /// Process AST tree
@@ -52,6 +52,8 @@ pub enum NodeKind {
     ForStatement,
     /// DoWhileStatement token
     DoWhileStatement,
+    /// ReturnStatement token
+    ReturnStatement,
 }
 
 impl<'a> Graph<'a> {
@@ -80,8 +82,7 @@ impl<'a> Graph<'a> {
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Return" => {
-                let splitter = Splitter::new();
-                let node = BlockNode::Return(splitter.split(walker));
+                let node = self.build_node(NodeKind::ReturnStatement, walker);
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Throw" => {
@@ -253,6 +254,10 @@ impl<'a> Graph<'a> {
                     }
                 }
                 BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks })
+            },
+            NodeKind::ReturnStatement => {
+                let body = CodeBlock::Block(walker);
+                BlockNode::ReturnStatement(ReturnStatement { body })
             },
         } 
     }
