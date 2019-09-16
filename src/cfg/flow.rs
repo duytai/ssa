@@ -8,6 +8,7 @@ use crate::cfg::{
     WhileStatement,
     DoWhileStatement,
     ForStatement,
+    Splitter,
 };
 use crate::core::{
     SmartContractQuery,
@@ -224,14 +225,16 @@ impl<'a> ControlFlowGraph<'a> {
             if predecessors.is_empty() { return vec![]; }
             match block {
                 CodeBlock::Block(walker) => {
-                    let simple_blocks = Graph::split(walker.clone());
+                    let splitter = Splitter::new();
+                    let simple_blocks = splitter.split(walker.clone());
                     predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
                         BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
                             if let CodeBlock::Block(walker) = condition {
-                                let condition_blocks = Graph::split(walker.clone());
+                                let splitter = Splitter::new();
+                                let condition_blocks = splitter.split(walker.clone());
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
@@ -258,7 +261,8 @@ impl<'a> ControlFlowGraph<'a> {
                                         predecessors.push(*id);
                                     });
                                 if !predecessors.is_empty() {
-                                    let condition_blocks = Graph::split(walker.clone());
+                                    let splitter = Splitter::new();
+                                    let condition_blocks = splitter.split(walker.clone());
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
@@ -280,7 +284,8 @@ impl<'a> ControlFlowGraph<'a> {
                         BlockNode::WhileStatement(WhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
                                 let mut our_breakers = vec![];
-                                let condition_blocks = Graph::split(walker.clone());
+                                let splitter = Splitter::new();
+                                let condition_blocks = splitter.split(walker.clone());
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
@@ -313,12 +318,14 @@ impl<'a> ControlFlowGraph<'a> {
                             let mut our_breakers = vec![];
                             let mut cond_predecessors = vec![];
                             if let CodeBlock::Block(walker) = init {
-                                let simple_blocks = Graph::split(walker.clone());
+                                let splitter = Splitter::new();
+                                let simple_blocks = splitter.split(walker.clone());
                                 predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                             }
                             for _ in 0..2 {
                                 if let CodeBlock::Block(walker) = condition {
-                                    let condition_blocks = Graph::split(walker.clone());
+                                    let splitter = Splitter::new();
+                                    let condition_blocks = splitter.split(walker.clone());
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
@@ -337,7 +344,8 @@ impl<'a> ControlFlowGraph<'a> {
                                         predecessors.push(*id);
                                     });
                                 if let CodeBlock::Block(walker) = expression {
-                                    let simple_blocks = Graph::split(walker.clone());
+                                    let splitter = Splitter::new();
+                                    let simple_blocks = splitter.split(walker.clone());
                                     predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                                 } 
                             }
