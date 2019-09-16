@@ -104,8 +104,11 @@ impl<'a> Network<'a> {
     fn find_index_links(&mut self) -> HashSet<DataLink> {
         let mut index_links = HashSet::new();
         let mut all_actions = HashMap::new();
+        let mut all_indexes = HashMap::new();
         for (_, dfg) in self.dfgs.iter() {
+            let cfg = dfg.get_cfg();
             all_actions.extend(dfg.get_new_actions());
+            all_indexes.extend(cfg.get_indexes().clone());
         }
         let get_variables = |index_id: u32| {
             let mut variables = HashSet::new();
@@ -118,9 +121,9 @@ impl<'a> Network<'a> {
             }
             variables
         };
-        for index_id in self.dict.find_ids(SmartContractQuery::IndexesByContractId(self.contract_id)) {
+        for (index_id, params) in all_indexes {
             let index_variables = get_variables(index_id);
-            for index_param_id in self.dict.find_ids(SmartContractQuery::IndexParamsByIndexAccess(index_id)) {
+            for index_param_id in params {
                 let param_variables = get_variables(index_param_id);
                 for index_variable in index_variables.iter() {
                     for param_variable in param_variables.iter() {
@@ -132,7 +135,7 @@ impl<'a> Network<'a> {
                         index_links.insert(data_link);
                     }
                 }
-            }
+            } 
         }
         index_links
     }

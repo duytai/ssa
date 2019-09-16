@@ -1,14 +1,21 @@
 use crate::cfg::SimpleBlockNode;
 use crate::core::Walker;
+use std::collections::HashMap;
 
-pub struct Splitter {}
+pub struct Splitter {
+    indexes: HashMap<u32, Vec<u32>>,
+}
 
 impl Splitter {
     pub fn new() -> Self {
-        Splitter {}
+        Splitter { indexes: HashMap::new() }
     }
 
-    pub fn split<'a>(&self, walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
+    pub fn get_indexes(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.indexes
+    }
+
+    pub fn split<'a>(&mut self, walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
         let mut function_calls = vec![];
         let ig = |_: &Walker, _: &Vec<Walker>| false;
         let fi = |walker: &Walker, _: &Vec<Walker>| {
@@ -18,8 +25,13 @@ impl Splitter {
         };
         // Split parameters to other nodes
         for walker in walker.walk(true, ig, fi).into_iter() {
+            let mut parameters = vec![];
             for walker in walker.direct_childs(|_| true).into_iter() {
+                parameters.push(walker.node.id);
                 function_calls.append(&mut self.split(walker));
+            }
+            if walker.node.name == "IndexAccess" {
+                self.indexes.insert(walker.node.id, parameters);
             }
             match walker.node.name {
                 "FunctionCall" => {

@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::collections::HashMap;
 use crate::cfg::{
     Graph,
     BlockNode,
@@ -28,6 +29,7 @@ pub struct ControlFlowGraph<'a> {
     start: u32,
     stop: u32,
     execution_paths: Vec<Vec<u32>>,
+    indexes: HashMap<u32, Vec<u32>>,
 }
 
 /// The type of breaking loop statement
@@ -51,6 +53,7 @@ impl<'a> ControlFlowGraph<'a> {
             edges: HashSet::new(),
             vertices: HashSet::new(),
             execution_paths: vec![],
+            indexes: HashMap::new(),
             dict,
             start: 0,
             stop: 0,
@@ -82,6 +85,10 @@ impl<'a> ControlFlowGraph<'a> {
 
     pub fn get_edges(&self) -> &HashSet<Edge> {
         &self.edges
+    }
+
+    pub fn get_indexes(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.indexes
     }
 
     /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
@@ -226,16 +233,18 @@ impl<'a> ControlFlowGraph<'a> {
             if predecessors.is_empty() { return vec![]; }
             match block {
                 CodeBlock::Block(walker) => {
-                    let splitter = Splitter::new();
+                    let mut splitter = Splitter::new();
                     let simple_blocks = splitter.split(walker.clone());
+                    self.indexes.extend(splitter.get_indexes().clone());
                     predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                 },
                 CodeBlock::Link(link) => {
                     match &**link {
                         BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks }) => {
                             if let CodeBlock::Block(walker) = condition {
-                                let splitter = Splitter::new();
+                                let mut splitter = Splitter::new();
                                 let condition_blocks = splitter.split(walker.clone());
+                                self.indexes.extend(splitter.get_indexes().clone());
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
@@ -262,8 +271,9 @@ impl<'a> ControlFlowGraph<'a> {
                                         predecessors.push(*id);
                                     });
                                 if !predecessors.is_empty() {
-                                    let splitter = Splitter::new();
+                                    let mut splitter = Splitter::new();
                                     let condition_blocks = splitter.split(walker.clone());
+                                    self.indexes.extend(splitter.get_indexes().clone());
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
@@ -285,8 +295,9 @@ impl<'a> ControlFlowGraph<'a> {
                         BlockNode::WhileStatement(WhileStatement { condition, blocks }) => {
                             if let CodeBlock::Block(walker) = condition {
                                 let mut our_breakers = vec![];
-                                let splitter = Splitter::new();
+                                let mut splitter = Splitter::new();
                                 let condition_blocks = splitter.split(walker.clone());
+                                self.indexes.extend(splitter.get_indexes().clone());
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
@@ -319,14 +330,16 @@ impl<'a> ControlFlowGraph<'a> {
                             let mut our_breakers = vec![];
                             let mut cond_predecessors = vec![];
                             if let CodeBlock::Block(walker) = init {
-                                let splitter = Splitter::new();
+                                let mut splitter = Splitter::new();
                                 let simple_blocks = splitter.split(walker.clone());
+                                self.indexes.extend(splitter.get_indexes().clone());
                                 predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                             }
                             for _ in 0..2 {
                                 if let CodeBlock::Block(walker) = condition {
-                                    let splitter = Splitter::new();
+                                    let mut splitter = Splitter::new();
                                     let condition_blocks = splitter.split(walker.clone());
+                                    self.indexes.extend(splitter.get_indexes().clone());
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
@@ -345,8 +358,9 @@ impl<'a> ControlFlowGraph<'a> {
                                         predecessors.push(*id);
                                     });
                                 if let CodeBlock::Block(walker) = expression {
-                                    let splitter = Splitter::new();
+                                    let mut splitter = Splitter::new();
                                     let simple_blocks = splitter.split(walker.clone());
+                                    self.indexes.extend(splitter.get_indexes().clone());
                                     predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                                 } 
                             }
@@ -360,8 +374,9 @@ impl<'a> ControlFlowGraph<'a> {
                         },
                         BlockNode::ReturnStatement(ReturnStatement { body }) => {
                             if let CodeBlock::Block(walker) = body {
-                                let splitter = Splitter::new();
+                                let mut splitter = Splitter::new();
                                 let simple_blocks = splitter.split(walker.clone());
+                                self.indexes.extend(splitter.get_indexes().clone());
                                 predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                                 for predecessor in predecessors.iter() {
                                     let edge = Edge::new(*predecessor, self.stop);
