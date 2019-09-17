@@ -181,10 +181,49 @@ impl<'a> Network<'a> {
             variables
         };
         for (fcall_id, params) in all_fcalls {
+            let fcall_variables = get_variables(fcall_id);
             self.dict.walker_at(fcall_id).map(|walker| {
                 let walkers = walker.direct_childs(|_| true);
                 let declaration = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                if let Some(declaration) = declaration {
+                match declaration {
+                    None => {
+                        for (idx, param_id) in (&params[1..]).iter().enumerate() {
+                            let param_variables = get_variables(*param_id);
+                            for fcall_variable in fcall_variables.iter() {
+                                for param_variable in param_variables.iter() {
+                                    let label = match idx {
+                                        0 => DataLinkLabel::SameType,
+                                        _ => DataLinkLabel::SwitchType,
+                                    };
+                                    let data_link = DataLink::new(
+                                        (fcall_variable.clone(), fcall_id),
+                                        (param_variable.clone(), *param_id),
+                                        label,
+                                    );
+                                    fcall_links.insert(data_link);
+                                }
+                            }
+                        }
+                        self.dict.walker_at(params[0]).map(|walker| {
+                            if walker.node.name != "FunctionCall" {
+                                let instance_variables = get_variables(walker.node.id);
+                                for instance_variable in instance_variables.iter() {
+                                    for fcall_variable in fcall_variables.iter() {
+                                        if fcall_variable.contains(instance_variable) == VariableComparison::Equal {
+                                            let data_link = DataLink::new(
+                                                (instance_variable.clone(), params[0]),
+                                                (fcall_variable.clone(), fcall_id),
+                                                DataLinkLabel::SameType,
+                                            );
+                                            fcall_links.insert(data_link);
+                                        } 
+                                    }
+                                }
+                            }
+                        });
+                    },
+                    Some(declaration) => {
+                    }
                 }
             });
         }
