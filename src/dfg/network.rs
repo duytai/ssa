@@ -250,15 +250,17 @@ impl<'a> Network<'a> {
                         });
                     },
                     true => {
-                        // let declaration = declaration.unwrap();
-                        // let returns = all_returns.get(&declaration).unwrap();
-                        // for return_id in returns {
-                            // let return_variables = get_variables(*return_id);
-                            // for fcall_variable in fcall_variables.iter() {
-                                // for return_variable in return_variables.iter() {
-                                // }
-                            // }
-                        // }
+                        let declaration = declaration.unwrap();
+                        let returns = all_returns.get(&declaration).unwrap();
+                        for return_id in returns {
+                            let return_variables = get_variables(*return_id);
+                            for fcall_variable in fcall_variables.iter() {
+                                for return_variable in return_variables.iter() {
+                                    // Similar to assignment here 
+                                    // TODO
+                                }
+                            }
+                        }
                     }
                 }
             });
