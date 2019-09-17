@@ -124,7 +124,7 @@ impl<'a> Network<'a> {
         };
         for (index_id, params) in all_indexes {
             let index_variables = get_variables(index_id);
-            for index_param_id in &params[1..] {
+            for index_param_id in &params[2..] {
                 let param_variables = get_variables(*index_param_id);
                 for index_variable in index_variables.iter() {
                     for param_variable in param_variables.iter() {
@@ -137,19 +137,34 @@ impl<'a> Network<'a> {
                     }
                 }
             } 
+            {
+                let param_variables = get_variables(params[1]);
+                for index_variable in index_variables.iter() {
+                    for param_variable in param_variables.iter() {
+                        if param_variable.equal_property(index_variable) {
+                            let data_link = DataLink::new(
+                                (index_variable.clone(), index_id),
+                                (param_variable.clone(), params[1]),
+                                DataLinkLabel::SameType,
+                            );
+                            index_links.insert(data_link);
+                        }
+                    }
+                }
+            }
             self.dict.walker_at(params[0]).map(|walker| {
                 if walker.node.name != "IndexAccess" {
                     let instance_variables = get_variables(walker.node.id);
                     for instance_variable in instance_variables.iter() {
                         for index_variable in instance_variables.iter() {
-                            if index_variable.contains(instance_variable) == VariableComparison::Equal {
+                            if index_variable.equal_property(instance_variable) {
                                 let data_link = DataLink::new(
                                     (instance_variable.clone(), params[0]),
                                     (index_variable.clone(), index_id),
                                     DataLinkLabel::SameType,
                                 );
                                 index_links.insert(data_link);
-                            } 
+                            }
                         }
                     }
                 }
@@ -185,22 +200,34 @@ impl<'a> Network<'a> {
             self.dict.walker_at(fcall_id).map(|walker| {
                 let walkers = walker.direct_childs(|_| true);
                 let declaration = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                match declaration {
-                    None => {
-                        for (idx, param_id) in (&params[1..]).iter().enumerate() {
+                let is_user_defined = declaration.and_then(|declaration| all_returns.get(&declaration)).is_some();
+                match is_user_defined {
+                    false => {
+                        for param_id in (&params[2..]).iter() {
                             let param_variables = get_variables(*param_id);
                             for fcall_variable in fcall_variables.iter() {
                                 for param_variable in param_variables.iter() {
-                                    let label = match idx {
-                                        0 => DataLinkLabel::SameType,
-                                        _ => DataLinkLabel::SwitchType,
-                                    };
                                     let data_link = DataLink::new(
                                         (fcall_variable.clone(), fcall_id),
                                         (param_variable.clone(), *param_id),
-                                        label,
+                                        DataLinkLabel::SwitchType,
                                     );
                                     fcall_links.insert(data_link);
+                                }
+                            }
+                        }
+                        {
+                            let param_variables = get_variables(params[1]);
+                            for fcall_variable in fcall_variables.iter() {
+                                for param_variable in param_variables.iter() {
+                                    if param_variable.equal_property(fcall_variable) {
+                                        let data_link = DataLink::new(
+                                            (fcall_variable.clone(), fcall_id),
+                                            (param_variable.clone(), params[1]),
+                                            DataLinkLabel::SameType,
+                                        );
+                                        fcall_links.insert(data_link);
+                                    }
                                 }
                             }
                         }
@@ -209,20 +236,29 @@ impl<'a> Network<'a> {
                                 let instance_variables = get_variables(walker.node.id);
                                 for instance_variable in instance_variables.iter() {
                                     for fcall_variable in fcall_variables.iter() {
-                                        if fcall_variable.contains(instance_variable) == VariableComparison::Equal {
+                                        if fcall_variable.equal_property(instance_variable) {
                                             let data_link = DataLink::new(
                                                 (instance_variable.clone(), params[0]),
                                                 (fcall_variable.clone(), fcall_id),
                                                 DataLinkLabel::SameType,
                                             );
                                             fcall_links.insert(data_link);
-                                        } 
+                                        }
                                     }
                                 }
                             }
                         });
                     },
-                    Some(declaration) => {
+                    true => {
+                        // let declaration = declaration.unwrap();
+                        // let returns = all_returns.get(&declaration).unwrap();
+                        // for return_id in returns {
+                            // let return_variables = get_variables(*return_id);
+                            // for fcall_variable in fcall_variables.iter() {
+                                // for return_variable in return_variables.iter() {
+                                // }
+                            // }
+                        // }
                     }
                 }
             });
