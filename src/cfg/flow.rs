@@ -28,8 +28,11 @@ pub struct ControlFlowGraph<'a> {
     dict: &'a Dictionary<'a>,
     start: u32,
     stop: u32,
+    function_id: u32,
     execution_paths: Vec<Vec<u32>>,
     indexes: HashMap<u32, Vec<u32>>,
+    fcalls: HashMap<u32, Vec<u32>>,
+    returns: HashMap<u32, Vec<u32>>, 
 }
 
 /// The type of breaking loop statement
@@ -54,9 +57,12 @@ impl<'a> ControlFlowGraph<'a> {
             vertices: HashSet::new(),
             execution_paths: vec![],
             indexes: HashMap::new(),
+            fcalls: HashMap::new(),
+            returns: HashMap::new(), 
             dict,
             start: 0,
             stop: 0,
+            function_id: 0,
         };
         cfg.start_at(contract_id, function_id);
         cfg.update_execution_paths(cfg.start, vec![]);
@@ -89,6 +95,14 @@ impl<'a> ControlFlowGraph<'a> {
 
     pub fn get_indexes(&self) -> &HashMap<u32, Vec<u32>> {
         &self.indexes
+    }
+
+    pub fn get_fcalls(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.fcalls
+    }
+
+    pub fn get_returns(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.returns
     }
 
     /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
@@ -236,6 +250,7 @@ impl<'a> ControlFlowGraph<'a> {
                     let mut splitter = Splitter::new();
                     let simple_blocks = splitter.split(walker.clone());
                     self.indexes.extend(splitter.get_indexes().clone());
+                    self.fcalls.extend(splitter.get_fcalls().clone());
                     predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                 },
                 CodeBlock::Link(link) => {
@@ -245,6 +260,7 @@ impl<'a> ControlFlowGraph<'a> {
                                 let mut splitter = Splitter::new();
                                 let condition_blocks = splitter.split(walker.clone());
                                 self.indexes.extend(splitter.get_indexes().clone());
+                                self.fcalls.extend(splitter.get_fcalls().clone());
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
@@ -274,6 +290,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     let mut splitter = Splitter::new();
                                     let condition_blocks = splitter.split(walker.clone());
                                     self.indexes.extend(splitter.get_indexes().clone());
+                                    self.fcalls.extend(splitter.get_fcalls().clone());
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
@@ -298,6 +315,7 @@ impl<'a> ControlFlowGraph<'a> {
                                 let mut splitter = Splitter::new();
                                 let condition_blocks = splitter.split(walker.clone());
                                 self.indexes.extend(splitter.get_indexes().clone());
+                                self.fcalls.extend(splitter.get_fcalls().clone());
                                 let chains = self.condition_traverse(&condition_blocks);
                                 if !chains.is_empty() {
                                     for predecessor in predecessors.iter() {
@@ -333,6 +351,7 @@ impl<'a> ControlFlowGraph<'a> {
                                 let mut splitter = Splitter::new();
                                 let simple_blocks = splitter.split(walker.clone());
                                 self.indexes.extend(splitter.get_indexes().clone());
+                                self.fcalls.extend(splitter.get_fcalls().clone());
                                 predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                             }
                             for _ in 0..2 {
@@ -340,6 +359,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     let mut splitter = Splitter::new();
                                     let condition_blocks = splitter.split(walker.clone());
                                     self.indexes.extend(splitter.get_indexes().clone());
+                                    self.fcalls.extend(splitter.get_fcalls().clone());
                                     let chains = self.condition_traverse(&condition_blocks);
                                     if !chains.is_empty() {
                                         for predecessor in predecessors.iter() {
@@ -361,6 +381,7 @@ impl<'a> ControlFlowGraph<'a> {
                                     let mut splitter = Splitter::new();
                                     let simple_blocks = splitter.split(walker.clone());
                                     self.indexes.extend(splitter.get_indexes().clone());
+                                    self.fcalls.extend(splitter.get_fcalls().clone());
                                     predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                                 } 
                             }
@@ -377,6 +398,12 @@ impl<'a> ControlFlowGraph<'a> {
                                 let mut splitter = Splitter::new();
                                 let simple_blocks = splitter.split(walker.clone());
                                 self.indexes.extend(splitter.get_indexes().clone());
+                                self.fcalls.extend(splitter.get_fcalls().clone());
+                                if let Some(returns) = self.returns.get_mut(&self.function_id) {
+                                    returns.push(walker.node.id);
+                                } else {
+                                    self.returns.insert(self.function_id, vec![walker.node.id]);
+                                }
                                 predecessors = self.simple_traverse(&simple_blocks, predecessors.clone(), breakers);
                                 for predecessor in predecessors.iter() {
                                     let edge = Edge::new(*predecessor, self.stop);
@@ -402,6 +429,7 @@ impl<'a> ControlFlowGraph<'a> {
     pub fn start_at(&mut self, contract_id: u32, function_id: u32) {
         self.start = function_id * 100000;
         self.stop = self.start + 1;
+        self.function_id = function_id;
         let mut graph = Graph::new(self.dict.walker_at(function_id).unwrap().clone());
         let root = graph.update();
         let states = self.dict.find_walkers(SmartContractQuery::StatesByContractId(contract_id));

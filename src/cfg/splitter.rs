@@ -4,15 +4,23 @@ use std::collections::HashMap;
 
 pub struct Splitter {
     indexes: HashMap<u32, Vec<u32>>,
+    fcalls: HashMap<u32, Vec<u32>>,
 }
 
 impl Splitter {
     pub fn new() -> Self {
-        Splitter { indexes: HashMap::new() }
+        Splitter {
+            indexes: HashMap::new(),
+            fcalls: HashMap::new(),
+        }
     }
 
     pub fn get_indexes(&self) -> &HashMap<u32, Vec<u32>> {
         &self.indexes
+    }
+
+    pub fn get_fcalls(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.fcalls
     }
 
     pub fn split<'a>(&mut self, walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
@@ -31,9 +39,16 @@ impl Splitter {
                 parameters.push(walker.node.id);
                 function_calls.append(&mut self.split(walker));
             }
-            if walker.node.name == "IndexAccess" {
-                parameters.insert(0, vertex_id);
-                self.indexes.insert(walker.node.id, parameters);
+            match walker.node.name {
+                "IndexAccess" => {
+                    parameters.insert(0, vertex_id);
+                    self.indexes.insert(walker.node.id, parameters);
+                },
+                "FunctionCall" | "ModifierInvocation" => {
+                    parameters.insert(0, vertex_id);
+                    self.fcalls.insert(walker.node.id, parameters);
+                },
+                _ => {},
             }
             match walker.node.name {
                 "FunctionCall" => {

@@ -158,10 +158,44 @@ impl<'a> Network<'a> {
         index_links
     }
 
+    fn find_fcall_links(&mut self) -> HashSet<DataLink>  {
+        let mut fcall_links = HashSet::new();
+        let mut all_actions = HashMap::new();
+        let mut all_fcalls = HashMap::new();
+        let mut all_returns = HashMap::new();
+        for (_, dfg) in self.dfgs.iter() {
+            let cfg = dfg.get_cfg();
+            all_actions.extend(dfg.get_new_actions());
+            all_fcalls.extend(cfg.get_fcalls().clone());
+            all_returns.extend(cfg.get_returns().clone());
+        }
+        let get_variables = |index_id: u32| {
+            let mut variables = HashSet::new();
+            if let Some(actions) = all_actions.get(&index_id) {
+                for action in actions.iter() {
+                    if let Action::Use(variable, _) = action {
+                        variables.insert(variable.clone());
+                    }
+                }
+            }
+            variables
+        };
+        for (fcall_id, params) in all_fcalls {
+            self.dict.walker_at(fcall_id).map(|walker| {
+                let walkers = walker.direct_childs(|_| true);
+                let declaration = walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                if let Some(declaration) = declaration {
+                }
+            });
+        }
+        fcall_links
+    }
+
     fn find_external_links(&mut self) -> HashSet<DataLink> {
         let mut external_links = HashSet::new();
         // external_links.extend(self.find_assignment_links());
         external_links.extend(self.find_index_links());
+        external_links.extend(self.find_fcall_links());
         external_links
     } 
 
