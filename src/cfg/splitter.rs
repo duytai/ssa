@@ -23,6 +23,7 @@ impl Splitter {
             || walker.node.name == "ModifierInvocation"
             || walker.node.name == "IndexAccess"
         };
+        let vertex_id = walker.node.id;
         // Split parameters to other nodes
         for walker in walker.walk(true, ig, fi).into_iter() {
             let mut parameters = vec![];
@@ -31,6 +32,7 @@ impl Splitter {
                 function_calls.append(&mut self.split(walker));
             }
             if walker.node.name == "IndexAccess" {
+                parameters.insert(0, vertex_id);
                 self.indexes.insert(walker.node.id, parameters);
             }
             match walker.node.name {

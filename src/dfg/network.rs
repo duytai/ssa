@@ -7,6 +7,7 @@ use crate::core::{
     Dictionary,
     SmartContractQuery,
     Action,
+    VariableComparison,
 };
 use std::collections::{
     HashMap,
@@ -123,19 +124,36 @@ impl<'a> Network<'a> {
         };
         for (index_id, params) in all_indexes {
             let index_variables = get_variables(index_id);
-            for index_param_id in params {
-                let param_variables = get_variables(index_param_id);
+            for index_param_id in &params[1..] {
+                let param_variables = get_variables(*index_param_id);
                 for index_variable in index_variables.iter() {
                     for param_variable in param_variables.iter() {
                         let data_link = DataLink::new(
                             (index_variable.clone(), index_id),
-                            (param_variable.clone(), index_param_id),
+                            (param_variable.clone(), *index_param_id),
                             DataLinkLabel::SwitchType,
                         );
                         index_links.insert(data_link);
                     }
                 }
             } 
+            self.dict.walker_at(params[0]).map(|walker| {
+                if walker.node.name != "IndexAccess" {
+                    let instance_variables = get_variables(walker.node.id);
+                    for instance_variable in instance_variables.iter() {
+                        for index_variable in instance_variables.iter() {
+                            if index_variable.contains(instance_variable) == VariableComparison::Equal {
+                                let data_link = DataLink::new(
+                                    (instance_variable.clone(), params[0]),
+                                    (index_variable.clone(), index_id),
+                                    DataLinkLabel::SameType,
+                                );
+                                index_links.insert(data_link);
+                            } 
+                        }
+                    }
+                }
+            });
         }
         index_links
     }
