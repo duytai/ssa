@@ -48,7 +48,9 @@ impl<'a> FlatVariable<'a> {
             println!("\t{:?}", flat);
         }
         for (members, attributes, kind) in self.flats.iter() {
-            if attributes.starts_with(&self.attributes.join(".")) {
+            let joined_1 = self.attributes.join(".");
+            let joined_2 = format!("{}.", joined_1);
+            if attributes == &joined_1 || attributes.starts_with(&joined_2) {
                 let variable = Variable::new(
                     members.clone(),
                     attributes.clone(),
