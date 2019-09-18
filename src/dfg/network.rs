@@ -203,8 +203,8 @@ impl<'a> Network<'a> {
                             for idx in 0..defined_len {
                                 let defined_parameter_variables = get_variables(defined_parameters[idx]);
                                 let invoked_parameter_variables = get_variables(invoked_parameters[idx + 2]);
-                                let from = (defined_parameter_variables, invoked_parameters[idx + 2]);
-                                let to = (invoked_parameter_variables, defined_parameters[idx]);
+                                let from = (defined_parameter_variables, defined_parameters[idx]);
+                                let to = (invoked_parameter_variables, invoked_parameters[idx + 2]);
                                 fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                             } 
                         } 
