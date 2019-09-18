@@ -6,6 +6,8 @@ use crate::core::{
     Member,
     VariableComparison,
     FlatVariable,
+    DataLink,
+    DataLinkLabel,
 };
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
@@ -97,4 +99,54 @@ impl Variable {
         }
     }
 
+    pub fn links(kill_variables_tup: (HashSet<Variable>, u32), use_variables_tup: (HashSet<Variable>, u32), label: DataLinkLabel) -> HashSet<DataLink> {
+        let mut assignment_links = HashSet::new();
+        let (kill_variables, kill_id) = kill_variables_tup;
+        let (use_variables, use_id) = use_variables_tup;
+        match label {
+            DataLinkLabel::SameType => {
+                if kill_variables.len() == 1 {
+                    for kill_variable in kill_variables.iter() {
+                        for use_variable in use_variables.iter() {
+                            if kill_variable.get_kind() == use_variable.get_kind() {
+                                let data_link = DataLink::new(
+                                    (kill_variable.clone(), kill_id),
+                                    (use_variable.clone(), use_id),
+                                    DataLinkLabel::SameType,
+                                );
+                                assignment_links.insert(data_link);
+                            }
+                        }
+                    }
+                }
+                if kill_variables.len() > 1 {
+                    for kill_variable in kill_variables.iter() {
+                        for use_variable in use_variables.iter() {
+                            if kill_variable.equal_property(use_variable) {
+                                let data_link = DataLink::new(
+                                    (kill_variable.clone(), kill_id),
+                                    (use_variable.clone(), use_id),
+                                    DataLinkLabel::SameType,
+                                );
+                                assignment_links.insert(data_link);
+                            }
+                        }
+                    }
+                }
+            },
+            DataLinkLabel::SwitchType => {
+                for kill_variable in kill_variables.iter() {
+                    for use_variable in use_variables.iter() {
+                        let data_link = DataLink::new(
+                            (kill_variable.clone(), kill_id),
+                            (use_variable.clone(), use_id),
+                            DataLinkLabel::SwitchType,
+                        );
+                        assignment_links.insert(data_link);
+                    }
+                }
+            },
+        }
+        assignment_links
+    }
 }

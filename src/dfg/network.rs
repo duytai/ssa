@@ -7,7 +7,7 @@ use crate::core::{
     Dictionary,
     SmartContractQuery,
     Action,
-    VariableComparison,
+    Variable,
 };
 use std::collections::{
     HashMap,
@@ -70,34 +70,9 @@ impl<'a> Network<'a> {
                     },
                 }
             }
-            if kill_variables.len() == 1 {
-                for kill_variable in kill_variables.iter() {
-                    for use_variable in use_variables.iter() {
-                        if kill_variable.get_kind() == use_variable.get_kind() {
-                            let data_link = DataLink::new(
-                                (kill_variable.clone(), *vertex_id),
-                                (use_variable.clone(), *vertex_id),
-                                DataLinkLabel::SameType,
-                            );
-                            assignment_links.insert(data_link);
-                        }
-                    }
-                }
-            }
-            if kill_variables.len() > 1 {
-                for kill_variable in kill_variables.iter() {
-                    for use_variable in use_variables.iter() {
-                        if kill_variable.equal_property(use_variable) {
-                            let data_link = DataLink::new(
-                                (kill_variable.clone(), *vertex_id),
-                                (use_variable.clone(), *vertex_id),
-                                DataLinkLabel::SameType,
-                            );
-                            assignment_links.insert(data_link);
-                        }
-                    }
-                }
-            }
+            let from = (kill_variables, *vertex_id);
+            let to = (use_variables, *vertex_id);
+            assignment_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
         }
         assignment_links
     }
@@ -126,31 +101,15 @@ impl<'a> Network<'a> {
             let index_variables = get_variables(index_id);
             for index_param_id in &params[2..] {
                 let param_variables = get_variables(*index_param_id);
-                for index_variable in index_variables.iter() {
-                    for param_variable in param_variables.iter() {
-                        let data_link = DataLink::new(
-                            (index_variable.clone(), index_id),
-                            (param_variable.clone(), *index_param_id),
-                            DataLinkLabel::SwitchType,
-                        );
-                        index_links.insert(data_link);
-                    }
-                }
+                let from = (index_variables.clone(), index_id);
+                let to = (param_variables, *index_param_id);
+                index_links.extend(Variable::links(from, to, DataLinkLabel::SwitchType));
             } 
             {
                 let param_variables = get_variables(params[1]);
-                for index_variable in index_variables.iter() {
-                    for param_variable in param_variables.iter() {
-                        if param_variable.equal_property(index_variable) {
-                            let data_link = DataLink::new(
-                                (index_variable.clone(), index_id),
-                                (param_variable.clone(), params[1]),
-                                DataLinkLabel::SameType,
-                            );
-                            index_links.insert(data_link);
-                        }
-                    }
-                }
+                let from = (index_variables.clone(), index_id);
+                let to = (param_variables, params[1]);
+                index_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
             }
             self.dict.walker_at(params[0]).map(|walker| {
                 if walker.node.name != "IndexAccess" {
@@ -205,31 +164,15 @@ impl<'a> Network<'a> {
                     false => {
                         for param_id in (&params[2..]).iter() {
                             let param_variables = get_variables(*param_id);
-                            for fcall_variable in fcall_variables.iter() {
-                                for param_variable in param_variables.iter() {
-                                    let data_link = DataLink::new(
-                                        (fcall_variable.clone(), fcall_id),
-                                        (param_variable.clone(), *param_id),
-                                        DataLinkLabel::SwitchType,
-                                    );
-                                    fcall_links.insert(data_link);
-                                }
-                            }
+                            let from = (fcall_variables.clone(), fcall_id);
+                            let to = (param_variables, *param_id);
+                            fcall_links.extend(Variable::links(from, to, DataLinkLabel::SwitchType));
                         }
                         {
                             let param_variables = get_variables(params[1]);
-                            for fcall_variable in fcall_variables.iter() {
-                                for param_variable in param_variables.iter() {
-                                    if param_variable.equal_property(fcall_variable) {
-                                        let data_link = DataLink::new(
-                                            (fcall_variable.clone(), fcall_id),
-                                            (param_variable.clone(), params[1]),
-                                            DataLinkLabel::SameType,
-                                        );
-                                        fcall_links.insert(data_link);
-                                    }
-                                }
-                            }
+                            let from = (fcall_variables.clone(), fcall_id);
+                            let to = (param_variables, params[1]);
+                            fcall_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
                         }
                         self.dict.walker_at(params[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
@@ -254,12 +197,9 @@ impl<'a> Network<'a> {
                         let returns = all_returns.get(&declaration).unwrap();
                         for return_id in returns {
                             let return_variables = get_variables(*return_id);
-                            for fcall_variable in fcall_variables.iter() {
-                                for return_variable in return_variables.iter() {
-                                    // Similar to assignment here 
-                                    // TODO
-                                }
-                            }
+                            let from = (fcall_variables.clone(), fcall_id);
+                            let to = (return_variables, *return_id);
+                            fcall_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
                         }
                     }
                 }
@@ -271,7 +211,7 @@ impl<'a> Network<'a> {
     fn find_external_links(&mut self) -> HashSet<DataLink> {
         let mut external_links = HashSet::new();
         // external_links.extend(self.find_assignment_links());
-        external_links.extend(self.find_index_links());
+        // external_links.extend(self.find_index_links());
         external_links.extend(self.find_fcall_links());
         external_links
     } 
