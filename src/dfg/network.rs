@@ -8,6 +8,7 @@ use crate::core::{
     SmartContractQuery,
     Action,
     Variable,
+    VariableLinkType,
 };
 use std::collections::{
     HashMap,
@@ -72,7 +73,7 @@ impl<'a> Network<'a> {
             }
             let from = (kill_variables, *vertex_id);
             let to = (use_variables, *vertex_id);
-            assignment_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
+            assignment_links.extend(Variable::links(from, to, VariableLinkType::SameType));
         }
         assignment_links
     }
@@ -103,29 +104,20 @@ impl<'a> Network<'a> {
                 let param_variables = get_variables(*index_param_id);
                 let from = (index_variables.clone(), index_id);
                 let to = (param_variables, *index_param_id);
-                index_links.extend(Variable::links(from, to, DataLinkLabel::SwitchType));
+                index_links.extend(Variable::links(from, to, VariableLinkType::SwitchType));
             } 
             {
                 let param_variables = get_variables(params[1]);
                 let from = (index_variables.clone(), index_id);
                 let to = (param_variables, params[1]);
-                index_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
+                index_links.extend(Variable::links(from, to, VariableLinkType::SameType));
             }
             self.dict.walker_at(params[0]).map(|walker| {
                 if walker.node.name != "IndexAccess" {
                     let instance_variables = get_variables(walker.node.id);
-                    for instance_variable in instance_variables.iter() {
-                        for index_variable in instance_variables.iter() {
-                            if index_variable.equal_property(instance_variable) {
-                                let data_link = DataLink::new(
-                                    (instance_variable.clone(), params[0]),
-                                    (index_variable.clone(), index_id),
-                                    DataLinkLabel::SameType,
-                                );
-                                index_links.insert(data_link);
-                            }
-                        }
-                    }
+                    let from = (index_variables.clone(), params[0]);
+                    let to = (instance_variables, index_id);
+                    index_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
                 }
             });
         }
@@ -166,29 +158,20 @@ impl<'a> Network<'a> {
                             let param_variables = get_variables(*param_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (param_variables, *param_id);
-                            fcall_links.extend(Variable::links(from, to, DataLinkLabel::SwitchType));
+                            fcall_links.extend(Variable::links(from, to, VariableLinkType::SwitchType));
                         }
                         {
                             let param_variables = get_variables(params[1]);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (param_variables, params[1]);
-                            fcall_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
+                            fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                         }
                         self.dict.walker_at(params[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
                                 let instance_variables = get_variables(walker.node.id);
-                                for instance_variable in instance_variables.iter() {
-                                    for fcall_variable in fcall_variables.iter() {
-                                        if fcall_variable.equal_property(instance_variable) {
-                                            let data_link = DataLink::new(
-                                                (instance_variable.clone(), params[0]),
-                                                (fcall_variable.clone(), fcall_id),
-                                                DataLinkLabel::SameType,
-                                            );
-                                            fcall_links.insert(data_link);
-                                        }
-                                    }
-                                }
+                                let from = (fcall_variables, params[0]);
+                                let to = (instance_variables, fcall_id);
+                                fcall_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
                             }
                         });
                     },
@@ -199,7 +182,7 @@ impl<'a> Network<'a> {
                             let return_variables = get_variables(*return_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (return_variables, *return_id);
-                            fcall_links.extend(Variable::links(from, to, DataLinkLabel::SameType));
+                            fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                         }
                     }
                 }

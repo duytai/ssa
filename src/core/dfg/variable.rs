@@ -17,6 +17,13 @@ pub struct Variable {
     kind: String,
 }
 
+#[derive(Debug)]
+pub enum VariableLinkType {
+    SameType,
+    SwitchType,
+    ExactMatch,
+}
+
 impl Variable {
 
     pub fn new(members: Vec<Member>, source: String, kind: String) -> Self {
@@ -99,12 +106,12 @@ impl Variable {
         }
     }
 
-    pub fn links(kill_variables_tup: (HashSet<Variable>, u32), use_variables_tup: (HashSet<Variable>, u32), label: DataLinkLabel) -> HashSet<DataLink> {
+    pub fn links(kill_variables_tup: (HashSet<Variable>, u32), use_variables_tup: (HashSet<Variable>, u32), link_type: VariableLinkType) -> HashSet<DataLink> {
         let mut assignment_links = HashSet::new();
         let (kill_variables, kill_id) = kill_variables_tup;
         let (use_variables, use_id) = use_variables_tup;
-        match label {
-            DataLinkLabel::SameType => {
+        match link_type {
+            VariableLinkType::SameType => {
                 if kill_variables.len() == 1 {
                     for kill_variable in kill_variables.iter() {
                         for use_variable in use_variables.iter() {
@@ -134,7 +141,7 @@ impl Variable {
                     }
                 }
             },
-            DataLinkLabel::SwitchType => {
+            VariableLinkType::SwitchType => {
                 for kill_variable in kill_variables.iter() {
                     for use_variable in use_variables.iter() {
                         let data_link = DataLink::new(
@@ -143,6 +150,20 @@ impl Variable {
                             DataLinkLabel::SwitchType,
                         );
                         assignment_links.insert(data_link);
+                    }
+                }
+            },
+            VariableLinkType::ExactMatch => {
+                for kill_variable in kill_variables.iter() {
+                    for use_variable in use_variables.iter() {
+                        if kill_variable.equal_property(use_variable) {
+                            let data_link = DataLink::new(
+                                (kill_variable.clone(), kill_id),
+                                (use_variable.clone(), use_id),
+                                DataLinkLabel::SameType,
+                            );
+                            assignment_links.insert(data_link);
+                        }
                     }
                 }
             },
