@@ -191,7 +191,6 @@ impl<'a> Network<'a> {
                         let declaration = declaration.unwrap();
                         let returns = all_returns.get(&declaration).unwrap();
                         let defined_parameters = all_defined_parameters.get(&declaration).unwrap();
-                        let invoked_parameters = &invoked_parameters[2..];
                         for return_id in returns {
                             let return_variables = get_variables(*return_id);
                             let from = (fcall_variables.clone(), fcall_id);
@@ -199,16 +198,24 @@ impl<'a> Network<'a> {
                             fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                         }
                         let defined_len = defined_parameters.len(); 
-                        let invoked_len = invoked_parameters.len();
+                        let invoked_len = invoked_parameters.len() - 2;
                         if defined_len == invoked_len {
                             for idx in 0..defined_len {
                                 let defined_parameter_variables = get_variables(defined_parameters[idx]);
-                                let invoked_parameter_variables = get_variables(invoked_parameters[idx]);
-                                let from = (defined_parameter_variables, invoked_parameters[idx]);
+                                let invoked_parameter_variables = get_variables(invoked_parameters[idx + 2]);
+                                let from = (defined_parameter_variables, invoked_parameters[idx + 2]);
                                 let to = (invoked_parameter_variables, defined_parameters[idx]);
                                 fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                             } 
                         } 
+                        self.dict.walker_at(invoked_parameters[0]).map(|walker| {
+                            if walker.node.name != "FunctionCall" {
+                                let instance_variables = get_variables(walker.node.id);
+                                let from = (fcall_variables, invoked_parameters[0]);
+                                let to = (instance_variables, fcall_id);
+                                fcall_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
+                            }
+                        });
                     }
                 }
             });
