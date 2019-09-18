@@ -2,7 +2,6 @@ use crate::dot::Dot;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
-    DataLinkLabel,
     DataLink,
     Dictionary,
     SmartContractQuery,
@@ -21,6 +20,7 @@ pub struct Network<'a> {
     dfgs: HashMap<u32, DataFlowGraph<'a>>,
     dot: Dot,
     contract_id: u32,
+    context: HashMap<(u32, u32), u32>,
 }
 
 impl<'a> Network<'a> {
@@ -30,6 +30,7 @@ impl<'a> Network<'a> {
             links: HashSet::new(),
             dfgs: HashMap::new(),
             dot: Dot::new(),
+            context: HashMap::new(),
             contract_id,
         };
         network.find_links();
@@ -130,6 +131,7 @@ impl<'a> Network<'a> {
     }
 
     fn find_fcall_links(&mut self) -> HashSet<DataLink>  {
+        let mut context = HashMap::new();
         let mut fcall_links = HashSet::new();
         let mut all_actions = HashMap::new();
         let mut all_fcalls = HashMap::new();
@@ -195,7 +197,13 @@ impl<'a> Network<'a> {
                             let return_variables = get_variables(*return_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (return_variables, *return_id);
-                            fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
+                            let tmp_links = Variable::links(from, to, VariableLinkType::SameType);
+                            for link in tmp_links.iter() {
+                                let (_, from) = link.get_from();
+                                let (_, to) = link.get_to();
+                                context.insert((*from, *to), fcall_id);
+                            }
+                            fcall_links.extend(tmp_links);
                         }
                         let defined_len = defined_parameters.len(); 
                         let invoked_len = invoked_parameters.len() - 2;
@@ -205,7 +213,13 @@ impl<'a> Network<'a> {
                                 let invoked_parameter_variables = get_variables(invoked_parameters[idx + 2]);
                                 let from = (defined_parameter_variables, defined_parameters[idx]);
                                 let to = (invoked_parameter_variables, invoked_parameters[idx + 2]);
-                                fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
+                                let tmp_links = Variable::links(from, to, VariableLinkType::SameType);
+                                for link in tmp_links.iter() {
+                                    let (_, from) = link.get_from();
+                                    let (_, to) = link.get_to();
+                                    context.insert((*from, *to), fcall_id);
+                                }
+                                fcall_links.extend(tmp_links);
                             } 
                         } 
                         self.dict.walker_at(invoked_parameters[0]).map(|walker| {
@@ -220,6 +234,7 @@ impl<'a> Network<'a> {
                 }
             });
         }
+        self.context = context;
         fcall_links
     }
 
@@ -228,6 +243,7 @@ impl<'a> Network<'a> {
         // external_links.extend(self.find_assignment_links());
         // external_links.extend(self.find_index_links());
         external_links.extend(self.find_fcall_links());
+        println!("{:?}", self.context);
         external_links
     } 
 
