@@ -240,10 +240,9 @@ impl<'a> Network<'a> {
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
         let mut external_links = HashSet::new();
-        // external_links.extend(self.find_assignment_links());
-        // external_links.extend(self.find_index_links());
+        external_links.extend(self.find_assignment_links());
+        external_links.extend(self.find_index_links());
         external_links.extend(self.find_fcall_links());
-        println!("{:?}", self.context);
         external_links
     } 
 
