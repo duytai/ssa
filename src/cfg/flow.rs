@@ -33,6 +33,7 @@ pub struct ControlFlowGraph<'a> {
     indexes: HashMap<u32, Vec<u32>>,
     fcalls: HashMap<u32, Vec<u32>>,
     returns: HashMap<u32, Vec<u32>>, 
+    parameters: HashMap<u32, Vec<u32>>,
 }
 
 /// The type of breaking loop statement
@@ -59,6 +60,7 @@ impl<'a> ControlFlowGraph<'a> {
             indexes: HashMap::new(),
             fcalls: HashMap::new(),
             returns: HashMap::new(), 
+            parameters: HashMap::new(),
             dict,
             start: 0,
             stop: 0,
@@ -103,6 +105,10 @@ impl<'a> ControlFlowGraph<'a> {
 
     pub fn get_returns(&self) -> &HashMap<u32, Vec<u32>> {
         &self.returns
+    }
+
+    pub fn get_parameters(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.parameters
     }
 
     /// Traverse comparison nodes in IfStatement, WhileStatement, DoWhileStatement 
@@ -451,6 +457,8 @@ impl<'a> ControlFlowGraph<'a> {
                 self.edges.insert(edge);
             }
         }
+        let parameters = graph.get_parameters().clone();
+        self.parameters.insert(function_id, parameters);
     }
 
     fn update_execution_paths(&mut self, from: u32, mut execution_path: Vec<u32>) {

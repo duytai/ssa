@@ -26,6 +26,7 @@ use crate::cfg::{
 pub struct Graph<'a> {
     walker: Walker<'a>,
     root: BlockNode<'a>,
+    parameters: Vec<u32>,
 }
 
 /// Kind of a graph node
@@ -58,7 +59,11 @@ pub enum NodeKind {
 
 impl<'a> Graph<'a> {
     pub fn new(walker: Walker<'a>) -> Self {
-        Graph { walker, root: BlockNode::None }
+        Graph { walker, root: BlockNode::None, parameters: vec![] }
+    }
+
+    pub fn get_parameters(&self) -> &Vec<u32> {
+        &self.parameters
     }
 
     /// Traverse the body of a function based on token kind, for some special token call build_node

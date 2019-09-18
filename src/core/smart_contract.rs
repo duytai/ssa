@@ -23,8 +23,6 @@ pub struct SmartContract {
     contracts: HashMap<u32, Vec<u32>>,
     /// contract_id => vec<state_id> 
     states: HashMap<u32, Vec<u32>>,
-    /// function_id => vec<param_id>
-    func_defs: HashMap<u32, Vec<u32>>,
     /// name => struct_id
     struct_defs: HashMap<String, u32>,
     /// name => contract_id
@@ -36,7 +34,6 @@ impl SmartContract {
         SmartContract {
             contracts: HashMap::new(),
             states: HashMap::new(),
-            func_defs: HashMap::new(),
             struct_defs: HashMap::new(),
             contract_defs: HashMap::new(),
         }
@@ -84,10 +81,6 @@ impl SmartContract {
                     "FunctionDefinition"
                         | "ModifierDefinition" => {
                         prop.functions.push(walker.node.id);
-                        walker.direct_childs(|_| true)
-                            .get(0)
-                            .map(|walker| walker.direct_childs(|_| true).iter().map(|w| w.node.id).collect::<Vec<u32>>())
-                            .map(|ids| self.func_defs.insert(walker.node.id, ids));
                     },
                     "VariableDeclaration" => {
                         prop.states.push(walker.node.id);
