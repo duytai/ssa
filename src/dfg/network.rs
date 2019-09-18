@@ -91,8 +91,13 @@ impl<'a> Network<'a> {
             let mut variables = HashSet::new();
             if let Some(actions) = all_actions.get(&index_id) {
                 for action in actions.iter() {
-                    if let Action::Use(variable, _) = action {
-                        variables.insert(variable.clone());
+                    match action {
+                        Action::Use(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
+                        Action::Kill(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
                     }
                 }
             }
@@ -129,24 +134,31 @@ impl<'a> Network<'a> {
         let mut all_actions = HashMap::new();
         let mut all_fcalls = HashMap::new();
         let mut all_returns = HashMap::new();
+        let mut all_defined_parameters = HashMap::new();
         for (_, dfg) in self.dfgs.iter() {
             let cfg = dfg.get_cfg();
             all_actions.extend(dfg.get_new_actions());
             all_fcalls.extend(cfg.get_fcalls().clone());
             all_returns.extend(cfg.get_returns().clone());
+            all_defined_parameters.extend(cfg.get_parameters().clone());
         }
         let get_variables = |index_id: u32| {
             let mut variables = HashSet::new();
             if let Some(actions) = all_actions.get(&index_id) {
                 for action in actions.iter() {
-                    if let Action::Use(variable, _) = action {
-                        variables.insert(variable.clone());
+                    match action {
+                        Action::Use(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
+                        Action::Kill(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
                     }
                 }
             }
             variables
         };
-        for (fcall_id, params) in all_fcalls {
+        for (fcall_id, invoked_parameters) in all_fcalls {
             let fcall_variables = get_variables(fcall_id);
             self.dict.walker_at(fcall_id).map(|walker| {
                 let walkers = walker.direct_childs(|_| true);
@@ -154,22 +166,22 @@ impl<'a> Network<'a> {
                 let is_user_defined = declaration.and_then(|declaration| all_returns.get(&declaration)).is_some();
                 match is_user_defined {
                     false => {
-                        for param_id in (&params[2..]).iter() {
+                        for param_id in (&invoked_parameters[2..]).iter() {
                             let param_variables = get_variables(*param_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (param_variables, *param_id);
                             fcall_links.extend(Variable::links(from, to, VariableLinkType::SwitchType));
                         }
                         {
-                            let param_variables = get_variables(params[1]);
+                            let param_variables = get_variables(invoked_parameters[1]);
                             let from = (fcall_variables.clone(), fcall_id);
-                            let to = (param_variables, params[1]);
+                            let to = (param_variables, invoked_parameters[1]);
                             fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                         }
-                        self.dict.walker_at(params[0]).map(|walker| {
+                        self.dict.walker_at(invoked_parameters[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
                                 let instance_variables = get_variables(walker.node.id);
-                                let from = (fcall_variables, params[0]);
+                                let from = (fcall_variables, invoked_parameters[0]);
                                 let to = (instance_variables, fcall_id);
                                 fcall_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
                             }
@@ -178,12 +190,25 @@ impl<'a> Network<'a> {
                     true => {
                         let declaration = declaration.unwrap();
                         let returns = all_returns.get(&declaration).unwrap();
+                        let defined_parameters = all_defined_parameters.get(&declaration).unwrap();
+                        let invoked_parameters = &invoked_parameters[2..];
                         for return_id in returns {
                             let return_variables = get_variables(*return_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (return_variables, *return_id);
                             fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
                         }
+                        let defined_len = defined_parameters.len(); 
+                        let invoked_len = invoked_parameters.len();
+                        if defined_len == invoked_len {
+                            for idx in 0..defined_len {
+                                let defined_parameter_variables = get_variables(defined_parameters[idx]);
+                                let invoked_parameter_variables = get_variables(invoked_parameters[idx]);
+                                let from = (defined_parameter_variables, invoked_parameters[idx]);
+                                let to = (invoked_parameter_variables, defined_parameters[idx]);
+                                fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
+                            } 
+                        } 
                     }
                 }
             });

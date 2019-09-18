@@ -129,6 +129,7 @@ impl<'a> Graph<'a> {
                         "ParameterList" => {
                             if index == 0 {
                                 for walker in walker.direct_childs(|_| true) {
+                                    self.parameters.push(walker.node.id);
                                     let block = CodeBlock::Block(walker);
                                     blocks.push(block);
                                 }
