@@ -241,7 +241,6 @@ impl<'a> Network<'a> {
                 }
             });
         }
-        println!("context: {:?}", context);
         self.context = context;
         fcall_links
     }
@@ -316,7 +315,7 @@ impl<'a> Network<'a> {
         }
     }
 
-    pub fn traverse(&self, vertex_id: u32, variable: &Variable) -> Vec<Vec<(Variable, u32)>> {
+    pub fn traverse(&self, source: (Variable, u32)) -> Vec<Vec<(Variable, u32)>> {
         let mut all_links: HashMap<(Variable, u32), Vec<(Variable, u32)>> = HashMap::new();
         for link in self.links.iter() {
             if let Some(v) = all_links.get_mut(link.get_from()) {
@@ -329,7 +328,7 @@ impl<'a> Network<'a> {
         }
         let mut execution_paths = vec![];
         self.network_traverse(
-            (variable.clone(), vertex_id),
+            source,
             &all_links,
             HashSet::new(),
             vec![],
