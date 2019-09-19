@@ -9,10 +9,17 @@ use crate::core::{
     Variable,
     VariableLinkType,
 };
+
 use std::collections::{
     HashMap,
     HashSet,
 };
+
+#[derive(Debug)]
+enum StackContext {
+    Push(u32),
+    Pop(u32),
+}
 
 pub struct Network<'a> {
     dict: &'a Dictionary<'a>,
@@ -20,7 +27,7 @@ pub struct Network<'a> {
     dfgs: HashMap<u32, DataFlowGraph<'a>>,
     dot: Dot,
     contract_id: u32,
-    context: HashMap<(u32, u32), u32>,
+    context: HashMap<(u32, u32), StackContext>,
 }
 
 impl<'a> Network<'a> {
@@ -201,7 +208,7 @@ impl<'a> Network<'a> {
                             for link in tmp_links.iter() {
                                 let (_, from) = link.get_from();
                                 let (_, to) = link.get_to();
-                                context.insert((*from, *to), fcall_id);
+                                context.insert((*from, *to), StackContext::Push(fcall_id));
                             }
                             fcall_links.extend(tmp_links);
                         }
@@ -217,7 +224,7 @@ impl<'a> Network<'a> {
                                 for link in tmp_links.iter() {
                                     let (_, from) = link.get_from();
                                     let (_, to) = link.get_to();
-                                    context.insert((*from, *to), fcall_id);
+                                    context.insert((*from, *to), StackContext::Pop(fcall_id));
                                 }
                                 fcall_links.extend(tmp_links);
                             } 
@@ -234,6 +241,7 @@ impl<'a> Network<'a> {
                 }
             });
         }
+        println!("context: {:?}", context);
         self.context = context;
         fcall_links
     }
@@ -263,6 +271,72 @@ impl<'a> Network<'a> {
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);
+    }
+
+    fn network_traverse(
+        &self,
+        source: (Variable, u32),
+        all_links: &HashMap<(Variable, u32), Vec<(Variable, u32)>>,
+        mut visited: HashSet<((Variable, u32), Vec<u32>)>,
+        stack: Vec<u32>,
+        mut execution_path: Vec<(Variable, u32)>,
+        execution_paths: &mut Vec<Vec<(Variable, u32)>>,
+    ) {
+        visited.insert((source.clone(), stack.clone()));
+        execution_path.push(source.clone());
+        if let Some(sinks) = all_links.get(&source) {
+            for sink in sinks {
+                let mut valid_stack = true;
+                let mut context_stack = stack.clone();
+                if let Some(stack_item) = self.context.get(&(source.1, sink.1)) {
+                    match stack_item {
+                        StackContext::Push(id) => {
+                            context_stack.push(*id);
+                        },
+                        StackContext::Pop(id) => {
+                            if let Some(stack_top) = context_stack.pop() {
+                                valid_stack = &stack_top == id;
+                            }
+                        },
+                    }
+                }
+                if valid_stack && !visited.contains(&(sink.clone(), context_stack.clone())) {
+                    self.network_traverse(
+                        sink.clone(),
+                        all_links,
+                        visited.clone(),
+                        context_stack,
+                        execution_path.clone(),
+                        execution_paths,
+                    );
+                }
+            }
+        } else {
+            execution_paths.push(execution_path);
+        }
+    }
+
+    pub fn traverse(&self, vertex_id: u32, variable: &Variable) -> Vec<Vec<(Variable, u32)>> {
+        let mut all_links: HashMap<(Variable, u32), Vec<(Variable, u32)>> = HashMap::new();
+        for link in self.links.iter() {
+            if let Some(v) = all_links.get_mut(link.get_from()) {
+                v.push(link.get_to().clone());
+            } else {
+                let from = link.get_from().clone();
+                let to = link.get_to().clone();
+                all_links.insert(from, vec![to]);
+            }
+        }
+        let mut execution_paths = vec![];
+        self.network_traverse(
+            (variable.clone(), vertex_id),
+            &all_links,
+            HashSet::new(),
+            vec![],
+            vec![],
+            &mut execution_paths,
+        );
+        execution_paths
     }
 
     pub fn format(&mut self) -> String {
