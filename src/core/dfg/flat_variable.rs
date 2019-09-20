@@ -86,6 +86,13 @@ impl<'a> FlatVariable<'a> {
                 let name = walker.node.attributes["name"].as_str().unwrap();
                 self.attributes.insert(0, name.to_string());
             },
+            "FunctionCall" => {
+                let type_conversion = walker.node.attributes["type_conversion"].as_bool().unwrap_or(false);
+                if type_conversion {
+                    let to_kind = walker.node.attributes["type"].as_str().unwrap();
+                    self.attributes.insert(0, to_kind.to_string());
+                }
+            },
             _ => {}
         }
         walker.direct_childs(|_| true).get(0).map(|walker| {
@@ -98,14 +105,16 @@ impl<'a> FlatVariable<'a> {
         let mapping_regex = Regex::new(r"^mapping\(.+\)((\[\])*)").unwrap();
         let contract_regex = Regex::new(r"^contract ([^\[\]]*)((\[\])*)").unwrap();
         let array_regex = Regex::new(r"([^\[]+)((\[\])+)$").unwrap();
+        let conversion_regex = Regex::new(r"^type\((.+)\)$").unwrap();
         let matches = (
             struct_regex.is_match(kind),
             mapping_regex.is_match(kind),
             contract_regex.is_match(kind),
             array_regex.is_match(kind),
+            conversion_regex.is_match(kind),
         );
         match matches {
-            (true, _, _, _) => {
+            (true, _, _, _, _) => {
                 for cap in struct_regex.captures_iter(kind) {
                     let struct_kind = (&cap[1]).to_string();
                     let dimension = (&cap[2]).len() / 2;
@@ -125,7 +134,7 @@ impl<'a> FlatVariable<'a> {
                     });
                 }
             },
-            (_, true, _, _) => {
+            (_, true, _, _, _) => {
                 let mut state = (0, 0, 0); // (depth, from, to)
                 for i in 0..kind.len() {
                     if kind[0..=i].ends_with("(") {
@@ -151,7 +160,7 @@ impl<'a> FlatVariable<'a> {
                     self.update_flats(&mapping_kind.trim(), members.clone(), attributes.clone());
                 }
             },
-            (_, _, true, _) => {
+            (_, _, true, _, _) => {
                 for cap in contract_regex.captures_iter(kind) {
                     let contract_kind = (&cap[1]).to_string();
                     let dimension = (&cap[2]).len() / 2;
@@ -194,7 +203,7 @@ impl<'a> FlatVariable<'a> {
                     });
                 } 
             },
-            (_, _, _, true) => {
+            (_, _, _, true, _) => {
                 for cap in array_regex.captures_iter(kind) {
                     let dimension = (&cap[2]).len() / 2;
                     let mut array_kind = (&cap[1]).to_string();
@@ -212,6 +221,12 @@ impl<'a> FlatVariable<'a> {
                         attributes.push(prop.1);
                         self.update_flats(&prop.2, members, attributes);
                     }
+                }
+            },
+            (_, _, _, _, true) => {
+                for cap in conversion_regex.captures_iter(kind) {
+                    let inner_kind = (&cap[1]).to_string();
+                    self.update_flats(&inner_kind, members.clone(), attributes.clone());
                 }
             },
             _ => {
