@@ -197,12 +197,21 @@ impl<'a> FlatVariable<'a> {
             (_, _, _, true) => {
                 for cap in array_regex.captures_iter(kind) {
                     let dimension = (&cap[2]).len() / 2;
-                    for _ in 0..dimension {
-                        members.push(Member::IndexAccess);
-                        attributes.push(String::from("$"));
+                    let mut array_kind = (&cap[1]).to_string();
+                    for _ in 0..dimension - 1 {
+                        array_kind.push_str("[]");
                     }
-                    let array_kind = (&cap[1]).to_string();
-                    self.update_flats(&array_kind, members.clone(), attributes.clone());
+                    let properties = vec![
+                        (Member::IndexAccess, String::from("$"), array_kind),
+                        (Member::Global(String::from("push")), String::from("push"), String::from("void")),
+                    ];
+                    for prop in properties {
+                        let mut members = members.clone();
+                        let mut attributes = attributes.clone();
+                        members.push(prop.0);
+                        attributes.push(prop.1);
+                        self.update_flats(&prop.2, members, attributes);
+                    }
                 }
             },
             _ => {
