@@ -10,6 +10,7 @@ use crate::core::{
 
 pub struct Permission<'a> {
     network: &'a Network<'a>, 
+    owner_variables: HashSet<Variable>,
 }
 
 impl<'a> Permission<'a> {
@@ -61,30 +62,36 @@ impl<'a> Permission<'a> {
             vec!["msg", "sender", "send", "bool"],
             vec!["msg", "sender", "call", "bool"],
         ];
-        for v in msg_sender {
+        for sender in msg_sender {
             let members = vec![
-                Member::Global(v[0].to_string()),
-                Member::Global(v[1].to_string()),
-                Member::Global(v[2].to_string()),
+                Member::Global(sender[0].to_string()),
+                Member::Global(sender[1].to_string()),
+                Member::Global(sender[2].to_string()),
             ];
             let variable = Variable::new(
                 members,
-                v[..3].join("."),
-                v[3].to_string(),
+                sender[..3].join("."),
+                sender[3].to_string(),
             );
             msg_sender_variables.push(variable);
         }
+        let mut owner_variables = HashSet::new(); 
         for state_source in state_sources {
             let excution_paths = network.traverse(state_source);
             for excution_path in excution_paths {
                 if excution_path.len() > 1 {
                     let (variable, _) = excution_path.last().unwrap();
                     if msg_sender_variables.contains(variable) {
-                        println!("state: {:?}", excution_path.first());
+                        let (owner_variable, _) = excution_path.first().unwrap();
+                        owner_variables.insert(owner_variable.clone());
                     }
                 }
             } 
         }
-        Permission { network }
+        Permission { network, owner_variables }
+    }
+
+    pub fn get_owner_variables(&self) -> &HashSet<Variable> {
+        &self.owner_variables
     }
 }
