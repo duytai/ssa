@@ -23,7 +23,7 @@ impl<'a> Permission<'a> {
         for (function_id, dfg) in network.get_dfgs().iter() {
             all_actions.extend(dfg.get_new_actions());
             let walker = dict.walker_at(*function_id).unwrap();
-            let is_constructor = walker.node.attributes["isConstructor"].as_bool().unwrap();
+            let is_constructor = walker.node.attributes["isConstructor"].as_bool().unwrap_or(false);
             if is_constructor {
                 for vertex in dfg.get_cfg().get_vertices() {
                     constructor_vertices.push(vertex.get_id());

@@ -118,7 +118,8 @@ impl<'a> ControlFlowGraph<'a> {
         let mut chains = vec![];
         for block in blocks {
             match block {
-                SimpleBlockNode::FunctionCall(walker) => {
+                SimpleBlockNode::FunctionCall(walker)
+                | SimpleBlockNode::IndexAccess(walker) => {
                     let Node { id, source, .. } = walker.node;
                     let vertice = Vertex::new(id, source, Shape::DoubleCircle);
                     self.vertices.insert(vertice);
