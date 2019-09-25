@@ -234,20 +234,20 @@ impl<'a> FlatVariable<'a> {
                 properties.insert("block", vec![
                   ("blockhash", "bytes32"),
                   ("coinbase", "address"),
-                  ("difficulty", "uint"),
-                  ("gaslimit", "uint"),
-                  ("number", "uint"),
-                  ("timestamp", "uint"),
+                  ("difficulty", "uint256"),
+                  ("gaslimit", "uint256"),
+                  ("number", "uint256"),
+                  ("timestamp", "uint256"),
                 ]);
                 properties.insert("msg", vec![
                   ("data", "bytes"),
-                  ("gas", "uint"),
+                  ("gas", "uint256"),
                   ("sender", "address"),
                   ("sig", "bytes4"),
-                  ("value", "uint"),
+                  ("value", "uint256"),
                 ]);
                 properties.insert("tx", vec![
-                  ("gasprice", "uint"),
+                  ("gasprice", "uint256"),
                   ("origin", "address"),
                 ]);
                 properties.insert("abi", vec![
@@ -274,8 +274,28 @@ impl<'a> FlatVariable<'a> {
                         self.update_flats(prop.1, members, attributes);
                     }
                 } else {
-                    let flat = (members, attributes.join("."), kind.to_string());
-                    self.flats.push(flat);
+                    let query = SmartContractQuery::LibraryByKind(kind.to_string());
+                    if let Some(walker) = self.dict.find_walkers(query).get(0) {
+                        for walker in walker.direct_childs(|_| true) {
+                            let mut members = members.clone();
+                            let mut attributes = attributes.clone();
+                            let name = walker.node.attributes["name"].as_str().unwrap_or("");
+                            members.push(Member::Reference(walker.node.id));
+                            attributes.push(name.to_string());
+                            walker.direct_childs(|_| true).get(1).map(|walker| {
+                                let walkers = walker.direct_childs(|_| true);
+                                let kind = match walkers.is_empty() {
+                                    true => String::from("void"),
+                                    false => Utils::normalize_kind(&walkers[0]).to_string(),
+                                };
+                                let flat = (members, attributes.join("."), kind);
+                                self.flats.push(flat);
+                            });
+                        }
+                    } else {
+                        let flat = (members, attributes.join("."), kind.to_string());
+                        self.flats.push(flat);
+                    }
                 }
             }
         }

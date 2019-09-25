@@ -15,6 +15,7 @@ pub enum SmartContractQuery {
     StatesByContractId(u32),
     StructByName(String),
     ContractByName(String),
+    LibraryByKind(String),
 }
 
 #[derive(Debug)]
@@ -27,6 +28,8 @@ pub struct SmartContract {
     struct_defs: HashMap<String, u32>,
     /// name => contract_id
     contract_defs: HashMap<String, u32>,
+    /// name => vec<function_id> 
+    lib_defs: HashMap<String, u32>,
 }
 
 impl SmartContract {
@@ -36,6 +39,7 @@ impl SmartContract {
             states: HashMap::new(),
             struct_defs: HashMap::new(),
             contract_defs: HashMap::new(),
+            lib_defs: HashMap::new(),
         }
     }
 
@@ -52,6 +56,9 @@ impl SmartContract {
             },
             SmartContractQuery::ContractByName(contract_name) => {
                 self.contract_defs.get(&contract_name).map(|x| vec![x.clone()])
+            },
+            SmartContractQuery::LibraryByKind(kind) => {
+                self.lib_defs.get(&kind).map(|x| vec![x.clone()])
             },
         }
     }
@@ -71,12 +78,24 @@ impl SmartContract {
             self.contract_defs.insert(contract_name.to_string(), contract_walker.node.id);
             for walker in contract_walker.direct_childs(|_| true).into_iter() {
                 match walker.node.name {
-                    "InheritanceSpecifier"
-                        | "UsingForDirective" => {
-                            walker.direct_childs(|_| true)
-                                .get(0)
-                                .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
-                                .map(|reference| prop.parents.push(reference));
+                    "UsingForDirective" => {
+                        let name = walker.direct_childs(|_| true)
+                            .get(1)
+                            .and_then(|walker| walker.node.attributes["name"].as_str())
+                            .unwrap();
+                        walker.direct_childs(|_| true)
+                            .get(0)
+                            .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
+                            .map(|reference| {
+                                prop.parents.push(reference);
+                                self.lib_defs.insert(name.to_string(), reference);
+                            });
+                    },
+                    "InheritanceSpecifier" => {
+                        walker.direct_childs(|_| true)
+                            .get(0)
+                            .and_then(|walker| walker.node.attributes["referencedDeclaration"].as_u32())
+                            .map(|reference| prop.parents.push(reference));
                     },
                     "FunctionDefinition"
                         | "ModifierDefinition" => {
@@ -121,6 +140,5 @@ impl SmartContract {
             self.contracts.insert(*contract_id, all_functions);
             self.states.insert(*contract_id, all_states);
         }
-        // Save index access entry
     }
 }

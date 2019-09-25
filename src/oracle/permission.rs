@@ -8,13 +8,18 @@ use crate::core::{
     Variable,
 };
 
-pub struct Permission<'a> {
-    network: &'a Network<'a>, 
+pub struct Permission {
     owner_variables: HashSet<Variable>,
 }
 
-impl<'a> Permission<'a> {
-    pub fn new(network: &'a Network) -> Self {
+impl Permission {
+    pub fn new(network: &Network) -> Self {
+        let mut permission = Permission { owner_variables: HashSet::new() };
+        permission.update(network);
+        permission
+    }
+
+    pub fn update(&mut self, network: &Network) {
         let mut all_actions = HashMap::new();
         let mut state_sources = vec![];
         let dict = network.get_dict();
@@ -75,7 +80,6 @@ impl<'a> Permission<'a> {
             );
             msg_sender_variables.push(variable);
         }
-        let mut owner_variables = HashSet::new(); 
         for state_source in state_sources {
             let excution_paths = network.traverse(state_source);
             for excution_path in excution_paths {
@@ -83,12 +87,11 @@ impl<'a> Permission<'a> {
                     let (variable, _) = excution_path.last().unwrap();
                     if msg_sender_variables.contains(variable) {
                         let (owner_variable, _) = excution_path.first().unwrap();
-                        owner_variables.insert(owner_variable.clone());
+                        self.owner_variables.insert(owner_variable.clone());
                     }
                 }
             } 
         }
-        Permission { network, owner_variables }
     }
 
     pub fn get_owner_variables(&self) -> &HashSet<Variable> {

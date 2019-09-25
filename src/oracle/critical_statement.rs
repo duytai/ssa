@@ -30,8 +30,6 @@ impl CriticalStatement {
                     },
                 }
             }
-            // println!("vertex_id: {:?}", vertex_id);
-            // println!("variables: {:?}", variables);
         }
     }
 }
