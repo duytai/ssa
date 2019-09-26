@@ -212,23 +212,21 @@ impl<'a> Network<'a> {
                             }
                             fcall_links.extend(tmp_links);
                         }
-                        let defined_len = defined_parameters.len(); 
-                        let invoked_len = invoked_parameters.len() - 2;
-                        if defined_len == invoked_len {
-                            for idx in 0..defined_len {
-                                let defined_parameter_variables = get_variables(defined_parameters[idx]);
-                                let invoked_parameter_variables = get_variables(invoked_parameters[idx + 2]);
-                                let from = (defined_parameter_variables, defined_parameters[idx]);
-                                let to = (invoked_parameter_variables, invoked_parameters[idx + 2]);
-                                let tmp_links = Variable::links(from, to, VariableLinkType::SameType);
-                                for link in tmp_links.iter() {
-                                    let (_, from) = link.get_from();
-                                    let (_, to) = link.get_to();
-                                    context.insert((*from, *to), StackContext::Pop(fcall_id));
-                                }
-                                fcall_links.extend(tmp_links);
-                            } 
-                        } 
+                        let defined_len = defined_parameters.len();
+                        let invoked_len = invoked_parameters.len();
+                        for idx in 0..invoked_len - 2 {
+                            let defined_parameter_variables = get_variables(defined_parameters[defined_len - idx - 1]);
+                            let invoked_parameter_variables = get_variables(invoked_parameters[invoked_len - idx - 1]);
+                            let from = (defined_parameter_variables, defined_parameters[defined_len - idx - 1]);
+                            let to = (invoked_parameter_variables, invoked_parameters[invoked_len - idx - 1]);
+                            let tmp_links = Variable::links(from, to, VariableLinkType::SameType);
+                            for link in tmp_links.iter() {
+                                let (_, from) = link.get_from();
+                                let (_, to) = link.get_to();
+                                context.insert((*from, *to), StackContext::Pop(fcall_id));
+                            }
+                            fcall_links.extend(tmp_links);
+                        }
                         self.dict.walker_at(invoked_parameters[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
                                 let instance_variables = get_variables(walker.node.id);
