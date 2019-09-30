@@ -1,9 +1,9 @@
 mod oracle;
 mod permission;
-mod critical_statement;
 mod balance;
+mod unsafe_condition;
 
 pub use oracle::*;
 pub use permission::*;
-pub use critical_statement::*;
 pub use balance::*;
+pub use unsafe_condition::*;
