@@ -6,6 +6,7 @@ use crate::core::{
     Action,
     Member,
     Variable,
+    VariableComparison,
 };
 
 pub struct Permission {
@@ -85,9 +86,12 @@ impl Permission {
             for excution_path in excution_paths {
                 if excution_path.len() > 1 {
                     let (variable, _) = excution_path.last().unwrap();
-                    if msg_sender_variables.contains(variable) {
-                        let (owner_variable, _) = excution_path.first().unwrap();
-                        self.owner_variables.insert(owner_variable.clone());
+                    for msg_sender_variable in msg_sender_variables.iter() {
+                        let comp = msg_sender_variable.contains(variable);
+                        if comp == VariableComparison::Equal || comp == VariableComparison::Partial {
+                            let (owner_variable, _) = excution_path.first().unwrap();
+                            self.owner_variables.insert(owner_variable.clone());
+                        }
                     }
                 }
             } 
