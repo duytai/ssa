@@ -54,7 +54,8 @@ impl<'a> FlatVariable<'a> {
                 let variable = Variable::new(
                     members.clone(),
                     attributes.clone(),
-                    kind.clone()
+                    kind.clone(),
+                    joined_1,
                 );
                 ret.insert(variable);
             }

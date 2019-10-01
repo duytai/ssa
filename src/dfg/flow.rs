@@ -5,7 +5,6 @@ use crate::core::{
     Operator,
     Action,
     DataLink,
-    DataLinkLabel,
     Variable,
     Assignment,
     Declaration,
@@ -162,7 +161,6 @@ impl<'a> DataFlowGraph<'a> {
                                                 let data_link = DataLink::new(
                                                     (variable.clone(), *id),
                                                     (kill_var.clone(), kill_id),
-                                                    DataLinkLabel::SameType,
                                                 );
                                                 links.insert(data_link);
                                                 cur_table.remove(action);
@@ -174,7 +172,6 @@ impl<'a> DataFlowGraph<'a> {
                                                     let data_link = DataLink::new(
                                                         (variable.clone(), *id),
                                                         (kill_var.clone(), kill_id),
-                                                        DataLinkLabel::SameType,
                                                     );
                                                     links.insert(data_link);
                                                     false

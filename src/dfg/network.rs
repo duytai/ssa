@@ -7,7 +7,6 @@ use crate::core::{
     SmartContractQuery,
     Action,
     Variable,
-    VariableLinkType,
 };
 
 use std::collections::{
@@ -81,7 +80,7 @@ impl<'a> Network<'a> {
             }
             let from = (kill_variables, *vertex_id);
             let to = (use_variables, *vertex_id);
-            assignment_links.extend(Variable::links(from, to, VariableLinkType::SameType));
+            assignment_links.extend(Variable::links(from, to));
         }
         assignment_links
     }
@@ -117,20 +116,20 @@ impl<'a> Network<'a> {
                 let param_variables = get_variables(*index_param_id);
                 let from = (index_variables.clone(), index_id);
                 let to = (param_variables, *index_param_id);
-                index_links.extend(Variable::links(from, to, VariableLinkType::SwitchType));
+                index_links.extend(Variable::links(from, to));
             } 
             {
                 let param_variables = get_variables(params[1]);
                 let from = (index_variables.clone(), index_id);
                 let to = (param_variables, params[1]);
-                index_links.extend(Variable::links(from, to, VariableLinkType::SameType));
+                index_links.extend(Variable::links(from, to));
             }
             self.dict.walker_at(params[0]).map(|walker| {
                 if walker.node.name != "IndexAccess" {
                     let instance_variables = get_variables(walker.node.id);
                     let from = (index_variables.clone(), params[0]);
                     let to = (instance_variables, index_id);
-                    index_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
+                    index_links.extend(Variable::links(from, to));
                 }
             });
         }
@@ -179,20 +178,20 @@ impl<'a> Network<'a> {
                             let param_variables = get_variables(*param_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (param_variables, *param_id);
-                            fcall_links.extend(Variable::links(from, to, VariableLinkType::SwitchType));
+                            fcall_links.extend(Variable::links(from, to));
                         }
                         {
                             let param_variables = get_variables(invoked_parameters[1]);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (param_variables, invoked_parameters[1]);
-                            fcall_links.extend(Variable::links(from, to, VariableLinkType::SameType));
+                            fcall_links.extend(Variable::links(from, to));
                         }
                         self.dict.walker_at(invoked_parameters[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
                                 let instance_variables = get_variables(walker.node.id);
                                 let from = (fcall_variables, invoked_parameters[0]);
                                 let to = (instance_variables, fcall_id);
-                                fcall_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
+                                fcall_links.extend(Variable::links(from, to));
                             }
                         });
                     },
@@ -204,7 +203,7 @@ impl<'a> Network<'a> {
                             let return_variables = get_variables(*return_id);
                             let from = (fcall_variables.clone(), fcall_id);
                             let to = (return_variables, *return_id);
-                            let tmp_links = Variable::links(from, to, VariableLinkType::SameType);
+                            let tmp_links = Variable::links(from, to);
                             for link in tmp_links.iter() {
                                 let (_, from) = link.get_from();
                                 let (_, to) = link.get_to();
@@ -219,7 +218,7 @@ impl<'a> Network<'a> {
                             let invoked_parameter_variables = get_variables(invoked_parameters[invoked_len - idx - 1]);
                             let from = (defined_parameter_variables, defined_parameters[defined_len - idx - 1]);
                             let to = (invoked_parameter_variables, invoked_parameters[invoked_len - idx - 1]);
-                            let tmp_links = Variable::links(from, to, VariableLinkType::SameType);
+                            let tmp_links = Variable::links(from, to);
                             for link in tmp_links.iter() {
                                 let (_, from) = link.get_from();
                                 let (_, to) = link.get_to();
@@ -232,7 +231,7 @@ impl<'a> Network<'a> {
                                 let instance_variables = get_variables(walker.node.id);
                                 let from = (fcall_variables, invoked_parameters[0]);
                                 let to = (instance_variables, fcall_id);
-                                fcall_links.extend(Variable::links(from, to, VariableLinkType::ExactMatch));
+                                fcall_links.extend(Variable::links(from, to));
                             }
                         });
                     }
