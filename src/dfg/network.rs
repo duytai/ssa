@@ -117,7 +117,7 @@ impl<'a> Network<'a> {
                 let from = (index_variables.clone(), index_id);
                 let to = (param_variables, *index_param_id);
                 index_links.extend(Variable::links(from, to));
-            } 
+            }
             {
                 let param_variables = get_variables(params[1]);
                 let from = (index_variables.clone(), index_id);
@@ -126,9 +126,8 @@ impl<'a> Network<'a> {
             }
             self.dict.walker_at(params[0]).map(|walker| {
                 if walker.node.name != "IndexAccess" {
-                    let instance_variables = get_variables(walker.node.id);
                     let from = (index_variables.clone(), params[0]);
-                    let to = (instance_variables, index_id);
+                    let to = (index_variables, index_id);
                     index_links.extend(Variable::links(from, to));
                 }
             });
@@ -228,9 +227,8 @@ impl<'a> Network<'a> {
                         }
                         self.dict.walker_at(invoked_parameters[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
-                                let instance_variables = get_variables(walker.node.id);
-                                let from = (fcall_variables, invoked_parameters[0]);
-                                let to = (instance_variables, fcall_id);
+                                let from = (fcall_variables.clone(), invoked_parameters[0]);
+                                let to = (fcall_variables, fcall_id);
                                 fcall_links.extend(Variable::links(from, to));
                             }
                         });
@@ -248,7 +246,7 @@ impl<'a> Network<'a> {
         external_links.extend(self.find_index_links());
         external_links.extend(self.find_fcall_links());
         external_links
-    } 
+    }
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
