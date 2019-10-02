@@ -1,9 +1,13 @@
 use crate::dfg::Network;
 use crate::core::Walker;
-use crate::oracle::UnsafeSendingCondition;
+use crate::oracle::{
+    UnsafeSendingCondition,
+    Suicide,
+};
 
 pub enum OracleAction {
     UnsafeSendingCondition,
+    Suicide,
 }
 
 pub struct Oracle<'a> {
@@ -18,6 +22,10 @@ impl<'a> Oracle<'a> {
     pub fn run(&mut self, action: OracleAction) -> Vec<(Walker, String)> {
         let dict = self.network.get_dict();
         match action {
+            OracleAction::Suicide => {
+                let suicide = Suicide::new(&self.network);
+                vec![]
+            },
             OracleAction::UnsafeSendingCondition => {
                 let unsafe_condition = UnsafeSendingCondition::new(&self.network);
                 let block_numbers = unsafe_condition.get_block_numbers();
