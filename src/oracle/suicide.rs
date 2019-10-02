@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use crate::core::{
     Action,
     Member,
+    Shape,
 };
 
 pub struct Suicide {
@@ -20,23 +21,24 @@ impl Suicide {
         let mut all_actions = HashMap::new();
         let mut all_edges = HashSet::new();
         let mut execution_paths = vec![];
+        let mut all_vertices = HashSet::new();
         let dict = network.get_dict();
 
         for (_, dfg) in network.get_dfgs().iter() {
             let cfg = dfg.get_cfg();
             all_actions.extend(dfg.get_new_actions());
             all_edges.extend(cfg.get_edges());
+            all_vertices.extend(cfg.get_vertices());
             execution_paths.extend(cfg.get_execution_paths());
         }
 
-        let get_outdegree = |from: u32| -> u32 {
-            let mut degree = 0;
-            for edge in all_edges.iter() {
-                if edge.get_from() == from {
-                    degree += 1;
+        let is_condition = |id: u32| -> bool {
+            for vertice in all_vertices.iter() {
+                if id == vertice.get_id() {
+                    return vertice.get_shape() == &Shape::Diamond;
                 }
             }
-            degree
+            false
         };
 
         let get_variables = |id: u32| {
@@ -70,9 +72,7 @@ impl Suicide {
                             if variable_members == &suicide_members || variable_members == &selfdestruct_members {
                                 let mut has_condition = false;
                                 for i in 0..idx {
-                                    let vertex_id = execution_path[i];
-                                    let outdegree = get_outdegree(vertex_id);
-                                    has_condition = has_condition || outdegree >= 2;
+                                    has_condition = has_condition || is_condition(execution_path[i]);
                                 }
                                 if !has_condition {
                                     possible_vul_vertices.insert(vertex_id);
