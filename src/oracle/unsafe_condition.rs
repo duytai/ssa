@@ -95,10 +95,11 @@ impl UnsafeSendingCondition {
                 idx -= 1;
             }
         }
+
         for vertex_id in possible_vul_vertices {
             for variable in get_variables(vertex_id) {
                 let source = variable.get_source();
-                match (source.starts_with("block.number"), source.starts_with("block.timestamp")) {
+                match (source.starts_with("block.number"), source.starts_with("block.timestamp") || source.starts_with("now")) {
                     (true, _) => {
                         self.block_numbers.insert((vertex_id, vertex_id));
                     },
