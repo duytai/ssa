@@ -1,6 +1,7 @@
 use crate::dfg::Network;
 use crate::core::Action;
 use crate::core::Member;
+use crate::core::Shape;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -21,26 +22,16 @@ impl UnsafeSendingCondition {
 
     fn update(&mut self, network: &Network) {
         let mut all_actions = HashMap::new();
-        let mut all_edges = HashSet::new();
+        let mut all_vertices = HashSet::new();
         let mut execution_paths = vec![];
         let dict = network.get_dict();
 
         for (_, dfg) in network.get_dfgs().iter() {
             let cfg = dfg.get_cfg();
             all_actions.extend(dfg.get_new_actions());
-            all_edges.extend(cfg.get_edges());
+            all_vertices.extend(cfg.get_vertices());
             execution_paths.extend(cfg.get_execution_paths());
         }
-
-        let get_outdegree = |from: u32| -> u32 {
-            let mut degree = 0;
-            for edge in all_edges.iter() {
-                if edge.get_from() == from {
-                    degree += 1;
-                }
-            }
-            degree
-        };
 
         let get_variables = |id: u32| {
             let mut variables = HashSet::new();
@@ -57,6 +48,15 @@ impl UnsafeSendingCondition {
                 }
             }
             variables
+        };
+
+        let is_condition = |id: u32| -> bool {
+            for vertice in all_vertices.iter() {
+                if id == vertice.get_id() {
+                    return vertice.get_shape() == &Shape::Diamond;
+                }
+            }
+            false
         };
 
         let mut possible_vul_vertices: HashSet<u32> = HashSet::new();
@@ -80,10 +80,8 @@ impl UnsafeSendingCondition {
                                 if sending_methods.contains(last_member) {
                                     possible_vul_vertices.insert(vertex_id);
                                     for i in 0..idx {
-                                        let vertex_id = execution_path[i];
-                                        let outdegree = get_outdegree(vertex_id);
-                                        if outdegree >= 2 {
-                                            possible_vul_vertices.insert(vertex_id);
+                                        if is_condition(execution_path[i]) {
+                                            possible_vul_vertices.insert(execution_path[i]);
                                         }
                                     }
                                     idx = 1;
@@ -109,6 +107,9 @@ impl UnsafeSendingCondition {
                     _ => {
                         let source = (variable.clone(), vertex_id);
                         for dependent_path in network.traverse(source) {
+                            println!("----");
+                            println!("{:?}", dependent_path);
+                            println!("----");
                             if dependent_path.len() > 1 {
                                 let (variable, dependent_id) = dependent_path.last().unwrap();
                                 let source = variable.get_source();
