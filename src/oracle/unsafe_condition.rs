@@ -5,15 +5,15 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 pub struct UnsafeSendingCondition {
-    block_timestamps: Vec<u32>,
-    block_numbers: Vec<u32>,
+    block_timestamps: HashSet<(u32, u32)>,
+    block_numbers: HashSet<(u32, u32)>,
 }
 
 impl UnsafeSendingCondition {
     pub fn new(network: &Network) -> Self {
         let mut unsafe_sending_condition = UnsafeSendingCondition {
-            block_timestamps: vec![],
-            block_numbers: vec![],
+            block_timestamps: HashSet::new(),
+            block_numbers: HashSet::new(),
         };
         unsafe_sending_condition.update(network);
         unsafe_sending_condition
@@ -95,25 +95,41 @@ impl UnsafeSendingCondition {
                 idx -= 1;
             }
         }
-        println!("possible_vul_vertices: {:?}", possible_vul_vertices);
-        // for vertex_id in vul_vertices {
-            // for variable in get_variables(vertex_id) {
-                // let source = (variable.clone(), vertex_id);
-                // for dependent_path in network.traverse(source) {
-                    // if dependent_path.len() > 1 {
-                        // let (variable, _) = dependent_path.last().unwrap();
-                        // let source = variable.get_source();
-                        // if source == "block.number" {
-                            // self.block_numbers.push(vertex_id);
-                        // }
-                        // if source == "block.timestamp" || source == "now" {
-                            // self.block_timestamps.push(vertex_id);
-                        // }
-                    // }
-                // }
-            // }
-        // }
-        // println!("block_timestamps: {:?}", self.block_timestamps);
-        // println!("block_numbers: {:?}", self.block_numbers);
+        for vertex_id in possible_vul_vertices {
+            for variable in get_variables(vertex_id) {
+                let source = variable.get_source();
+                match (source.starts_with("block.number"), source.starts_with("block.timestamp")) {
+                    (true, _) => {
+                        self.block_numbers.insert((vertex_id, vertex_id));
+                    },
+                    (_, true) => {
+                        self.block_timestamps.insert((vertex_id, vertex_id));
+                    },
+                    _ => {
+                        let source = (variable.clone(), vertex_id);
+                        for dependent_path in network.traverse(source) {
+                            if dependent_path.len() > 1 {
+                                let (variable, dependent_id) = dependent_path.last().unwrap();
+                                let source = variable.get_source();
+                                if source == "block.number" {
+                                    self.block_numbers.insert((vertex_id, *dependent_id));
+                                }
+                                if source == "block.timestamp" || source == "now" {
+                                    self.block_timestamps.insert((vertex_id, *dependent_id));
+                                }
+                            }
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    pub fn get_block_numbers(&self) -> &HashSet<(u32, u32)> {
+        &self.block_numbers
+    }
+
+    pub fn get_block_timestamps(&self) -> &HashSet<(u32, u32)> {
+        &self.block_timestamps
     }
 }
