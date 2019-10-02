@@ -103,6 +103,25 @@ impl Variable {
         }
     }
 
+    pub fn mix(
+        kill_variables_tup: (HashSet<Variable>, u32),
+        use_variables_tup: (HashSet<Variable>, u32),
+    ) -> HashSet<DataLink> {
+        let mut mix_links = HashSet::new(); 
+        let (kill_variables, kill_id) = kill_variables_tup;
+        let (use_variables, use_id) = use_variables_tup;
+        for kill_variable in kill_variables.iter() {
+            for use_variable in use_variables.iter() {
+                let data_link = DataLink::new(
+                    (kill_variable.clone(), kill_id),
+                    (use_variable.clone(), use_id),
+                );
+                mix_links.insert(data_link);
+            }
+        }
+        mix_links
+    }
+
     pub fn links(
         kill_variables_tup: (HashSet<Variable>, u32),
         use_variables_tup: (HashSet<Variable>, u32),
