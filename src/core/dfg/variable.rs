@@ -1,5 +1,10 @@
 use std::collections::HashSet;
 use std::cmp;
+use std::hash::{Hash, Hasher};
+use std::cmp::{
+    PartialEq,
+    Eq,
+};
 use crate::core::{
     Walker,
     Dictionary,
@@ -9,7 +14,7 @@ use crate::core::{
     DataLink,
 };
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Variable {
     members: Vec<Member>,
     source: String,
@@ -159,5 +164,20 @@ impl Variable {
             }
         }
         assignment_links
+    }
+}
+
+impl PartialEq for Variable {
+    fn eq(&self, other: &Self) -> bool {
+        self.members == other.members && self.source == other.source
+    }
+} 
+
+impl Eq for Variable {}
+
+impl Hash for Variable {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.members.hash(state);
+        self.source.hash(state);
     }
 }

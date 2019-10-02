@@ -107,9 +107,6 @@ impl UnsafeSendingCondition {
                     _ => {
                         let source = (variable.clone(), vertex_id);
                         for dependent_path in network.traverse(source) {
-                            println!("----");
-                            println!("{:?}", dependent_path);
-                            println!("----");
                             if dependent_path.len() > 1 {
                                 let (variable, dependent_id) = dependent_path.last().unwrap();
                                 let source = variable.get_source();
