@@ -1,36 +1,43 @@
 use crate::dot::Dot;
-use crate::dfg::Alias;
 use crate::cfg::ControlFlowGraph;
 use crate::dfg::DataFlowGraph;
 use crate::core::{
-    LookupInputType,
     DataLink,
-    DataLinkLabel,
     Dictionary,
-    Member,
+    SmartContractQuery,
+    Action,
     Variable,
 };
+
 use std::collections::{
     HashMap,
     HashSet,
 };
+
+#[derive(Debug)]
+enum StackContext {
+    Push(u32),
+    Pop(u32),
+}
 
 pub struct Network<'a> {
     dict: &'a Dictionary<'a>,
     links: HashSet<DataLink>,
     dfgs: HashMap<u32, DataFlowGraph<'a>>,
     dot: Dot,
-    entry_id: u32,
+    contract_id: u32,
+    context: HashMap<(u32, u32), StackContext>,
 }
 
 impl<'a> Network<'a> {
-    pub fn new(dict: &'a Dictionary, entry_id: u32) -> Self {
+    pub fn new(dict: &'a Dictionary, contract_id: u32) -> Self {
         let mut network = Network {
             dict,
             links: HashSet::new(),
             dfgs: HashMap::new(),
             dot: Dot::new(),
-            entry_id,
+            context: HashMap::new(),
+            contract_id,
         };
         network.find_links();
         network
@@ -48,134 +55,207 @@ impl<'a> Network<'a> {
         &self.dict
     }
 
-    pub fn get_entry_id(&self) -> u32 {
-        self.entry_id
+    pub fn get_contract_id(&self) -> u32 {
+        self.contract_id
+    }
+
+    fn find_assignment_links(&mut self) -> HashSet<DataLink> {
+        let mut assignment_links = HashSet::new();
+        let mut all_actions = HashMap::new();
+        for (_, dfg) in self.dfgs.iter() {
+            all_actions.extend(dfg.get_new_actions());
+        }
+        for (vertex_id, actions) in all_actions {
+            let mut kill_variables = HashSet::new();
+            let mut use_variables = HashSet::new();
+            for action in actions {
+                match action {
+                    Action::Use(variable, _) => {
+                        use_variables.insert(variable.clone());
+                    },
+                    Action::Kill(variable, _) => {
+                        kill_variables.insert(variable.clone());
+                    },
+                }
+            }
+            let from = (kill_variables, *vertex_id);
+            let to = (use_variables, *vertex_id);
+            assignment_links.extend(Variable::links(from, to));
+        }
+        assignment_links
+    }
+
+    fn find_index_links(&mut self) -> HashSet<DataLink> {
+        let mut index_links = HashSet::new();
+        let mut all_actions = HashMap::new();
+        let mut all_indexes = HashMap::new();
+        for (_, dfg) in self.dfgs.iter() {
+            let cfg = dfg.get_cfg();
+            all_actions.extend(dfg.get_new_actions());
+            all_indexes.extend(cfg.get_indexes().clone());
+        }
+        let get_variables = |index_id: u32| {
+            let mut variables = HashSet::new();
+            if let Some(actions) = all_actions.get(&index_id) {
+                for action in actions.iter() {
+                    match action {
+                        Action::Use(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
+                        Action::Kill(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
+                    }
+                }
+            }
+            variables
+        };
+        for (index_id, params) in all_indexes {
+            let index_variables = get_variables(index_id);
+            for index_param_id in &params[2..] {
+                let param_variables = get_variables(*index_param_id);
+                let from = (index_variables.clone(), index_id);
+                let to = (param_variables, *index_param_id);
+                index_links.extend(Variable::links(from, to));
+            }
+            {
+                let param_variables = get_variables(params[1]);
+                let from = (index_variables.clone(), index_id);
+                let to = (param_variables, params[1]);
+                index_links.extend(Variable::links(from, to));
+            }
+            self.dict.walker_at(params[0]).map(|walker| {
+                if walker.node.name != "IndexAccess" {
+                    let from = (index_variables.clone(), params[0]);
+                    let to = (index_variables, index_id);
+                    index_links.extend(Variable::links(from, to));
+                }
+            });
+        }
+        index_links
+    }
+
+    fn find_fcall_links(&mut self) -> HashSet<DataLink>  {
+        let mut context = HashMap::new();
+        let mut fcall_links = HashSet::new();
+        let mut all_actions = HashMap::new();
+        let mut all_fcalls = HashMap::new();
+        let mut all_returns = HashMap::new();
+        let mut all_defined_parameters = HashMap::new();
+        for (_, dfg) in self.dfgs.iter() {
+            let cfg = dfg.get_cfg();
+            all_actions.extend(dfg.get_new_actions());
+            all_fcalls.extend(cfg.get_fcalls().clone());
+            all_returns.extend(cfg.get_returns().clone());
+            all_defined_parameters.extend(cfg.get_parameters().clone());
+        }
+        let get_variables = |index_id: u32| {
+            let mut variables = HashSet::new();
+            if let Some(actions) = all_actions.get(&index_id) {
+                for action in actions.iter() {
+                    match action {
+                        Action::Use(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
+                        Action::Kill(variable, _) => {
+                            variables.insert(variable.clone());
+                        },
+                    }
+                }
+            }
+            variables
+        };
+        for (fcall_id, invoked_parameters) in all_fcalls {
+            let fcall_variables = get_variables(fcall_id);
+            self.dict.walker_at(fcall_id).map(|walker| {
+                let walkers = walker.direct_childs(|_| true);
+                let declaration = walkers[0].node.attributes["referencedDeclaration"].as_u32();
+                let is_user_defined = declaration.and_then(|declaration| all_returns.get(&declaration)).is_some();
+                match is_user_defined {
+                    false => {
+                        for param_id in (&invoked_parameters[2..]).iter() {
+                            let param_variables = get_variables(*param_id);
+                            let from = (fcall_variables.clone(), fcall_id);
+                            let to = (param_variables, *param_id);
+                            fcall_links.extend(Variable::links(from, to));
+                        }
+                        {
+                            let param_variables = get_variables(invoked_parameters[1]);
+                            let from = (fcall_variables.clone(), fcall_id);
+                            let to = (param_variables, invoked_parameters[1]);
+                            fcall_links.extend(Variable::links(from, to));
+                        }
+                        self.dict.walker_at(invoked_parameters[0]).map(|walker| {
+                            if walker.node.name != "FunctionCall" {
+                                let instance_variables = get_variables(walker.node.id);
+                                let from = (fcall_variables, invoked_parameters[0]);
+                                let to = (instance_variables, fcall_id);
+                                fcall_links.extend(Variable::links(from, to));
+                            }
+                        });
+                    },
+                    true => {
+                        let declaration = declaration.unwrap();
+                        let returns = all_returns.get(&declaration).unwrap();
+                        let defined_parameters = all_defined_parameters.get(&declaration).unwrap();
+                        for return_id in returns {
+                            let return_variables = get_variables(*return_id);
+                            let from = (fcall_variables.clone(), fcall_id);
+                            let to = (return_variables, *return_id);
+                            let tmp_links = Variable::links(from, to);
+                            for link in tmp_links.iter() {
+                                let (_, from) = link.get_from();
+                                let (_, to) = link.get_to();
+                                context.insert((*from, *to), StackContext::Push(fcall_id));
+                            }
+                            fcall_links.extend(tmp_links);
+                        }
+                        let defined_len = defined_parameters.len();
+                        let invoked_len = invoked_parameters.len();
+                        for idx in 0..invoked_len - 2 {
+                            let defined_parameter_variables = get_variables(defined_parameters[defined_len - idx - 1]);
+                            let invoked_parameter_variables = get_variables(invoked_parameters[invoked_len - idx - 1]);
+                            let from = (defined_parameter_variables, defined_parameters[defined_len - idx - 1]);
+                            let to = (invoked_parameter_variables, invoked_parameters[invoked_len - idx - 1]);
+                            let tmp_links = Variable::links(from, to);
+                            for link in tmp_links.iter() {
+                                let (_, from) = link.get_from();
+                                let (_, to) = link.get_to();
+                                context.insert((*from, *to), StackContext::Pop(fcall_id));
+                            }
+                            fcall_links.extend(tmp_links);
+                        }
+                        self.dict.walker_at(invoked_parameters[0]).map(|walker| {
+                            if walker.node.name != "FunctionCall" {
+                                let from = (fcall_variables.clone(), invoked_parameters[0]);
+                                let to = (fcall_variables, fcall_id);
+                                fcall_links.extend(Variable::links(from, to));
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        self.context = context;
+        fcall_links
     }
 
     fn find_external_links(&mut self) -> HashSet<DataLink> {
-        let mut ret = HashSet::new();
-        let function_calls = self.dict.lookup_function_calls(self.entry_id);
-        for walker in function_calls.iter() {
-            let fc_source = walker.node.source;
-            let fc_id = walker.node.id;
-            let walkers = walker.direct_childs(|_| true);
-            // Find functiond definition 
-            let mut reference = None;
-            match walkers[0].node.name {
-                "NewExpression" => {
-                    let walkers = walkers[0].direct_childs(|_| true);
-                    let contract_id = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                    if let Some(contract_id) = contract_id {
-                        let walker = self.dict.lookup_constructor(LookupInputType::ContractId(contract_id));
-                        reference = walker.map(|w| w.node.id);
-                    }
-                },
-                _ => {
-                    reference = walkers[0].node.attributes["referencedDeclaration"]
-                        .as_u32()
-                        .and_then(|reference| match self.dict.lookup(reference) {
-                            Some(walker) => match walker.node.name {
-                                "EventDefinition" 
-                                    | "StructDefinition"
-                                    | "ContractDefinition"
-                                    | "VariableDeclaration"
-                                    | "EnumDefinition" => None,
-                                _ => Some(reference),
-                            },
-                            None => None,
-                        });
-                }
-            }
-            match reference {
-                // User defined functions
-                // Connect invoked_parameters to defined_parameters 
-                // Connect function_call to return statement
-                Some(reference) => {
-                    for walker in self.dict.lookup_returns(reference) {
-                        let members = vec![Member::Reference(walker.node.id)];
-                        let variable = Variable::new(
-                            members,
-                            fc_source.to_string(),
-                            Variable::normalize_type(walker)
-                        );
-                        let label = DataLinkLabel::InFrom(fc_id);
-                        let link = DataLink::new_with_label(fc_id, walker.node.id, variable, label);
-                        ret.insert(link);
-                    }
-                    let defined_parameters = self.dict
-                        .lookup_parameters(LookupInputType::FunctionId(reference));
-                    let mut invoked_parameters = self.dict
-                        .lookup_parameters(LookupInputType::FunctionCallId(fc_id));
-                    // Library invokcation 
-                    if invoked_parameters.len() < defined_parameters.len() {
-                        invoked_parameters.insert(0, &walkers[0]);
-                    }
-                    for i in 0..invoked_parameters.len() {
-                        let defined_parameter = defined_parameters[i];
-                        let invoked_parameter = invoked_parameters[i];
-                        let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let source = defined_parameter.node.source.to_string();
-                        let variable = Variable::new(
-                            members,
-                            source,
-                            Variable::normalize_type(invoked_parameter)
-                        );
-                        let label = DataLinkLabel::OutTo(fc_id);
-                        let link = DataLink::new_with_label(defined_parameter.node.id, invoked_parameter.node.id, variable, label);
-                        ret.insert(link);
-                    }
-                },
-                // Emit event
-                // Global functions
-                // Connect function_calls to parameters
-                None => {
-                    let invoked_parameters = self.dict.lookup_parameters(LookupInputType::FunctionCallId(fc_id));
-                    for invoked_parameter in invoked_parameters {
-                        let members = vec![Member::Reference(invoked_parameter.node.id)];
-                        let source = invoked_parameter.node.source.to_string();
-                        let variable = Variable::new(
-                            members,
-                            source,
-                            Variable::normalize_type(invoked_parameter)
-                        );
-                        let label = DataLinkLabel::BuiltIn;
-                        let link = DataLink::new_with_label(fc_id, invoked_parameter.node.id, variable, label);
-                        ret.insert(link);
-                    }
-                },
-            };
-            // Connect to object which call function
-            let members = vec![Member::Reference(walkers[0].node.id)];
-            let source = walkers[0].node.source.to_string();
-            let variable = Variable::new(
-                members,
-                source,
-                Variable::normalize_type(&walkers[0])
-            );
-            let label = DataLinkLabel::Executor;
-            let link = DataLink::new_with_label(fc_id, walkers[0].node.id, variable, label);
-            ret.insert(link);
-        }
-        ret
-    } 
+        let mut external_links = HashSet::new();
+        external_links.extend(self.find_assignment_links());
+        external_links.extend(self.find_index_links());
+        external_links.extend(self.find_fcall_links());
+        external_links
+    }
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        let walkers = self.dict.lookup_functions(LookupInputType::ContractId(self.entry_id));
-        if walkers.is_empty() {
-            let cfg = ControlFlowGraph::new(self.dict, self.entry_id);
-            let alias = Alias::new(&cfg);
-            let mut dfg = DataFlowGraph::new(cfg, alias);
+        let function_ids = self.dict.find_ids(SmartContractQuery::FunctionsByContractId(self.contract_id));
+        for function_id in function_ids {
+            let cfg = ControlFlowGraph::new(self.dict, self.contract_id, function_id);
+            let mut dfg = DataFlowGraph::new(cfg);
             links.extend(dfg.find_links());
-            self.dfgs.insert(self.entry_id, dfg);
-        } else {
-            for walker in walkers {
-                let cfg = ControlFlowGraph::new(self.dict, walker.node.id);
-                let alias = Alias::new(&cfg);
-                let mut dfg = DataFlowGraph::new(cfg, alias);
-                links.extend(dfg.find_links());
-                self.dfgs.insert(walker.node.id, dfg);
-            }
+            self.dfgs.insert(function_id, dfg);
         }
         links
     }
@@ -185,89 +265,72 @@ impl<'a> Network<'a> {
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);
-        // Find all sub networks 
     }
 
-    /// Find all paths
-    /// keep call_stack for each path to know correct exit point
-    fn find_paths(&'a self, start_at: u32, mut visited: HashSet<(Option<u32>, u32)>, paths: &mut Vec<Vec<&'a DataLink>>, call_stack: Vec<u32>) {
-        let mut targets = vec![];
-        for link in self.links.iter() {
-            if link.get_from() == start_at {
-                match link.get_label() {
-                    DataLinkLabel::InFrom(fc_id) => {
-                        let mut new_call_stack = call_stack.clone();
-                        new_call_stack.push(*fc_id);
-                        targets.push((link, new_call_stack));
-                    },
-                    DataLinkLabel::OutTo(fc_id) => {
-                        if let Some(id) = call_stack.last() {
-                            if id == fc_id {
-                                let mut new_call_stack = call_stack.clone();
-                                new_call_stack.pop();
-                                targets.push((link, new_call_stack));
+    fn network_traverse(
+        &self,
+        source: (Variable, u32),
+        all_links: &HashMap<(Variable, u32), Vec<(Variable, u32)>>,
+        mut visited: HashSet<((Variable, u32), Vec<u32>)>,
+        stack: Vec<u32>,
+        mut execution_path: Vec<(Variable, u32)>,
+        execution_paths: &mut Vec<Vec<(Variable, u32)>>,
+    ) {
+        visited.insert((source.clone(), stack.clone()));
+        execution_path.push(source.clone());
+        if let Some(sinks) = all_links.get(&source) {
+            for sink in sinks {
+                let mut valid_stack = true;
+                let mut context_stack = stack.clone();
+                if let Some(stack_item) = self.context.get(&(source.1, sink.1)) {
+                    match stack_item {
+                        StackContext::Push(id) => {
+                            context_stack.push(*id);
+                        },
+                        StackContext::Pop(id) => {
+                            if let Some(stack_top) = context_stack.pop() {
+                                valid_stack = &stack_top == id;
                             }
-                        }
-                    },
-                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn | DataLinkLabel::Executor => {
-                        targets.push((link, call_stack.clone()));
-                    },
-                }
-            }
-        }
-        let last_stack_item: Option<u32> = call_stack.last().map(|x| *x);
-        if !visited.contains(&(last_stack_item, start_at)) && !targets.is_empty() {
-            let prev_paths = paths.clone();
-            paths.clear();
-            for path in prev_paths {
-                let last_link = path.last().unwrap();
-                if last_link.get_to() == start_at {
-                    for (link, _) in targets.iter() {
-                        let mut new_path = path.clone();
-                        new_path.push(link);
-                        paths.push(new_path);
+                        },
                     }
-                } else {
-                    paths.push(path);
+                }
+                if valid_stack && !visited.contains(&(sink.clone(), context_stack.clone())) {
+                    self.network_traverse(
+                        sink.clone(),
+                        all_links,
+                        visited.clone(),
+                        context_stack,
+                        execution_path.clone(),
+                        execution_paths,
+                    );
                 }
             }
-            for (link, call_stack) in targets {
-                let last_stack_item: Option<u32> = call_stack.last().map(|x| *x);
-                visited.insert((last_stack_item, start_at));
-                self.find_paths(link.get_to(), visited.clone(), paths, call_stack);
-            }
+        } else {
+            execution_paths.push(execution_path);
         }
     }
 
-    /// Traverse around network
-    /// Stop at visited nodes or no more link
-    pub fn traverse(&self, start_at: u32) -> Vec<Vec<&DataLink>> {
-        let mut paths = vec![];
-        let mut targets: Vec<(&DataLink, Vec<u32>)> = vec![];
-        // (X, Y) where
-        // X is call_stack id
-        // Y is node id
-        let mut visited: HashSet<(Option<u32>, u32)> = HashSet::new(); 
+    pub fn traverse(&self, source: (Variable, u32)) -> Vec<Vec<(Variable, u32)>> {
+        let mut all_links: HashMap<(Variable, u32), Vec<(Variable, u32)>> = HashMap::new();
         for link in self.links.iter() {
-            if link.get_from() == start_at {
-                paths.push(vec![link]);
-                match link.get_label() {
-                    DataLinkLabel::InFrom(fc_id) => {
-                        targets.push((link, vec![*fc_id]));
-                    },
-                    DataLinkLabel::Internal | DataLinkLabel::BuiltIn | DataLinkLabel::Executor => {
-                        targets.push((link, vec![]));
-                    },
-                    DataLinkLabel::OutTo(_) => {},
-                } 
+            if let Some(v) = all_links.get_mut(link.get_from()) {
+                v.push(link.get_to().clone());
+            } else {
+                let from = link.get_from().clone();
+                let to = link.get_to().clone();
+                all_links.insert(from, vec![to]);
             }
         }
-        for (link, call_stack) in targets {
-            let last_stack_item: Option<u32> = call_stack.last().map(|x| *x).clone();
-            visited.insert((last_stack_item, start_at));
-            self.find_paths(link.get_to(), visited.clone(), &mut paths, call_stack);
-        }
-        paths
+        let mut execution_paths = vec![];
+        self.network_traverse(
+            source,
+            &all_links,
+            HashSet::new(),
+            vec![],
+            vec![],
+            &mut execution_paths,
+        );
+        execution_paths
     }
 
     pub fn format(&mut self) -> String {

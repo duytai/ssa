@@ -28,6 +28,7 @@ pub enum SimpleBlockNode<'a> {
     ModifierInvocation(Walker<'a>),
     FunctionCall(Walker<'a>),
     Unit(Walker<'a>),
+    IndexAccess(Walker<'a>),
     None,
 }
 
@@ -39,8 +40,14 @@ pub enum BlockNode<'a> {
     WhileStatement(WhileStatement<'a>),
     ForStatement(ForStatement<'a>),
     DoWhileStatement(DoWhileStatement<'a>),
-    Return(Vec<SimpleBlockNode<'a>>),
+    ReturnStatement(ReturnStatement<'a>),
     None,
+}
+
+/// components of a return statement
+#[derive(Debug)]
+pub struct ReturnStatement<'a> {
+    pub body: CodeBlock<'a>,
 }
 
 /// Components of a while statement

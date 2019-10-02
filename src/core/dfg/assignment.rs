@@ -84,28 +84,24 @@ impl Assignment {
             || walker.node.name == "IndexAccess"
         };
         for walker in walker.walk(false, ig, fi).into_iter() {
-            assignments.push(Assignment::parse_one(&walker, dict));
+            let operator = walker.node.attributes["operator"].as_str();
+            let op = match operator {
+                Some(op) => match op {
+                    "=" | "delete" => Operator::Equal,
+                    _ => Operator::Other,
+                },
+                None => Operator::Equal, 
+            };
+            let mut lhs = HashSet::new();
+            let mut rhs = HashSet::new();
+            let walkers = walker.direct_childs(|_| true);
+            lhs.extend(Variable::parse(&walkers[0], dict));
+            if walkers.len() >= 2 {
+                rhs.extend(Variable::parse(&walkers[1], dict));
+            }
+            assignments.push(Assignment { lhs, rhs, op });
         }
         assignments
     }
 
-    /// Find a assignment of current walker
-    fn parse_one(walker: &Walker, dict: &Dictionary) -> Assignment {
-        let operator = walker.node.attributes["operator"].as_str();
-        let op = match operator {
-            Some(op) => match op {
-                "=" | "delete" => Operator::Equal,
-                _ => Operator::Other,
-            },
-            None => Operator::Equal, 
-        };
-        let mut lhs = HashSet::new();
-        let mut rhs = HashSet::new();
-        let walkers = walker.direct_childs(|_| true);
-        lhs.extend(Variable::parse(&walkers[0], dict));
-        if walkers.len() >= 2 {
-            rhs.extend(Variable::parse(&walkers[1], dict));
-        }
-        Assignment { lhs, rhs, op }
-    }
 }

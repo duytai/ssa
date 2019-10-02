@@ -43,8 +43,10 @@ impl Dot {
         for link in links.iter() {
             let from = link.get_from();
             let to = link.get_to();
-            let label = link.get_var().get_source().replace("\"", "");
-            self.links.push(format!("  {} -> {}[label=\"{}\", style=dotted];", from, to, label));
+            let from_var_label = from.0.get_source().replace("\"", "");
+            let to_var_label = to.0.get_source().replace("\"", "");
+            let label = format!("({}, {})", from_var_label, to_var_label);
+            self.links.push(format!("  {} -> {}[label=\"{}\", style=dotted];", from.1, to.1, label));
         }
     }
 

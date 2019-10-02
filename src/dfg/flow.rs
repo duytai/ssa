@@ -1,4 +1,3 @@
-use crate::dfg::Alias;
 use std::collections::{ HashSet, HashMap };
 use crate::cfg::ControlFlowGraph;
 use crate::core::{
@@ -6,8 +5,10 @@ use crate::core::{
     Operator,
     Action,
     DataLink,
+    Variable,
+    Assignment,
+    Declaration,
 };
-use crate::dfg::utils;
 
 /// Data flow graph
 ///
@@ -19,12 +20,11 @@ pub struct DataFlowGraph<'a> {
     parents: HashMap<u32, Vec<u32>>,
     tables: HashMap<u32, HashSet<Action>>,
     new_actions: HashMap<u32, Vec<Action>>,
-    alias: Alias,
 }
 
 impl<'a> DataFlowGraph<'a> {
     /// Create new flow graph by importing `State` from cfg
-    pub fn new(cfg: ControlFlowGraph<'a>, alias: Alias) -> Self {
+    pub fn new(cfg: ControlFlowGraph<'a>) -> Self {
         let vertices = cfg.get_vertices();
         let edges = cfg.get_edges();
         let mut tables = HashMap::new();
@@ -42,7 +42,6 @@ impl<'a> DataFlowGraph<'a> {
         }
         DataFlowGraph {
             cfg,
-            alias,
             parents,
             tables,
             visited: HashSet::new(),
@@ -109,62 +108,33 @@ impl<'a> DataFlowGraph<'a> {
             let mut new_actions = vec![];
             let mut assignments = vec![];
             let mut variables = HashSet::new();
-            variables.extend(utils::find_variables(id, dict));
-            assignments.append(&mut utils::find_assignments(id, dict));
-            for declaration in utils::find_declarations(id, dict) {
-                assignments.push(declaration.get_assignment().clone());
-            }
-            for index_access in utils::find_index_accesses(id, dict) {
-                let mut agns = index_access.get_assignments().clone();
-                let vars = index_access.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            }
-            for function_use in utils::find_function_use(id, dict) {
-                let mut agns = function_use.get_assignments().clone();
-                let vars = function_use.get_variables().clone();
-                assignments.append(&mut agns);
-                variables.extend(vars);
-            } 
+            dict.walker_at(id).map(|walker| {
+                variables.extend(Variable::parse(walker, dict));
+                assignments.extend(Assignment::parse(walker, dict));
+                for declaration in Declaration::parse(walker, dict) {
+                    assignments.push(declaration.get_assignment().clone());
+                }
+            });
             for assignment in assignments {
                 for l in assignment.get_lhs().clone() {
                     match assignment.get_op() {
                         Operator::Equal => {
-                            for l in l.flatten(dict) {
-                                new_actions.push(Action::Kill(l, id));
-                            }
-                            for l in self.alias.find_references(id, &l, dict) {
-                                new_actions.push(Action::Kill(l, id));
-                            }
+                            new_actions.push(Action::Kill(l, id));
                         },
                         Operator::Other => {
-                            for l in l.flatten(dict) {
-                                new_actions.push(Action::Kill(l.clone(), id));
-                                new_actions.push(Action::Use(l, id));
-                            }
-                            for l in self.alias.find_references(id, &l, dict) {
-                                new_actions.push(Action::Kill(l.clone(), id));
-                                new_actions.push(Action::Use(l, id));
-                            }
+                            new_actions.push(Action::Kill(l.clone(), id));
+                            new_actions.push(Action::Use(l, id));
                         }
                     }
                 }
                 for r in assignment.get_rhs().clone() {
-                    for r in r.flatten(dict) {
-                        new_actions.push(Action::Use(r, id));
-                    }
-                    for r in self.alias.find_references(id, &r, dict) {
-                        new_actions.push(Action::Use(r, id));
-                    }
+                    new_actions.push(Action::Use(r, id));
                 }
             }
+            println!("-----{}------", id);
             for var in variables {
-                for var in var.flatten(dict) {
-                    new_actions.push(Action::Use(var, id));
-                }
-                for var in self.alias.find_references(id, &var, dict) {
-                    new_actions.push(Action::Use(var, id));
-                }
+                println!("\t {:?}", var);
+                new_actions.push(Action::Use(var, id));
             }
             self.new_actions.insert(id, new_actions.clone());
             actions.extend(new_actions.clone());
@@ -188,7 +158,10 @@ impl<'a> DataFlowGraph<'a> {
                                     if let Action::Use(variable, id) = action {
                                         match kill_var.contains(variable) {
                                             VariableComparison::Equal => {
-                                                let data_link = DataLink::new(*id, kill_id, variable.clone());
+                                                let data_link = DataLink::new(
+                                                    (variable.clone(), *id),
+                                                    (kill_var.clone(), kill_id),
+                                                );
                                                 links.insert(data_link);
                                                 cur_table.remove(action);
                                                 false
@@ -196,7 +169,10 @@ impl<'a> DataFlowGraph<'a> {
                                             VariableComparison::Partial => {
                                                 // Only kill by using parent
                                                 if kill_var.get_members().len() < variable.get_members().len() {
-                                                    let data_link = DataLink::new(*id, kill_id, variable.clone());
+                                                    let data_link = DataLink::new(
+                                                        (variable.clone(), *id),
+                                                        (kill_var.clone(), kill_id),
+                                                    );
                                                     links.insert(data_link);
                                                     false
                                                 } else {

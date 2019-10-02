@@ -7,6 +7,7 @@ use crate::cfg::{
     WhileStatement,
     DoWhileStatement,
     ForStatement,
+    ReturnStatement,
 };
 
 /// Process AST tree
@@ -25,6 +26,7 @@ use crate::cfg::{
 pub struct Graph<'a> {
     walker: Walker<'a>,
     root: BlockNode<'a>,
+    parameters: Vec<u32>,
 }
 
 /// Kind of a graph node
@@ -51,83 +53,17 @@ pub enum NodeKind {
     ForStatement,
     /// DoWhileStatement token
     DoWhileStatement,
+    /// ReturnStatement token
+    ReturnStatement,
 }
 
 impl<'a> Graph<'a> {
     pub fn new(walker: Walker<'a>) -> Self {
-        Graph { walker, root: BlockNode::None }
+        Graph { walker, root: BlockNode::None, parameters: vec![] }
     }
 
-    /// Find all nested function_calls and try to create a single node for each
-    ///
-    /// Some functions directly affect to control flow will be collected to precisely build cfg
-    pub fn split(walker: Walker<'a>) -> Vec<SimpleBlockNode<'a>> {
-        let mut function_calls = vec![];
-        let ig = |_: &Walker, _: &Vec<Walker>| false;
-        let fi = |walker: &Walker, _: &Vec<Walker>| {
-            walker.node.name == "FunctionCall" || walker.node.name == "ModifierInvocation"
-        };
-        // Split parameters to other nodes
-        for walker in walker.walk(true, ig, fi).into_iter() {
-            for walker in walker.direct_childs(|_| true).into_iter() {
-                function_calls.append(&mut Graph::split(walker));
-            }
-            let child_walkers = walker.direct_childs(|_| true);
-            let function_name = child_walkers[0].node.attributes["value"].as_str();
-            match function_name {
-                Some(function_name) => match function_name {
-                    "revert" => {
-                        let node = SimpleBlockNode::Revert(walker);
-                        function_calls.push(node);
-                    },
-                    "assert" => {
-                        let node = SimpleBlockNode::Assert(walker);
-                        function_calls.push(node);
-                    },
-                    "require" => {
-                        let node = SimpleBlockNode::Require(walker);
-                        function_calls.push(node);
-                    },
-                    "suicide" => {
-                        let node = SimpleBlockNode::Suicide(walker);
-                        function_calls.push(node);
-                    },
-                    "selfdestruct" => {
-                        let node = SimpleBlockNode::Selfdestruct(walker);
-                        function_calls.push(node);
-                    },
-                    _ => match walker.node.name {
-                        "ModifierInvocation" => {
-                            let node = SimpleBlockNode::ModifierInvocation(walker);
-                            function_calls.push(node);
-                        },
-                        _ => {
-                            let node = SimpleBlockNode::FunctionCall(walker);
-                            function_calls.push(node);
-                        }
-                    }
-                },
-                None => {
-                    let member_name = child_walkers[0].node.attributes["member_name"].as_str();
-                    let reference = child_walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                    match (member_name, reference) {
-                        (Some("transfer"), None) => {
-                            let node = SimpleBlockNode::Transfer(walker);
-                            function_calls.push(node);
-                        },
-                        (_, _) => {
-                            let node = SimpleBlockNode::FunctionCall(walker);
-                            function_calls.push(node);
-                        },
-                    }
-                }
-            }
-        }
-        if walker.node.name != "FunctionCall" && walker.node.name != "ModifierInvocation" {
-            let node = SimpleBlockNode::Unit(walker.clone());
-            function_calls.push(node);
-        }
-        function_calls
+    pub fn get_parameters(&self) -> &Vec<u32> {
+        &self.parameters
     }
 
     /// Traverse the body of a function based on token kind, for some special token call build_node
@@ -151,7 +87,7 @@ impl<'a> Graph<'a> {
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Return" => {
-                let node = BlockNode::Return(Graph::split(walker));
+                let node = self.build_node(NodeKind::ReturnStatement, walker);
                 vec![CodeBlock::Link(Box::new(node))]
             },
             "Throw" => {
@@ -166,7 +102,11 @@ impl<'a> Graph<'a> {
                 let node = SimpleBlockNode::Break(walker);
                 vec![CodeBlock::SimpleBlocks(vec![node])]
             },
-            "VariableDeclarationStatement" | "EmitStatement" | "ExpressionStatement" | "PlaceholderStatement" | "InlineAssemblyStatement" => {
+            "VariableDeclarationStatement"
+                | "EmitStatement"
+                | "ExpressionStatement"
+                | "PlaceholderStatement"
+                | "InlineAssemblyStatement" => {
                 vec![CodeBlock::Block(walker)]
             },
             _ => vec![CodeBlock::Block(walker)],
@@ -189,6 +129,7 @@ impl<'a> Graph<'a> {
                         "ParameterList" => {
                             if index == 0 {
                                 for walker in walker.direct_childs(|_| true) {
+                                    self.parameters.push(walker.node.id);
                                     let block = CodeBlock::Block(walker);
                                     blocks.push(block);
                                 }
@@ -319,6 +260,10 @@ impl<'a> Graph<'a> {
                     }
                 }
                 BlockNode::IfStatement(IfStatement { condition, tblocks, fblocks })
+            },
+            NodeKind::ReturnStatement => {
+                let body = CodeBlock::Block(walker);
+                BlockNode::ReturnStatement(ReturnStatement { body })
             },
         } 
     }
