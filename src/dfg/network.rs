@@ -116,7 +116,7 @@ impl<'a> Network<'a> {
                 let param_variables = get_variables(*index_param_id);
                 let from = (index_variables.clone(), index_id);
                 let to = (param_variables, *index_param_id);
-                index_links.extend(Variable::links(from, to));
+                index_links.extend(Variable::mix(from, to));
             }
             {
                 let param_variables = get_variables(params[1]);
