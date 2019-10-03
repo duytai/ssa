@@ -5,6 +5,11 @@ use crate::core::Shape;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+/// How to check:
+/// execution_path contains send/transfer/delegatecall/call/callcode/selfdestruct/suicide
+/// block.number/block.timestamp is used in these functions
+/// condition in execution_path use block.number/block.timestamp directly or depend on them 
+///
 pub struct UnsafeSendingCondition {
     block_timestamps: HashSet<(u32, u32)>,
     block_numbers: HashSet<(u32, u32)>,

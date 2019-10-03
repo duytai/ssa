@@ -7,6 +7,9 @@ use crate::core::{
     Shape,
 };
 
+/// How to check:
+/// parameters of suicide/selfdestruct depend on parameters or msg.sender
+/// but there is condition check against parameters or msg.sender 
 pub struct Suicide {
 }
 
@@ -32,13 +35,21 @@ impl Suicide {
             execution_paths.extend(cfg.get_execution_paths());
         }
 
-        let is_condition = |id: u32| -> bool {
+        let is_valid_condition = |sending_at: u32, condition_at: u32| -> bool {
+            let mut sending_level = 0;
+            let mut condition_level = 0;
             for vertice in all_vertices.iter() {
-                if id == vertice.get_id() {
-                    return vertice.get_shape() == &Shape::Diamond;
+                let vertex_id = vertice.get_id();
+                let shape = vertice.get_shape();
+                let level = vertice.get_level();
+                if vertex_id == condition_at && shape == &Shape::Diamond {
+                    condition_level = level;
+                }
+                if vertex_id == sending_at {
+                    sending_level = level;
                 }
             }
-            false
+            sending_level * condition_level > 0 && sending_level > condition_level 
         };
 
         let get_variables = |id: u32| {
@@ -70,14 +81,7 @@ impl Suicide {
                             let suicide_members = vec![Member::Global(String::from("suicide"))];
                             let selfdestruct_members = vec![Member::Global(String::from("selfdestruct"))];
                             if variable_members == &suicide_members || variable_members == &selfdestruct_members {
-                                let mut has_condition = false;
-                                for i in 0..idx {
-                                    has_condition = has_condition || is_condition(execution_path[i]);
-                                }
-                                if !has_condition {
-                                    possible_vul_vertices.insert(vertex_id);
-                                }
-                                idx = 1;
+                                possible_vul_vertices.insert(vertex_id);
                             }
                         }
                     }
