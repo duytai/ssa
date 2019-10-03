@@ -69,7 +69,6 @@ impl Suicide {
             variables
         };
 
-        let mut possible_vul_vertices: HashSet<u32> = HashSet::new();
         for execution_path in execution_paths {
             let mut idx = execution_path.len() - 1;
             while idx > 0 {
@@ -80,8 +79,24 @@ impl Suicide {
                             let variable_members = variable.get_members();
                             let suicide_members = vec![Member::Global(String::from("suicide"))];
                             let selfdestruct_members = vec![Member::Global(String::from("selfdestruct"))];
+                            // Find suicide/selfdestruct
                             if variable_members == &suicide_members || variable_members == &selfdestruct_members {
-                                possible_vul_vertices.insert(vertex_id);
+                                let source = (variable.clone(), vertex_id);
+                                // Depend on parameters or not
+                                for dependent_path in network.traverse(source) {
+                                    if dependent_path.len() > 1 {
+                                        let (variable, _) = dependent_path.last().unwrap();
+                                        // Depend on msg.sender 
+                                        if variable.get_source().starts_with("msg.sender") {
+                                            // If msg.sender involves in condition check 
+                                            for i in 0..idx {
+                                                if is_valid_condition(vertex_id, execution_path[i]) {
+                                                    println!("condition: {}", execution_path[i]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -89,8 +104,6 @@ impl Suicide {
                 idx -= 1;
             }
         }
-
-        println!("vul_vertices: {:?}", possible_vul_vertices);
     }
 }
 

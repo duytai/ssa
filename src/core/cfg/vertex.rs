@@ -5,6 +5,7 @@ pub enum Shape {
     Box,
     Diamond,
     DoubleCircle,
+    Star,
 }
 
 /// Vertex in CFG

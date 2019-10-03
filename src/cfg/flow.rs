@@ -182,7 +182,7 @@ impl<'a> ControlFlowGraph<'a> {
                     | SimpleBlockNode::Assert(walker)
                     | SimpleBlockNode::Transfer(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::DoubleCircle, level);
+                    let vertice = Vertex::new(id, source, Shape::Star, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
