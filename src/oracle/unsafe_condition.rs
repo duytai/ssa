@@ -50,13 +50,21 @@ impl UnsafeSendingCondition {
             variables
         };
 
-        let is_condition = |id: u32| -> bool {
+        let is_valid_condition = |sending_at: u32, condition_at: u32| -> bool {
+            let mut sending_level = 0;
+            let mut condition_level = 0;
             for vertice in all_vertices.iter() {
-                if id == vertice.get_id() {
-                    return vertice.get_shape() == &Shape::Diamond;
+                let vertex_id = vertice.get_id();
+                let shape = vertice.get_shape();
+                let level = vertice.get_level();
+                if vertex_id == condition_at && shape == &Shape::Diamond {
+                    condition_level = level;
+                }
+                if vertex_id == sending_at {
+                    sending_level = level;
                 }
             }
-            false
+            sending_level * condition_level > 0 && sending_level > condition_level 
         };
 
         let mut possible_vul_vertices: HashSet<u32> = HashSet::new();
@@ -80,7 +88,7 @@ impl UnsafeSendingCondition {
                                 if sending_methods.contains(last_member) {
                                     possible_vul_vertices.insert(vertex_id);
                                     for i in 0..idx {
-                                        if is_condition(execution_path[i]) {
+                                        if is_valid_condition(vertex_id, execution_path[i]) {
                                             possible_vul_vertices.insert(execution_path[i]);
                                         }
                                     }
