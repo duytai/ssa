@@ -13,14 +13,16 @@ pub struct Vertex {
     id: u32,
     source: String,
     shape: Shape,
+    level: u32,
 }
 
 impl Vertex {
-    pub fn new(id: u32, source: &str, shape: Shape) -> Self {
+    pub fn new(id: u32, source: &str, shape: Shape, level: u32) -> Self {
         Vertex {
             id,
             shape,
             source: source.to_string(),
+            level,
         }
     }
 
@@ -34,5 +36,9 @@ impl Vertex {
 
     pub fn get_shape(&self) -> &Shape {
         &self.shape
+    }
+
+    pub fn get_level(&self) -> u32 {
+        self.level
     }
 }

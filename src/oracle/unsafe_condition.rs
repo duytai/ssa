@@ -84,7 +84,6 @@ impl UnsafeSendingCondition {
                                             possible_vul_vertices.insert(execution_path[i]);
                                         }
                                     }
-                                    idx = 1;
                                 }
                             }
                         }
