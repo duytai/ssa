@@ -10,6 +10,7 @@ use std::collections::HashSet;
 /// block.number/block.timestamp is used in these functions
 /// condition in execution_path use block.number/block.timestamp directly or depend on them 
 ///
+/// Ignore case where block.numer is saved to state variable then it is used somewhere
 pub struct UnsafeSendingCondition {
     block_timestamps: HashSet<(u32, u32)>,
     block_numbers: HashSet<(u32, u32)>,

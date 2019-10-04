@@ -24,6 +24,13 @@ impl<'a> Oracle<'a> {
         match action {
             OracleAction::Suicide => {
                 let suicide = Suicide::new(&self.network);
+                for s in suicide.get_suicide() {
+                    let suicide_walker = dict.walker_at(*s).unwrap();
+                    println!(
+                        "[WARNING] suicide \n\t{}",
+                        suicide_walker.node.source,
+                    );
+                }
                 vec![]
             },
             OracleAction::UnsafeSendingCondition => {

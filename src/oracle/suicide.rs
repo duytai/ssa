@@ -11,13 +11,18 @@ use crate::core::{
 /// parameters of suicide/selfdestruct depend on parameters or msg.sender
 /// but there is condition check against parameters or msg.sender 
 pub struct Suicide {
+    suicide: HashSet<u32>,
 }
 
 impl Suicide {
     pub fn new(network: &Network) -> Suicide {
-        let mut suicide = Suicide {};
+        let mut suicide = Suicide { suicide: HashSet::new() };
         suicide.update(network);
         suicide
+    }
+
+    pub fn get_suicide(&self) -> &HashSet<u32> {
+        &self.suicide
     }
 
     fn update(&mut self, network: &Network) {
@@ -42,8 +47,18 @@ impl Suicide {
                 let vertex_id = vertice.get_id();
                 let shape = vertice.get_shape();
                 let level = vertice.get_level();
-                if vertex_id == condition_at && shape == &Shape::Diamond {
-                    condition_level = level;
+                if vertex_id == condition_at {
+                    match shape {
+                        // normal condition
+                        Shape::Diamond => {
+                            condition_level = level;
+                        },
+                        // require, transfer, assert 
+                        Shape::Star => {
+                            return true;
+                        },
+                        _ => {},
+                    }
                 }
                 if vertex_id == sending_at {
                     sending_level = level;
@@ -81,6 +96,7 @@ impl Suicide {
                             let selfdestruct_members = vec![Member::Global(String::from("selfdestruct"))];
                             // Find suicide/selfdestruct
                             if variable_members == &suicide_members || variable_members == &selfdestruct_members {
+                                let mut is_sanitized = false;
                                 let source = (variable.clone(), vertex_id);
                                 // Depend on parameters or not
                                 for dependent_path in network.traverse(source) {
@@ -91,11 +107,29 @@ impl Suicide {
                                             // If msg.sender involves in condition check 
                                             for i in 0..idx {
                                                 if is_valid_condition(vertex_id, execution_path[i]) {
-                                                    println!("condition: {}", execution_path[i]);
+                                                    // If msg.sender is used in condition
+                                                    let condition_variables = get_variables(execution_path[i]);
+                                                    for condition_variable in condition_variables {
+                                                        if condition_variable.get_source().starts_with("msg.sender") {
+                                                            is_sanitized = true;
+                                                        }
+                                                        let source = (condition_variable.clone(), execution_path[i]);
+                                                        for dependent_path in network.traverse(source) {
+                                                            if dependent_path.len() > 1 {
+                                                                let (variable, _) = dependent_path.last().unwrap();
+                                                                if variable.get_source().starts_with("msg.sender") {
+                                                                    is_sanitized = true;
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
+                                }
+                                if !is_sanitized {
+                                    self.suicide.insert(vertex_id);
                                 }
                             }
                         }
