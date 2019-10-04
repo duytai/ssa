@@ -62,8 +62,18 @@ impl UnsafeSendingCondition {
                 let vertex_id = vertice.get_id();
                 let shape = vertice.get_shape();
                 let level = vertice.get_level();
-                if vertex_id == condition_at && shape == &Shape::Diamond {
-                    condition_level = level;
+                if vertex_id == condition_at {
+                    match shape {
+                        // normal condition
+                        Shape::Diamond => {
+                            condition_level = level;
+                        },
+                        // require, transfer, assert 
+                        Shape::Star => {
+                            return true;
+                        },
+                        _ => {},
+                    }
                 }
                 if vertex_id == sending_at {
                     sending_level = level;
