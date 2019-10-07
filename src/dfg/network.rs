@@ -27,6 +27,12 @@ pub struct Network<'a> {
     dot: Dot,
     contract_id: u32,
     context: HashMap<(u32, u32), StackContext>,
+    all_actions: HashMap<u32, Vec<Action>>,
+    all_indexes: HashMap<u32, Vec<u32>>,
+    all_execution_paths: Vec<Vec<u32>>,
+    all_fcalls: HashMap<u32, Vec<u32>>,
+    all_returns: HashMap<u32, Vec<u32>>,
+    all_defined_parameters: HashMap<u32, Vec<u32>>,
 }
 
 impl<'a> Network<'a> {
@@ -37,6 +43,12 @@ impl<'a> Network<'a> {
             dfgs: HashMap::new(),
             dot: Dot::new(),
             context: HashMap::new(),
+            all_actions: HashMap::new(),
+            all_indexes: HashMap::new(),
+            all_execution_paths: vec![],
+            all_fcalls: HashMap::new(),
+            all_returns: HashMap::new(),
+            all_defined_parameters: HashMap::new(),
             contract_id,
         };
         network.find_links();
@@ -61,11 +73,7 @@ impl<'a> Network<'a> {
 
     fn find_assignment_links(&mut self) -> HashSet<DataLink> {
         let mut assignment_links = HashSet::new();
-        let mut all_actions = HashMap::new();
-        for (_, dfg) in self.dfgs.iter() {
-            all_actions.extend(dfg.get_new_actions());
-        }
-        for (vertex_id, actions) in all_actions {
+        for (vertex_id, actions) in self.all_actions.iter() {
             let mut kill_variables = HashSet::new();
             let mut use_variables = HashSet::new();
             for action in actions {
@@ -87,16 +95,9 @@ impl<'a> Network<'a> {
 
     fn find_index_links(&mut self) -> HashSet<DataLink> {
         let mut index_links = HashSet::new();
-        let mut all_actions = HashMap::new();
-        let mut all_indexes = HashMap::new();
-        for (_, dfg) in self.dfgs.iter() {
-            let cfg = dfg.get_cfg();
-            all_actions.extend(dfg.get_new_actions());
-            all_indexes.extend(cfg.get_indexes().clone());
-        }
         let get_variables = |index_id: u32| {
             let mut variables = HashSet::new();
-            if let Some(actions) = all_actions.get(&index_id) {
+            if let Some(actions) = self.all_actions.get(&index_id) {
                 for action in actions.iter() {
                     match action {
                         Action::Use(variable, _) => {
@@ -110,24 +111,24 @@ impl<'a> Network<'a> {
             }
             variables
         };
-        for (index_id, params) in all_indexes {
-            let index_variables = get_variables(index_id);
+        for (index_id, params) in self.all_indexes.iter() {
+            let index_variables = get_variables(*index_id);
             for index_param_id in &params[2..] {
                 let param_variables = get_variables(*index_param_id);
-                let from = (index_variables.clone(), index_id);
+                let from = (index_variables.clone(), *index_id);
                 let to = (param_variables, *index_param_id);
                 index_links.extend(Variable::mix(from, to));
             }
             {
                 let param_variables = get_variables(params[1]);
-                let from = (index_variables.clone(), index_id);
+                let from = (index_variables.clone(), *index_id);
                 let to = (param_variables, params[1]);
                 index_links.extend(Variable::links(from, to));
             }
             self.dict.walker_at(params[0]).map(|walker| {
                 if walker.node.name != "IndexAccess" {
                     let from = (index_variables.clone(), params[0]);
-                    let to = (index_variables, index_id);
+                    let to = (index_variables, *index_id);
                     index_links.extend(Variable::links(from, to));
                 }
             });
@@ -138,20 +139,9 @@ impl<'a> Network<'a> {
     fn find_fcall_links(&mut self) -> HashSet<DataLink>  {
         let mut context = HashMap::new();
         let mut fcall_links = HashSet::new();
-        let mut all_actions = HashMap::new();
-        let mut all_fcalls = HashMap::new();
-        let mut all_returns = HashMap::new();
-        let mut all_defined_parameters = HashMap::new();
-        for (_, dfg) in self.dfgs.iter() {
-            let cfg = dfg.get_cfg();
-            all_actions.extend(dfg.get_new_actions());
-            all_fcalls.extend(cfg.get_fcalls().clone());
-            all_returns.extend(cfg.get_returns().clone());
-            all_defined_parameters.extend(cfg.get_parameters().clone());
-        }
         let get_variables = |index_id: u32| {
             let mut variables = HashSet::new();
-            if let Some(actions) = all_actions.get(&index_id) {
+            if let Some(actions) = self.all_actions.get(&index_id) {
                 for action in actions.iter() {
                     match action {
                         Action::Use(variable, _) => {
@@ -165,47 +155,47 @@ impl<'a> Network<'a> {
             }
             variables
         };
-        for (fcall_id, invoked_parameters) in all_fcalls {
-            let fcall_variables = get_variables(fcall_id);
-            self.dict.walker_at(fcall_id).map(|walker| {
+        for (fcall_id, invoked_parameters) in self.all_fcalls.iter() {
+            let fcall_variables = get_variables(*fcall_id);
+            self.dict.walker_at(*fcall_id).map(|walker| {
                 let walkers = walker.direct_childs(|_| true);
                 let declaration = walkers[0].node.attributes["referencedDeclaration"].as_u32();
-                let is_user_defined = declaration.and_then(|declaration| all_returns.get(&declaration)).is_some();
+                let is_user_defined = declaration.and_then(|declaration| self.all_returns.get(&declaration)).is_some();
                 match is_user_defined {
                     false => {
                         for param_id in (&invoked_parameters[2..]).iter() {
                             let param_variables = get_variables(*param_id);
-                            let from = (fcall_variables.clone(), fcall_id);
+                            let from = (fcall_variables.clone(), *fcall_id);
                             let to = (param_variables, *param_id);
                             fcall_links.extend(Variable::mix(from, to));
                         }
                         {
                             let param_variables = get_variables(invoked_parameters[1]);
-                            let from = (fcall_variables.clone(), fcall_id);
+                            let from = (fcall_variables.clone(), *fcall_id);
                             let to = (param_variables, invoked_parameters[1]);
                             fcall_links.extend(Variable::links(from, to));
                         }
                         self.dict.walker_at(invoked_parameters[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
                                 let from = (fcall_variables.clone(), invoked_parameters[0]);
-                                let to = (fcall_variables, fcall_id);
+                                let to = (fcall_variables, *fcall_id);
                                 fcall_links.extend(Variable::links(from, to));
                             }
                         });
                     },
                     true => {
                         let declaration = declaration.unwrap();
-                        let returns = all_returns.get(&declaration).unwrap();
-                        let defined_parameters = all_defined_parameters.get(&declaration).unwrap();
+                        let returns = self.all_returns.get(&declaration).unwrap();
+                        let defined_parameters = self.all_defined_parameters.get(&declaration).unwrap();
                         for return_id in returns {
                             let return_variables = get_variables(*return_id);
-                            let from = (fcall_variables.clone(), fcall_id);
+                            let from = (fcall_variables.clone(), *fcall_id);
                             let to = (return_variables, *return_id);
                             let tmp_links = Variable::links(from, to);
                             for link in tmp_links.iter() {
                                 let (_, from) = link.get_from();
                                 let (_, to) = link.get_to();
-                                context.insert((*from, *to), StackContext::Push(fcall_id));
+                                context.insert((*from, *to), StackContext::Push(*fcall_id));
                             }
                             fcall_links.extend(tmp_links);
                         }
@@ -220,14 +210,14 @@ impl<'a> Network<'a> {
                             for link in tmp_links.iter() {
                                 let (_, from) = link.get_from();
                                 let (_, to) = link.get_to();
-                                context.insert((*from, *to), StackContext::Pop(fcall_id));
+                                context.insert((*from, *to), StackContext::Pop(*fcall_id));
                             }
                             fcall_links.extend(tmp_links);
                         }
                         self.dict.walker_at(invoked_parameters[0]).map(|walker| {
                             if walker.node.name != "FunctionCall" {
                                 let from = (fcall_variables.clone(), invoked_parameters[0]);
-                                let to = (fcall_variables, fcall_id);
+                                let to = (fcall_variables, *fcall_id);
                                 fcall_links.extend(Variable::links(from, to));
                             }
                         });
@@ -261,6 +251,15 @@ impl<'a> Network<'a> {
 
     fn find_links(&mut self) {
         let internal_links = self.find_internal_links();
+        for (_, dfg) in self.dfgs.iter() {
+            let cfg = dfg.get_cfg();
+            self.all_actions.extend(dfg.get_new_actions().clone());
+            self.all_execution_paths.extend(cfg.get_execution_paths().clone());
+            self.all_indexes.extend(cfg.get_indexes().clone());
+            self.all_fcalls.extend(cfg.get_fcalls().clone());
+            self.all_returns.extend(cfg.get_returns().clone());
+            self.all_defined_parameters.extend(cfg.get_parameters().clone());
+        }
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);

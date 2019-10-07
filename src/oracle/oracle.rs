@@ -2,7 +2,6 @@ use crate::dfg::Network;
 use crate::core::Walker;
 use crate::oracle::{
     UnsafeSendingCondition,
-    Suicide,
 };
 
 pub enum OracleAction {
@@ -23,14 +22,6 @@ impl<'a> Oracle<'a> {
         let dict = self.network.get_dict();
         match action {
             OracleAction::Suicide => {
-                let suicide = Suicide::new(&self.network);
-                for s in suicide.get_suicide() {
-                    let suicide_walker = dict.walker_at(*s).unwrap();
-                    println!(
-                        "[WARNING] suicide \n\t{}",
-                        suicide_walker.node.source,
-                    );
-                }
                 vec![]
             },
             OracleAction::UnsafeSendingCondition => {
