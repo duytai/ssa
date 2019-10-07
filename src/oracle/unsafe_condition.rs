@@ -10,7 +10,8 @@ use std::collections::HashSet;
 /// block.number/block.timestamp is used in these functions
 /// condition in execution_path use block.number/block.timestamp directly or depend on them 
 ///
-/// Ignore case where block.numer is saved to state variable then it is used somewhere
+/// block.numer is saved to variable
+/// invoke function call
 pub struct UnsafeSendingCondition {
     block_timestamps: HashSet<(u32, u32)>,
     block_numbers: HashSet<(u32, u32)>,
@@ -56,31 +57,15 @@ impl UnsafeSendingCondition {
             variables
         };
 
-        let is_valid_condition = |sending_at: u32, condition_at: u32| -> bool {
-            let mut sending_level = 0;
-            let mut condition_level = 0;
+        let is_condition = |id: u32| -> bool {
             for vertice in all_vertices.iter() {
                 let vertex_id = vertice.get_id();
                 let shape = vertice.get_shape();
-                let level = vertice.get_level();
-                if vertex_id == condition_at {
-                    match shape {
-                        // normal condition
-                        Shape::Diamond => {
-                            condition_level = level;
-                        },
-                        // require, transfer, assert 
-                        Shape::Star => {
-                            return true;
-                        },
-                        _ => {},
-                    }
-                }
-                if vertex_id == sending_at {
-                    sending_level = level;
+                if vertex_id == id {
+                    return shape == &Shape::Diamond || shape == &Shape::Star;
                 }
             }
-            sending_level * condition_level > 0 && sending_level > condition_level 
+            false
         };
 
         let mut possible_vul_vertices: HashSet<u32> = HashSet::new();
@@ -104,7 +89,7 @@ impl UnsafeSendingCondition {
                                 if sending_methods.contains(last_member) {
                                     possible_vul_vertices.insert(vertex_id);
                                     for i in 0..idx {
-                                        if is_valid_condition(vertex_id, execution_path[i]) {
+                                        if is_condition(execution_path[i]) {
                                             possible_vul_vertices.insert(execution_path[i]);
                                         }
                                     }
@@ -117,10 +102,14 @@ impl UnsafeSendingCondition {
             }
         }
 
+        println!("possible_vul_vertices: {:?}", possible_vul_vertices);
         for vertex_id in possible_vul_vertices {
             for variable in get_variables(vertex_id) {
                 let source = variable.get_source();
-                match (source.starts_with("block.number"), source.starts_with("block.timestamp") || source.starts_with("now")) {
+                let is_block_number = source.starts_with("block.number"); 
+                let is_timestamp = source.starts_with("block.timestamp")
+                    || source.starts_with("now");
+                match (is_block_number, is_timestamp) {
                     (true, _) => {
                         self.block_numbers.insert((vertex_id, vertex_id));
                     },
@@ -128,16 +117,36 @@ impl UnsafeSendingCondition {
                         self.block_timestamps.insert((vertex_id, vertex_id));
                     },
                     _ => {
-                        let source = (variable.clone(), vertex_id);
-                        for dependent_path in network.traverse(source) {
-                            if dependent_path.len() > 1 {
-                                let (variable, dependent_id) = dependent_path.last().unwrap();
-                                let source = variable.get_source();
-                                if source == "block.number" {
-                                    self.block_numbers.insert((vertex_id, *dependent_id));
-                                }
-                                if source == "block.timestamp" || source == "now" {
-                                    self.block_timestamps.insert((vertex_id, *dependent_id));
+                        let mut stack = vec![variable.clone()];
+                        let mut visited = HashSet::new();
+                        while !stack.is_empty() {
+                            let variable = stack.pop().unwrap();
+                            if visited.contains(&variable) {
+                                continue;
+                            } else {
+                                visited.insert(variable.clone());
+                            }
+                            for vertice in all_vertices.iter() {
+                                let source = (variable.clone(), vertice.get_id());
+                                for dependent_path in network.traverse(source) {
+                                    if dependent_path.len() > 1 {
+                                        let (variable, dependent_id) = dependent_path.last().unwrap();
+                                        let source = variable.get_source();
+                                        let is_block_number = source.starts_with("block.number");
+                                        let is_timestamp = source.starts_with("block.timestamp")
+                                            || source.starts_with("now");
+                                        match (is_block_number, is_timestamp) {
+                                            (true, _) => {
+                                                self.block_numbers.insert((vertex_id, *dependent_id));
+                                            },
+                                            (_, true) => {
+                                                self.block_timestamps.insert((vertex_id, *dependent_id));
+                                            },
+                                            _ => {
+                                                stack.push(variable.clone());
+                                            },
+                                        }
+                                    }
                                 }
                             }
                         }
