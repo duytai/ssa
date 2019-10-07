@@ -7,6 +7,7 @@ use crate::core::{
     SmartContractQuery,
     Action,
     Variable,
+    Vertex,
 };
 
 use std::collections::{
@@ -32,6 +33,7 @@ pub struct Network<'a> {
     all_execution_paths: Vec<Vec<u32>>,
     all_fcalls: HashMap<u32, Vec<u32>>,
     all_returns: HashMap<u32, Vec<u32>>,
+    all_vertices: HashMap<u32, Vertex>,
     all_defined_parameters: HashMap<u32, Vec<u32>>,
 }
 
@@ -48,11 +50,16 @@ impl<'a> Network<'a> {
             all_execution_paths: vec![],
             all_fcalls: HashMap::new(),
             all_returns: HashMap::new(),
+            all_vertices: HashMap::new(),
             all_defined_parameters: HashMap::new(),
             contract_id,
         };
         network.find_links();
         network
+    }
+
+    pub fn get_all_vertices(&self) -> &HashMap<u32, Vertex> {
+        &self.all_vertices
     }
 
     pub fn get_all_defined_parameters(&self) -> &HashMap<u32, Vec<u32>> {
@@ -251,6 +258,7 @@ impl<'a> Network<'a> {
             self.all_fcalls.extend(cfg.get_fcalls().clone());
             self.all_returns.extend(cfg.get_returns().clone());
             self.all_defined_parameters.extend(cfg.get_parameters().clone());
+            self.all_vertices.extend(cfg.get_vertices().clone());
         }
         let external_links = self.find_external_links();
         self.links.extend(internal_links);

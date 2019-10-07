@@ -27,17 +27,6 @@ impl UnsafeSendingCondition {
     }
 
     fn update(&mut self, network: &Network) {
-        // let is_condition = |id: u32| -> bool {
-            // for vertice in all_vertices.iter() {
-                // let vertex_id = vertice.get_id();
-                // let shape = vertice.get_shape();
-                // if vertex_id == id {
-                    // return shape == &Shape::Diamond || shape == &Shape::Star;
-                // }
-            // }
-            // false
-        // };
-
     }
 
     pub fn get_block_numbers(&self) -> &HashSet<(u32, u32)> {
