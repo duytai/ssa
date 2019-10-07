@@ -55,6 +55,30 @@ impl<'a> Network<'a> {
         network
     }
 
+    pub fn get_all_defined_parameters(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.all_defined_parameters
+    }
+
+    pub fn get_all_returns(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.all_returns
+    }
+
+    pub fn get_all_fcall(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.all_fcalls
+    }
+
+    pub fn get_all_executions(&self) -> &Vec<Vec<u32>> {
+        &self.all_execution_paths
+    }
+
+    pub fn get_all_indexes(&self) -> &HashMap<u32, Vec<u32>> {
+        &self.all_indexes
+    }
+
+    pub fn get_all_actions(&self) -> &HashMap<u32, Vec<Action>> {
+        &self.all_actions
+    }
+
     pub fn get_links(&self) -> &HashSet<DataLink> {
         &self.links
     }
@@ -95,32 +119,16 @@ impl<'a> Network<'a> {
 
     fn find_index_links(&mut self) -> HashSet<DataLink> {
         let mut index_links = HashSet::new();
-        let get_variables = |index_id: u32| {
-            let mut variables = HashSet::new();
-            if let Some(actions) = self.all_actions.get(&index_id) {
-                for action in actions.iter() {
-                    match action {
-                        Action::Use(variable, _) => {
-                            variables.insert(variable.clone());
-                        },
-                        Action::Kill(variable, _) => {
-                            variables.insert(variable.clone());
-                        },
-                    }
-                }
-            }
-            variables
-        };
         for (index_id, params) in self.all_indexes.iter() {
-            let index_variables = get_variables(*index_id);
+            let index_variables = self.get_variables(index_id);
             for index_param_id in &params[2..] {
-                let param_variables = get_variables(*index_param_id);
+                let param_variables = self.get_variables(index_param_id);
                 let from = (index_variables.clone(), *index_id);
                 let to = (param_variables, *index_param_id);
                 index_links.extend(Variable::mix(from, to));
             }
             {
-                let param_variables = get_variables(params[1]);
+                let param_variables = self.get_variables(&params[1]);
                 let from = (index_variables.clone(), *index_id);
                 let to = (param_variables, params[1]);
                 index_links.extend(Variable::links(from, to));
@@ -139,24 +147,8 @@ impl<'a> Network<'a> {
     fn find_fcall_links(&mut self) -> HashSet<DataLink>  {
         let mut context = HashMap::new();
         let mut fcall_links = HashSet::new();
-        let get_variables = |index_id: u32| {
-            let mut variables = HashSet::new();
-            if let Some(actions) = self.all_actions.get(&index_id) {
-                for action in actions.iter() {
-                    match action {
-                        Action::Use(variable, _) => {
-                            variables.insert(variable.clone());
-                        },
-                        Action::Kill(variable, _) => {
-                            variables.insert(variable.clone());
-                        },
-                    }
-                }
-            }
-            variables
-        };
         for (fcall_id, invoked_parameters) in self.all_fcalls.iter() {
-            let fcall_variables = get_variables(*fcall_id);
+            let fcall_variables = self.get_variables(fcall_id);
             self.dict.walker_at(*fcall_id).map(|walker| {
                 let walkers = walker.direct_childs(|_| true);
                 let declaration = walkers[0].node.attributes["referencedDeclaration"].as_u32();
@@ -164,13 +156,13 @@ impl<'a> Network<'a> {
                 match is_user_defined {
                     false => {
                         for param_id in (&invoked_parameters[2..]).iter() {
-                            let param_variables = get_variables(*param_id);
+                            let param_variables = self.get_variables(param_id);
                             let from = (fcall_variables.clone(), *fcall_id);
                             let to = (param_variables, *param_id);
                             fcall_links.extend(Variable::mix(from, to));
                         }
                         {
-                            let param_variables = get_variables(invoked_parameters[1]);
+                            let param_variables = self.get_variables(&invoked_parameters[1]);
                             let from = (fcall_variables.clone(), *fcall_id);
                             let to = (param_variables, invoked_parameters[1]);
                             fcall_links.extend(Variable::links(from, to));
@@ -188,7 +180,7 @@ impl<'a> Network<'a> {
                         let returns = self.all_returns.get(&declaration).unwrap();
                         let defined_parameters = self.all_defined_parameters.get(&declaration).unwrap();
                         for return_id in returns {
-                            let return_variables = get_variables(*return_id);
+                            let return_variables = self.get_variables(return_id);
                             let from = (fcall_variables.clone(), *fcall_id);
                             let to = (return_variables, *return_id);
                             let tmp_links = Variable::links(from, to);
@@ -202,8 +194,8 @@ impl<'a> Network<'a> {
                         let defined_len = defined_parameters.len();
                         let invoked_len = invoked_parameters.len();
                         for idx in 0..invoked_len - 2 {
-                            let defined_parameter_variables = get_variables(defined_parameters[defined_len - idx - 1]);
-                            let invoked_parameter_variables = get_variables(invoked_parameters[invoked_len - idx - 1]);
+                            let defined_parameter_variables = self.get_variables(&defined_parameters[defined_len - idx - 1]);
+                            let invoked_parameter_variables = self.get_variables(&invoked_parameters[invoked_len - idx - 1]);
                             let from = (defined_parameter_variables, defined_parameters[defined_len - idx - 1]);
                             let to = (invoked_parameter_variables, invoked_parameters[invoked_len - idx - 1]);
                             let tmp_links = Variable::links(from, to);
@@ -329,6 +321,23 @@ impl<'a> Network<'a> {
             &mut execution_paths,
         );
         execution_paths
+    }
+
+    pub fn get_variables(&self, id: &u32) -> HashSet<Variable> {
+        let mut variables = HashSet::new();
+        if let Some(actions) = self.all_actions.get(id) {
+            for action in actions.iter() {
+                match action {
+                    Action::Use(variable, _) => {
+                        variables.insert(variable.clone());
+                    },
+                    Action::Kill(variable, _) => {
+                        variables.insert(variable.clone());
+                    },
+                }
+            }
+        }
+        variables
     }
 
     pub fn format(&mut self) -> String {

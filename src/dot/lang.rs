@@ -26,8 +26,7 @@ impl Dot {
         for edge in cfg.get_edges().iter() {
             self.edges.push(format!("  {} -> {};", edge.get_from(), edge.get_to()));
         }
-        for vertex in cfg.get_vertices().iter() {
-            let id = vertex.get_id();
+        for (id, vertex) in cfg.get_vertices().iter() {
             let source = vertex.get_source().replace("\"", "");
             let shape = match vertex.get_shape() {
                 Shape::Point => "point",

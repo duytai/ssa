@@ -87,8 +87,12 @@ impl<'a> ControlFlowGraph<'a> {
         &self.execution_paths
     }
 
-    pub fn get_vertices(&self) -> &HashSet<Vertex> {
-        &self.vertices
+    pub fn get_vertices(&self) -> HashMap<u32, Vertex> {
+        let mut h: HashMap<u32, Vertex> = HashMap::new();
+        for v in self.vertices.iter() {
+            h.insert(v.get_id(), v.clone());
+        }
+        h
     }
 
     pub fn get_edges(&self) -> &HashSet<Edge> {

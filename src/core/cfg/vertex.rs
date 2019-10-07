@@ -9,7 +9,7 @@ pub enum Shape {
 }
 
 /// Vertex in CFG
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Vertex {
     id: u32,
     source: String,
@@ -41,5 +41,12 @@ impl Vertex {
 
     pub fn get_level(&self) -> u32 {
         self.level
+    }
+
+    pub fn is_condition(&self) -> bool {
+        match self.shape {
+            Shape::Star | Shape::Diamond => true,
+            _ => false,
+        }
     }
 }

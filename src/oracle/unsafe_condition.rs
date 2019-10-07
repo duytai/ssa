@@ -27,45 +27,16 @@ impl UnsafeSendingCondition {
     }
 
     fn update(&mut self, network: &Network) {
-        let mut all_actions = HashMap::new();
-        let mut all_vertices = HashSet::new();
-        let mut execution_paths = vec![];
-        let dict = network.get_dict();
-
-        for (_, dfg) in network.get_dfgs().iter() {
-            let cfg = dfg.get_cfg();
-            all_actions.extend(dfg.get_new_actions());
-            all_vertices.extend(cfg.get_vertices());
-            execution_paths.extend(cfg.get_execution_paths());
-        }
-
-        let get_variables = |id: u32| {
-            let mut variables = HashSet::new();
-            if let Some(actions) = all_actions.get(&id) {
-                for action in actions.iter() {
-                    match action {
-                        Action::Use(variable, _) => {
-                            variables.insert(variable.clone());
-                        },
-                        Action::Kill(variable, _) => {
-                            variables.insert(variable.clone());
-                        },
-                    }
-                }
-            }
-            variables
-        };
-
-        let is_condition = |id: u32| -> bool {
-            for vertice in all_vertices.iter() {
-                let vertex_id = vertice.get_id();
-                let shape = vertice.get_shape();
-                if vertex_id == id {
-                    return shape == &Shape::Diamond || shape == &Shape::Star;
-                }
-            }
-            false
-        };
+        // let is_condition = |id: u32| -> bool {
+            // for vertice in all_vertices.iter() {
+                // let vertex_id = vertice.get_id();
+                // let shape = vertice.get_shape();
+                // if vertex_id == id {
+                    // return shape == &Shape::Diamond || shape == &Shape::Star;
+                // }
+            // }
+            // false
+        // };
 
     }
 

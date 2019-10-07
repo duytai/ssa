@@ -29,8 +29,8 @@ impl<'a> DataFlowGraph<'a> {
         let edges = cfg.get_edges();
         let mut tables = HashMap::new();
         let mut parents: HashMap<u32, Vec<u32>> = HashMap::new();
-        for vertex in vertices.iter() {
-            tables.insert(vertex.get_id(), HashSet::new());
+        for (id, _) in vertices.iter() {
+            tables.insert(*id, HashSet::new());
         }
         for edge in edges.iter() {
             let from = edge.get_from();
