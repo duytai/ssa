@@ -29,11 +29,13 @@ impl Dot {
         for (id, vertex) in cfg.get_vertices().iter() {
             let source = vertex.get_source().replace("\"", "");
             let shape = match vertex.get_shape() {
-                Shape::Point => "point",
-                Shape::Box => "box",
-                Shape::Diamond => "diamond",
-                Shape::DoubleCircle => "doublecircle",
-                Shape::Star => "star",
+                Shape::Entry => "point",
+                Shape::Statement => "box",
+                Shape::Condition => "diamond",
+                Shape::FunctionCall => "doublecircle",
+                Shape::IndexAccess => "doublecircle",
+                Shape::ConditionAndFunctionCall=> "doublecircle",
+                Shape::ConditionAndIndexAccess => "doublecircle",
             };
             self.vertices.push(format!("  {}[label=\"{}\", shape=\"{}\"];", id, source, shape));
         }

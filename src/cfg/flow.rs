@@ -120,28 +120,23 @@ impl<'a> ControlFlowGraph<'a> {
     /// Build a list of nested function calls and connect them toghether
     pub fn condition_traverse(&mut self, blocks: &Vec<SimpleBlockNode>, level: u32) -> Vec<u32> {
         let mut chains = vec![];
-        for (idx, block) in blocks.into_iter().enumerate() {
+        for block in blocks {
             match block {
-                SimpleBlockNode::FunctionCall(walker)
-                | SimpleBlockNode::IndexAccess(walker) => {
-                    let shape = if idx == blocks.len() - 1 {
-                        Shape::Diamond
-                    } else {
-                        Shape::DoubleCircle
-                    };
+                SimpleBlockNode::FunctionCall(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, shape, level);
+                    let vertice = Vertex::new(id, source, Shape::ConditionAndFunctionCall, level);
+                    self.vertices.insert(vertice);
+                    chains.push(id);
+                },
+                SimpleBlockNode::IndexAccess(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::ConditionAndIndexAccess, level);
                     self.vertices.insert(vertice);
                     chains.push(id);
                 },
                 SimpleBlockNode::Unit(walker) => {
-                    let shape = if idx == blocks.len() - 1 {
-                        Shape::Diamond
-                    } else {
-                        Shape::Box
-                    };
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, shape, level);
+                    let vertice = Vertex::new(id, source, Shape::Condition, level);
                     self.vertices.insert(vertice);
                     chains.push(id);
                 },
@@ -162,7 +157,7 @@ impl<'a> ControlFlowGraph<'a> {
             match block {
                 SimpleBlockNode::Break(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::Box, level);
+                    let vertice = Vertex::new(id, source, Shape::Statement, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -173,7 +168,7 @@ impl<'a> ControlFlowGraph<'a> {
                 },
                 SimpleBlockNode::Continue(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::Box, level);
+                    let vertice = Vertex::new(id, source, Shape::Statement, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -186,7 +181,7 @@ impl<'a> ControlFlowGraph<'a> {
                     | SimpleBlockNode::Assert(walker)
                     | SimpleBlockNode::Transfer(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::Star, level);
+                    let vertice = Vertex::new(id, source, Shape::FunctionCall, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -198,7 +193,7 @@ impl<'a> ControlFlowGraph<'a> {
                 },
                 SimpleBlockNode::Throw(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::Box, level);
+                    let vertice = Vertex::new(id, source, Shape::Statement, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -212,7 +207,7 @@ impl<'a> ControlFlowGraph<'a> {
                     | SimpleBlockNode::Selfdestruct(walker)
                     | SimpleBlockNode::Suicide(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::DoubleCircle, level);
+                    let vertice = Vertex::new(id, source, Shape::FunctionCall, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -233,7 +228,7 @@ impl<'a> ControlFlowGraph<'a> {
                         })
                     .collect::<Vec<u32>>();
                     if !predecessors.is_empty() {
-                        let vertice = Vertex::new(id, source, Shape::Box, level);
+                        let vertice = Vertex::new(id, source, Shape::Statement, level);
                         self.vertices.insert(vertice);
                     }
                     predecessors.dedup();
@@ -251,7 +246,7 @@ impl<'a> ControlFlowGraph<'a> {
                         })
                     .collect::<Vec<u32>>();
                     if !predecessors.is_empty() {
-                        let vertice = Vertex::new(id, source, Shape::DoubleCircle, level);
+                        let vertice = Vertex::new(id, source, Shape::FunctionCall, level);
                         self.vertices.insert(vertice);
                     }
                     predecessors.dedup();
@@ -457,11 +452,11 @@ impl<'a> ControlFlowGraph<'a> {
         let level = 0;
         if let BlockNode::Root(blocks) = root {
             for id in vec![self.start, self.stop] {
-                let vertex = Vertex::new(id, "", Shape::Point, level);
+                let vertex = Vertex::new(id, "", Shape::Entry, level);
                 self.vertices.insert(vertex);
             }
             let last_id = states.iter().fold(self.start, |prev, cur| {
-                let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Box, level);
+                let vertex = Vertex::new(cur.node.id, cur.node.source, Shape::Statement, level);
                 let edge = Edge::new(prev, cur.node.id);
                 self.vertices.insert(vertex);
                 self.edges.insert(edge);

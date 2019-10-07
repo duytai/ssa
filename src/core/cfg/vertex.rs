@@ -1,11 +1,13 @@
 /// Shape represents function of a node in CFG 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Shape {
-    Point,
-    Box,
-    Diamond,
-    DoubleCircle,
-    Star,
+    Entry,
+    Statement,
+    Condition,
+    FunctionCall,
+    IndexAccess,
+    ConditionAndFunctionCall,
+    ConditionAndIndexAccess,
 }
 
 /// Vertex in CFG
@@ -45,7 +47,8 @@ impl Vertex {
 
     pub fn is_condition(&self) -> bool {
         match self.shape {
-            Shape::Star | Shape::Diamond => true,
+            Shape::ConditionAndFunctionCall
+                | Shape::Condition => true,
             _ => false,
         }
     }
