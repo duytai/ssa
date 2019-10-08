@@ -30,7 +30,8 @@ impl UnsafeSendingCondition {
     fn update(&mut self, network: &Network) {
         for (id, _) in network.get_all_vertices().iter() {
             for variable in network.get_variables(id) {
-                println!("var: {:?}", variable);
+                for member in variable.get_members() {
+                }
             }
         }
     }

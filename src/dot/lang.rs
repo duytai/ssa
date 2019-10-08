@@ -31,7 +31,7 @@ impl Dot {
             let shape = match vertex.get_shape() {
                 Shape::Entry => "point",
                 Shape::Statement => "box",
-                Shape::Condition => "diamond",
+                Shape::RootCondition => "diamond",
                 Shape::FunctionCall => "doublecircle",
                 Shape::IndexAccess => "doublecircle",
                 Shape::ConditionAndFunctionCall=> "doublecircle",

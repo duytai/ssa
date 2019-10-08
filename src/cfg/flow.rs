@@ -120,23 +120,32 @@ impl<'a> ControlFlowGraph<'a> {
     /// Build a list of nested function calls and connect them toghether
     pub fn condition_traverse(&mut self, blocks: &Vec<SimpleBlockNode>, level: u32) -> Vec<u32> {
         let mut chains = vec![];
-        for block in blocks {
+        let last_block_idx = blocks.len() - 1;
+        for (idx, block) in blocks.iter().enumerate() {
             match block {
                 SimpleBlockNode::FunctionCall(walker) => {
+                    let shape = match idx == last_block_idx {
+                        true => Shape::RootCondition, 
+                        false => Shape::ConditionAndFunctionCall,
+                    };
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::ConditionAndFunctionCall, level);
+                    let vertice = Vertex::new(id, source, shape, level);
                     self.vertices.insert(vertice);
                     chains.push(id);
                 },
                 SimpleBlockNode::IndexAccess(walker) => {
+                    let shape = match idx == last_block_idx {
+                        true => Shape::RootCondition, 
+                        false => Shape::ConditionAndIndexAccess,
+                    };
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::ConditionAndIndexAccess, level);
+                    let vertice = Vertex::new(id, source, shape, level);
                     self.vertices.insert(vertice);
                     chains.push(id);
                 },
                 SimpleBlockNode::Unit(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::Condition, level);
+                    let vertice = Vertex::new(id, source, Shape::RootCondition, level);
                     self.vertices.insert(vertice);
                     chains.push(id);
                 },

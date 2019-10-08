@@ -3,11 +3,11 @@
 pub enum Shape {
     Entry,
     Statement,
-    Condition,
     FunctionCall,
     IndexAccess,
     ConditionAndFunctionCall,
     ConditionAndIndexAccess,
+    RootCondition,
 }
 
 /// Vertex in CFG
@@ -45,11 +45,7 @@ impl Vertex {
         self.level
     }
 
-    pub fn is_condition(&self) -> bool {
-        match self.shape {
-            Shape::ConditionAndFunctionCall
-                | Shape::Condition => true,
-            _ => false,
-        }
+    pub fn is_root_condition(&self) -> bool {
+        self.shape == Shape::RootCondition
     }
 }
