@@ -35,6 +35,7 @@ pub struct Network<'a> {
     all_returns: HashMap<u32, Vec<u32>>,
     all_vertices: HashMap<u32, Vertex>,
     all_defined_parameters: HashMap<u32, Vec<u32>>,
+    all_states: HashSet<Variable>,
 }
 
 impl<'a> Network<'a> {
@@ -52,6 +53,7 @@ impl<'a> Network<'a> {
             all_returns: HashMap::new(),
             all_vertices: HashMap::new(),
             all_defined_parameters: HashMap::new(),
+            all_states: HashSet::new(),
             contract_id,
         };
         network.find_links();
@@ -84,6 +86,10 @@ impl<'a> Network<'a> {
 
     pub fn get_all_actions(&self) -> &HashMap<u32, Vec<Action>> {
         &self.all_actions
+    }
+
+    pub fn get_all_states(&self) -> &HashSet<Variable> {
+        &self.all_states
     }
 
     pub fn get_links(&self) -> &HashSet<DataLink> {
@@ -260,6 +266,11 @@ impl<'a> Network<'a> {
             self.all_defined_parameters.extend(cfg.get_parameters().clone());
             self.all_vertices.extend(cfg.get_vertices().clone());
         }
+        let state_ids = self.dict.find_ids(SmartContractQuery::StatesByContractId(self.contract_id));
+        for state_id in state_ids.iter() {
+            let variables = self.get_variables(state_id);
+            self.all_states.extend(variables);
+        } 
         let external_links = self.find_external_links();
         self.links.extend(internal_links);
         self.links.extend(external_links);

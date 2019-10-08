@@ -28,12 +28,14 @@ impl UnsafeSendingCondition {
     }
 
     fn update(&mut self, network: &Network) {
-        for (id, _) in network.get_all_vertices().iter() {
-            for variable in network.get_variables(id) {
-                for member in variable.get_members() {
-                }
-            }
-        }
+        let states = network.get_all_states();
+        println!("states: {:?}", states);
+        // for (id, _) in network.get_all_vertices().iter() {
+            // for variable in network.get_variables(id) {
+                // for member in variable.get_members() {
+                // }
+            // }
+        // }
     }
 
     pub fn get_block_numbers(&self) -> &HashSet<(u32, u32)> {
