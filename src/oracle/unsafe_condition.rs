@@ -28,14 +28,30 @@ impl UnsafeSendingCondition {
     }
 
     fn update(&mut self, network: &Network) {
-        let states = network.get_all_states();
-        println!("states: {:?}", states);
-        // for (id, _) in network.get_all_vertices().iter() {
-            // for variable in network.get_variables(id) {
-                // for member in variable.get_members() {
-                // }
-            // }
-        // }
+        let sending_members = vec![
+            Member::Global(String::from("send")),
+            Member::Global(String::from("transfer")),
+            Member::Global(String::from("call")),
+            Member::Global(String::from("callcode")),
+            Member::Global(String::from("delegatecall")),
+            Member::Global(String::from("selfdestruct")),
+            Member::Global(String::from("suicide")),
+        ];
+        for execution_path in network.get_all_executions() {
+            for vertex_id in execution_path {
+                let vertice = network.get_all_vertices().get(vertex_id).unwrap();
+                let variables = network.get_variables(vertex_id);
+                for variable in variables {
+                    let members = variable.get_members();
+                    let is_send = members.iter().fold(false, |acc, m| {
+                        acc || (sending_members.contains(m) && vertice.is_function_call())
+                    });
+                    if is_send {
+                        println!("vertex_id: {}", vertex_id);
+                    }
+                }
+            }
+        }
     }
 
     pub fn get_block_numbers(&self) -> &HashSet<(u32, u32)> {
