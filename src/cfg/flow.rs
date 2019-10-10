@@ -529,4 +529,30 @@ impl<'a> ControlFlowGraph<'a> {
             }
         }
     }
+
+    pub fn is_control_dependency(&self, from: u32, to: u32, mut execution_path: Vec<u32>) -> bool {
+        let mut ret = false; 
+        if from == self.stop {
+            return true;
+        }
+        if from == to {
+            return false;
+        }
+        let mut next_edges = vec![];
+        let num_dups = execution_path.iter()
+            .filter(|x| *x == &from)
+            .count();
+        if num_dups < 2 {
+            execution_path.push(from);
+            for edge in self.edges.iter() {
+                if edge.get_from() == from {
+                    next_edges.push(edge.get_to());
+                }
+            }
+            for next_edge in next_edges {
+                ret = ret || self.is_control_dependency(next_edge, to, execution_path.clone());
+            }
+        }
+        ret
+    }
 }

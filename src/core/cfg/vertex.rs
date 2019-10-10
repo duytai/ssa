@@ -47,8 +47,12 @@ impl Vertex {
         self.level
     }
 
-    pub fn is_root_condition(&self) -> bool {
-        self.shape == Shape::RootCondition
+    pub fn is_condition(&self) -> bool {
+        vec![
+            Shape::RootCondition,
+            Shape::Require,
+            Shape::Assert,
+        ].contains(&self.shape)
     }
 
     pub fn is_function_call(&self) -> bool {
