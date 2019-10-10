@@ -37,20 +37,43 @@ impl UnsafeSendingCondition {
             Member::Global(String::from("selfdestruct")),
             Member::Global(String::from("suicide")),
         ];
+        let all_actions = network.get_all_actions();
+        let all_vertices = network.get_all_vertices();
+        let mut all_state_variables = HashMap::new();
+        for variable in network.get_all_states() {
+            all_state_variables.insert(variable, variable);
+        }
         for execution_path in network.get_all_executions() {
-            for vertex_id in execution_path {
-                let vertice = network.get_all_vertices().get(vertex_id).unwrap();
-                let variables = network.get_variables(vertex_id);
-                for variable in variables {
-                    let members = variable.get_members();
-                    let is_send = members.iter().fold(false, |acc, m| {
-                        acc || (sending_members.contains(m) && vertice.is_function_call())
-                    });
-                    if is_send {
-                        println!("vertex_id: {}", vertex_id);
+            let mut path_state_variables = all_state_variables.clone();
+            let mut state_related_vertices = HashSet::new();
+            for vertex_id in execution_path.iter().rev() {
+                if !state_related_vertices.is_empty() {
+                    let vertice = all_vertices.get(vertex_id).unwrap();
+                    if vertice.is_root_condition() {
+                        println!("vertex_id: {:?}", vertex_id);
+                    }
+                }
+                if let Some(actions) = all_actions.get(vertex_id) {
+                    for action in actions {
+                        if let Action::Kill(variable, _) = action {
+                            if path_state_variables.contains_key(variable) {
+                                path_state_variables.remove(variable);
+                                state_related_vertices.insert(vertex_id);
+                            }
+                        }
                     }
                 }
             }
+                // for variable in network.get_variables(vertex_id) {
+                    // let members = variable.get_members();
+                    // let vertice = all_vertices.get(vertex_id).unwrap();
+                    // let is_send = members.iter().fold(false, |acc, m| {
+                        // acc || (sending_members.contains(m) && vertice.is_function_call())
+                    // });
+                    // if is_send {
+                        // FIND conditions
+                    // }
+                // }
         }
     }
 

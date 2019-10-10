@@ -7,6 +7,8 @@ pub enum Shape {
     IndexAccess,
     ConditionAndFunctionCall,
     ConditionAndIndexAccess,
+    Require,
+    Assert,
     RootCondition,
 }
 
@@ -53,6 +55,8 @@ impl Vertex {
         vec![
             Shape::FunctionCall,
             Shape::ConditionAndFunctionCall,
+            Shape::Require,
+            Shape::Assert,
         ].contains(&self.shape)
     }
 }

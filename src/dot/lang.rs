@@ -33,6 +33,8 @@ impl Dot {
                 Shape::Statement => "box",
                 Shape::RootCondition => "diamond",
                 Shape::FunctionCall => "doublecircle",
+                Shape::Require => "doublecircle",
+                Shape::Assert => "doublecircle",
                 Shape::IndexAccess => "doublecircle",
                 Shape::ConditionAndFunctionCall=> "doublecircle",
                 Shape::ConditionAndIndexAccess => "doublecircle",
