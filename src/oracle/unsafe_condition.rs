@@ -23,6 +23,16 @@ impl UnsafeSendingCondition {
         unsafe_sending_condition.update(network);
         unsafe_sending_condition
     }
+    
+    fn is_blocknumber(&self, variable: &Variable) -> bool {
+        let source = variable.get_source();
+        source.starts_with("block.number")
+    }
+
+    fn is_timestamp(&self, variable: &Variable) -> bool {
+        let source = variable.get_source();
+        source.starts_with("block.timestamp") || source.starts_with("now")
+    }
 
     fn update(&mut self, network: &Network) {
         let sending_members = vec![
@@ -85,20 +95,21 @@ impl UnsafeSendingCondition {
                 }
             }
         }
-        let mut all_state_dependency = HashMap::new(); 
         // Find dependency in condition node 
+        let mut all_state_dependency = HashMap::new(); 
         for (state_variable, condition_ids) in all_control_dependency {
-            let mut is_timestamp = false;
-            let mut is_blocknumber = false;
+            let mut timestamp = false;
+            let mut blocknumber = false;
             let mut root_variables = HashSet::new();
             for condition_id in condition_ids {
                 for variable in network.get_variables(&condition_id) {
+                    timestamp = timestamp || self.is_timestamp(&variable);
+                    blocknumber = blocknumber || self.is_blocknumber(&variable);
                     for depend_path in network.traverse((variable, condition_id)) {
                         if depend_path.len() > 1 {
                             let (root_variable, _) = depend_path.last().unwrap();
-                            let root_source = root_variable.get_source();
-                            is_timestamp = is_timestamp || root_source.starts_with("block.timestamp") || root_source.starts_with("now");
-                            is_blocknumber = is_blocknumber || root_source.starts_with("block.number");
+                            blocknumber = blocknumber || self.is_blocknumber(root_variable);
+                            timestamp = timestamp || self.is_timestamp(root_variable);
                             if all_state_variables.contains_key(root_variable) {
                                 root_variables.insert(root_variable.clone());
                             }
@@ -106,7 +117,10 @@ impl UnsafeSendingCondition {
                     }
                 }
             }
-            all_state_dependency.insert(state_variable, (root_variables, is_timestamp, is_blocknumber));
+            all_state_dependency.insert(
+                state_variable,
+                (root_variables, timestamp, blocknumber)
+            );
         }
         println!("----all-state-dependency----");
         for (k, v) in all_state_dependency {
