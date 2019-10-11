@@ -78,10 +78,29 @@ impl UnsafeSendingCondition {
         for variable in network.get_all_states() {
             all_state_variables.insert(variable, variable);
         }
+        // Find function calls in control flow graph which has send function 
+        for (_, dfg) in network.get_dfgs() {
+            let cfg = dfg.get_cfg();
+            for execution_path in cfg.get_execution_paths() {
+                let mut has_send = false;
+                for vertex_id in execution_path {
+                    let vertice = all_vertices.get(vertex_id).unwrap();
+                    if has_send {
+                    }
+                    // Send function
+                    for variable in network.get_variables(vertex_id) {
+                        if self.is_send_with_vertice(&variable, vertice) {
+                            has_send = true;
+                        }
+                    }
+                }
+            }
+        }
+        //
         for (_, dfg) in network.get_dfgs() {
             let cfg = dfg.get_cfg();
             let execution_paths = cfg.get_execution_paths();
-            for execution_path in execution_paths {
+            for execution_path in execution_paths.iter() {
                 let mut state_variables = all_state_variables.clone();
                 let mut control_dependency: HashMap<Variable, Vec<u32>> = HashMap::new();
                 for vertex_id in execution_path.iter().rev() {
@@ -121,6 +140,7 @@ impl UnsafeSendingCondition {
                             }
                         }
                     }
+                    // Stop condition
                 }
                 // Store control_dependency
                 for (state_variable, condition_ids) in control_dependency {

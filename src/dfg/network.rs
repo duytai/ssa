@@ -28,6 +28,7 @@ pub struct Network<'a> {
     dot: Dot,
     contract_id: u32,
     context: HashMap<(u32, u32), StackContext>,
+    function_ids: Vec<u32>,
     all_actions: HashMap<u32, Vec<Action>>,
     all_indexes: HashMap<u32, Vec<u32>>,
     all_execution_paths: Vec<Vec<u32>>,
@@ -55,6 +56,7 @@ impl<'a> Network<'a> {
             all_defined_parameters: HashMap::new(),
             all_states: HashSet::new(),
             contract_id,
+            function_ids: dict.find_ids(SmartContractQuery::FunctionsByContractId(contract_id)),
         };
         network.find_links();
         network
@@ -106,6 +108,10 @@ impl<'a> Network<'a> {
 
     pub fn get_contract_id(&self) -> u32 {
         self.contract_id
+    }
+
+    pub fn get_function_ids(&self) -> &Vec<u32> {
+        &self.function_ids
     }
 
     fn find_assignment_links(&mut self) -> HashSet<DataLink> {
@@ -244,12 +250,11 @@ impl<'a> Network<'a> {
 
     fn find_internal_links(&mut self) -> HashSet<DataLink> {
         let mut links = HashSet::new();
-        let function_ids = self.dict.find_ids(SmartContractQuery::FunctionsByContractId(self.contract_id));
-        for function_id in function_ids {
-            let cfg = ControlFlowGraph::new(self.dict, self.contract_id, function_id);
+        for function_id in self.function_ids.iter() {
+            let cfg = ControlFlowGraph::new(self.dict, self.contract_id, *function_id);
             let mut dfg = DataFlowGraph::new(cfg);
             links.extend(dfg.find_links());
-            self.dfgs.insert(function_id, dfg);
+            self.dfgs.insert(*function_id, dfg);
         }
         links
     }
