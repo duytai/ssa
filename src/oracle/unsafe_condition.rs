@@ -2,6 +2,7 @@ use crate::dfg::Network;
 use crate::core::Action;
 use crate::core::Member;
 use crate::core::Variable;
+use crate::core::Vertex;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -34,7 +35,7 @@ impl UnsafeSendingCondition {
         source.starts_with("block.timestamp") || source.starts_with("now")
     }
 
-    fn update(&mut self, network: &Network) {
+    fn is_send(&self, variable: &Variable, vertice: &Vertex) -> bool {
         let sending_members = vec![
             Member::Global(String::from("send")),
             Member::Global(String::from("transfer")),
@@ -44,6 +45,14 @@ impl UnsafeSendingCondition {
             Member::Global(String::from("selfdestruct")),
             Member::Global(String::from("suicide")),
         ];
+        let members = variable.get_members();
+        let is_send = members.iter().fold(false, |acc, m| {
+            acc || (sending_members.contains(m) && vertice.is_function_call())
+        });
+        is_send
+    }
+
+    fn update(&mut self, network: &Network) {
         let all_actions = network.get_all_actions();
         let all_vertices = network.get_all_vertices();
         let mut all_control_dependency: HashMap<Variable, HashSet<u32>> = HashMap::new();
@@ -131,12 +140,4 @@ impl UnsafeSendingCondition {
     }
 }
                 // for variable in network.get_variables(vertex_id) {
-                    // let members = variable.get_members();
-                    // let vertice = all_vertices.get(vertex_id).unwrap();
-                    // let is_send = members.iter().fold(false, |acc, m| {
-                        // acc || (sending_members.contains(m) && vertice.is_function_call())
-                    // });
-                    // if is_send {
-                        // FIND conditions
-                    // }
                 // }
