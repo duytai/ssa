@@ -36,6 +36,23 @@ impl UnsafeSendingCondition {
         source.starts_with("block.timestamp") || source.starts_with("now")
     }
 
+    fn is_stop(&self, variable: &Variable) -> bool {
+        let stop_members = vec![
+            Member::Global(String::from("assert")),
+            Member::Global(String::from("require")),
+            Member::Global(String::from("transfer")),
+            Member::Global(String::from("revert")),
+            Member::Global(String::from("throw")),
+            Member::Global(String::from("suicide")),
+            Member::Global(String::from("selfdestruct")),
+        ];
+        let members = variable.get_members();
+        let is_stop = members.iter().fold(false, |acc, m| {
+            acc || stop_members.contains(m)
+        });
+        is_stop
+    }
+
     fn is_send(&self, variable: &Variable) -> bool {
         let sending_members = vec![
             Member::Global(String::from("send")),
@@ -71,6 +88,7 @@ impl UnsafeSendingCondition {
     }
 
     fn update(&mut self, network: &Network) {
+        let dict = network.get_dict();
         let all_actions = network.get_all_actions();
         let all_vertices = network.get_all_vertices();
         let mut all_control_dependency: HashMap<Variable, HashSet<u32>> = HashMap::new();
@@ -78,26 +96,33 @@ impl UnsafeSendingCondition {
         for variable in network.get_all_states() {
             all_state_variables.insert(variable, variable);
         }
-        // Find function calls in control flow graph which has send function 
+        // Find 
+        let mut invoked_functions = HashSet::new();
         for (_, dfg) in network.get_dfgs() {
-            let cfg = dfg.get_cfg();
+            let cfg = dfg.get_cfg(); 
             for execution_path in cfg.get_execution_paths() {
                 let mut has_send = false;
-                for vertex_id in execution_path {
+                for vertex_id in execution_path.iter().rev() {
                     let vertice = all_vertices.get(vertex_id).unwrap();
-                    if has_send {
+                    if has_send && vertice.is_function_call() {
+                        if let Some(walker) = dict.walker_at(*vertex_id) {
+                            let walker = &walker.direct_childs(|_| true)[0];
+                            let declaration = walker.node.attributes["referencedDeclaration"].as_u32();
+                            if let Some(declaration) = declaration {
+                                invoked_functions.insert(declaration);
+                            }
+                        }
                     }
-                    // Send function
                     for variable in network.get_variables(vertex_id) {
                         if self.is_send_with_vertice(&variable, vertice) {
                             has_send = true;
                         }
                     }
                 }
-            }
+            } 
         }
-        //
-        for (_, dfg) in network.get_dfgs() {
+        // Main
+        for (function_id, dfg) in network.get_dfgs() {
             let cfg = dfg.get_cfg();
             let execution_paths = cfg.get_execution_paths();
             for execution_path in execution_paths.iter() {
@@ -129,7 +154,7 @@ impl UnsafeSendingCondition {
                             }
                         }
                     }
-                    // Send function
+                    // Send function 
                     let vertice = all_vertices.get(vertex_id).unwrap();
                     for variable in network.get_variables(vertex_id) {
                         if self.is_send_with_vertice(&variable, vertice) {
@@ -138,9 +163,30 @@ impl UnsafeSendingCondition {
                             } else {
                                 control_dependency.insert(variable, vec![*vertex_id]);
                             }
+                        } 
+                    }
+                    // Stop statement or functions 
+                    if invoked_functions.contains(function_id) && vertice.is_stop() {
+                        let walker = dict.walker_at(*vertex_id).unwrap();
+                        let mut variables = network.get_variables(vertex_id);
+                        if walker.node.source == "throw" {
+                            // Create fake variable throw
+                            let variable = Variable::new(
+                                vec![Member::Global(String::from("throw"))],
+                                String::from("throw"),
+                                String::from("void"),
+                                String::from("throw"),
+                            );
+                            variables.insert(variable);
+                        }
+                        for variable in variables {
+                            if let Some(condition_ids) = control_dependency.get_mut(&variable) {
+                                condition_ids.push(*vertex_id);
+                            } else {
+                                control_dependency.insert(variable, vec![*vertex_id]);
+                            }
                         }
                     }
-                    // Stop condition
                 }
                 // Store control_dependency
                 for (state_variable, condition_ids) in control_dependency {
@@ -186,10 +232,10 @@ impl UnsafeSendingCondition {
         let mut has_timestamp = false;
         let mut has_blocknumber = false;
         let mut has_send = false;
-        logging::debug("\t\t**Find Send**");
+        logging::debug("\t\t**Find Send/Stop **");
         for (variable, (root_variables, timestamp, blocknumber)) in all_state_dependency.iter() {
-            if self.is_send(variable) {
-                logging::debug(&format!("\tsend\t\t: {:?}", variable.get_source()));
+            if self.is_send(variable) || self.is_stop(variable) {
+                logging::debug(&format!("\tsend/stop\t: {:?}", variable.get_source()));
                 has_timestamp = has_timestamp || *timestamp;
                 has_blocknumber = has_blocknumber || *blocknumber;
                 has_send = true;

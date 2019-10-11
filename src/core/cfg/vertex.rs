@@ -60,6 +60,18 @@ impl Vertex {
         ].contains(&self.shape)
     }
 
+    pub fn is_stop(&self) -> bool {
+        vec![
+            Shape::Require,
+            Shape::Assert,
+            Shape::Revert,
+            Shape::Suicide,
+            Shape::Selfdestruct,
+            Shape::Transfer,
+            Shape::Throw,
+        ].contains(&self.shape)
+    }
+
     pub fn is_function_call(&self) -> bool {
         vec![
             Shape::FunctionCall,
