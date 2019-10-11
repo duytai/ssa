@@ -1,5 +1,6 @@
 use std::collections::{ HashSet, HashMap };
 use crate::cfg::ControlFlowGraph;
+use crate::logging;
 use crate::core::{
     VariableComparison,
     Operator,
@@ -131,9 +132,9 @@ impl<'a> DataFlowGraph<'a> {
                     new_actions.push(Action::Use(r, id));
                 }
             }
-            println!("-----{}------", id);
+            logging::debug(&format!("-----{}------", id));
             for var in variables {
-                println!("\t {:?}", var);
+                logging::debug(&format!("\t {:?}", var));
                 new_actions.push(Action::Use(var, id));
             }
             self.new_actions.insert(id, new_actions.clone());

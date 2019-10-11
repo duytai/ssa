@@ -10,3 +10,4 @@ pub mod dfg;
 pub mod dot;
 pub mod loader;
 pub mod oracle;
+pub mod logging;

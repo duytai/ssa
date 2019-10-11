@@ -19,7 +19,6 @@ impl<'a> Oracle<'a> {
     }
 
     pub fn run(&mut self, action: OracleAction) -> Vec<(Walker, String)> {
-        let dict = self.network.get_dict();
         match action {
             OracleAction::Suicide => {
                 vec![]

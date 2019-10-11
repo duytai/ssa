@@ -10,6 +10,7 @@ use crate::core::{
     Utils,
     Variable,
 };
+use crate::logging;
 
 pub struct FlatVariable<'a> {
     dict: &'a Dictionary<'a>,
@@ -43,9 +44,9 @@ impl<'a> FlatVariable<'a> {
 
     pub fn get_variables(&self) -> HashSet<Variable> {
         let mut ret = HashSet::new();
-        println!("Found: {:?}", self.attributes);
+        logging::debug(&format!("Found: {:?}", self.attributes));
         for flat in self.flats.iter() {
-            println!("\t{:?}", flat);
+            logging::debug(&format!("\t{:?}", flat));
         }
         for (members, attributes, kind) in self.flats.iter() {
             let joined_1 = self.attributes.join(".");
@@ -61,11 +62,11 @@ impl<'a> FlatVariable<'a> {
             }
         }
         if ret.is_empty() {
-            println!("ERROR on decode variables");
+            logging::debug("ERROR on decode variables");
         }
-        println!("==> Flatted Varariable <==");
+        logging::debug("==> Flatted Varariable <==");
         for r in ret.iter() {
-            println!("\t{:?}", r);
+            logging::debug(&format!("\t{:?}", r));
         }
         ret
     } 

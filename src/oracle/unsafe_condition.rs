@@ -35,7 +35,24 @@ impl UnsafeSendingCondition {
         source.starts_with("block.timestamp") || source.starts_with("now")
     }
 
-    fn is_send(&self, variable: &Variable, vertice: &Vertex) -> bool {
+    fn is_send(&self, variable: &Variable) -> bool {
+        let sending_members = vec![
+            Member::Global(String::from("send")),
+            Member::Global(String::from("transfer")),
+            Member::Global(String::from("call")),
+            Member::Global(String::from("callcode")),
+            Member::Global(String::from("delegatecall")),
+            Member::Global(String::from("selfdestruct")),
+            Member::Global(String::from("suicide")),
+        ];
+        let members = variable.get_members();
+        let is_send = members.iter().fold(false, |acc, m| {
+            acc || sending_members.contains(m)
+        });
+        is_send
+    }
+
+    fn is_send_with_vertice(&self, variable: &Variable, vertice: &Vertex) -> bool {
         let sending_members = vec![
             Member::Global(String::from("send")),
             Member::Global(String::from("transfer")),
@@ -92,6 +109,17 @@ impl UnsafeSendingCondition {
                             }
                         }
                     }
+                    // Send function
+                    let vertice = all_vertices.get(vertex_id).unwrap();
+                    for variable in network.get_variables(vertex_id) {
+                        if self.is_send_with_vertice(&variable, vertice) {
+                            if let Some(condition_ids) = control_dependency.get_mut(&variable) {
+                                condition_ids.push(*vertex_id);
+                            } else {
+                                control_dependency.insert(variable, vec![*vertex_id]);
+                            }
+                        }
+                    }
                 }
                 // Store control_dependency
                 for (state_variable, condition_ids) in control_dependency {
@@ -131,13 +159,39 @@ impl UnsafeSendingCondition {
                 (root_variables, timestamp, blocknumber)
             );
         }
-        println!("----all-state-dependency----");
-        for (k, v) in all_state_dependency {
-            println!("-----");
-            println!("k: {:?}", k);
-            println!("v: {:?}", v);
-        } 
+        // Find vulerabilities
+        let mut visited: HashSet<&Variable> = HashSet::new();
+        let mut stack = vec![]; 
+        let mut has_timestamp = false;
+        let mut has_blocknumber = false;
+        for (variable, (root_variables, timestamp, blocknumber)) in all_state_dependency.iter() {
+            if self.is_send(variable) {
+                has_timestamp = has_timestamp || *timestamp;
+                has_blocknumber = has_blocknumber || *blocknumber;
+                for root_variable in root_variables {
+                    stack.push(root_variable);
+                }
+            }
+        }
+        let has_send = !stack.is_empty(); 
+        while stack.len() > 0 {
+            let root_variable = stack.pop().unwrap();
+            if !visited.contains(root_variable) {
+                visited.insert(root_variable);
+                if let Some((root_variables, timestamp, blocknumber)) = all_state_dependency.get(root_variable) {
+                    has_timestamp = has_timestamp || *timestamp;
+                    has_blocknumber = has_blocknumber || *blocknumber;
+                    for root_variable in root_variables {
+                        stack.push(root_variable);
+                    }
+                }
+            }
+        }
+        if has_send && has_blocknumber {
+            println!("blocknumber dependency");
+        }
+        if has_send && has_timestamp {
+            println!("timestamp dependency");
+        }
     }
 }
-                // for variable in network.get_variables(vertex_id) {
-                // }
