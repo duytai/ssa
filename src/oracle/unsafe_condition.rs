@@ -165,12 +165,14 @@ impl UnsafeSendingCondition {
         let mut stack = vec![]; 
         let mut has_timestamp = false;
         let mut has_blocknumber = false;
+        let mut has_send = false;
         logging::debug("\t\t**Find Send**");
         for (variable, (root_variables, timestamp, blocknumber)) in all_state_dependency.iter() {
             if self.is_send(variable) {
                 logging::debug(&format!("\tsend\t\t: {:?}", variable.get_source()));
                 has_timestamp = has_timestamp || *timestamp;
                 has_blocknumber = has_blocknumber || *blocknumber;
+                has_send = true;
                 logging::debug(&format!("\ttimestamp\t: {}", has_timestamp));
                 logging::debug(&format!("\tblocknumber\t: {}", has_blocknumber));
                 for root_variable in root_variables {
@@ -178,7 +180,6 @@ impl UnsafeSendingCondition {
                 }
             }
         }
-        let has_send = !stack.is_empty(); 
         while stack.len() > 0 {
             let root_variable = stack.pop().unwrap();
             if !visited.contains(root_variable) {
