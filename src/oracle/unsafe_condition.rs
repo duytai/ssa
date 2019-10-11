@@ -3,6 +3,7 @@ use crate::core::Action;
 use crate::core::Member;
 use crate::core::Variable;
 use crate::core::Vertex;
+use crate::logging;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -164,10 +165,14 @@ impl UnsafeSendingCondition {
         let mut stack = vec![]; 
         let mut has_timestamp = false;
         let mut has_blocknumber = false;
+        logging::debug("\t\t**Find Send**");
         for (variable, (root_variables, timestamp, blocknumber)) in all_state_dependency.iter() {
             if self.is_send(variable) {
+                logging::debug(&format!("\tsend\t\t: {:?}", variable.get_source()));
                 has_timestamp = has_timestamp || *timestamp;
                 has_blocknumber = has_blocknumber || *blocknumber;
+                logging::debug(&format!("\ttimestamp\t: {}", has_timestamp));
+                logging::debug(&format!("\tblocknumber\t: {}", has_blocknumber));
                 for root_variable in root_variables {
                     stack.push(root_variable);
                 }
@@ -181,6 +186,10 @@ impl UnsafeSendingCondition {
                 if let Some((root_variables, timestamp, blocknumber)) = all_state_dependency.get(root_variable) {
                     has_timestamp = has_timestamp || *timestamp;
                     has_blocknumber = has_blocknumber || *blocknumber;
+                    logging::debug("\t\t**Loop**");
+                    logging::debug(&format!("\tvariable\t: {}", root_variable.get_source()));
+                    logging::debug(&format!("\ttimestamp\t: {}", has_timestamp));
+                    logging::debug(&format!("\tblocknumber\t: {}", has_blocknumber));
                     for root_variable in root_variables {
                         stack.push(root_variable);
                     }
@@ -188,10 +197,10 @@ impl UnsafeSendingCondition {
             }
         }
         if has_send && has_blocknumber {
-            println!("blocknumber dependency");
+            logging::debug("\t\t**Found: Number");
         }
         if has_send && has_timestamp {
-            println!("timestamp dependency");
+            logging::debug("\t\t**Found: Time");
         }
     }
 }
