@@ -9,6 +9,11 @@ pub enum Shape {
     ConditionAndIndexAccess,
     Require,
     Assert,
+    Throw,
+    Suicide,
+    Selfdestruct,
+    Transfer,
+    Revert,
     RootCondition,
 }
 
@@ -61,6 +66,10 @@ impl Vertex {
             Shape::ConditionAndFunctionCall,
             Shape::Require,
             Shape::Assert,
+            Shape::Revert,
+            Shape::Suicide,
+            Shape::Selfdestruct,
+            Shape::Transfer,
         ].contains(&self.shape)
     }
 }

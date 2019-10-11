@@ -31,11 +31,16 @@ impl Dot {
             let shape = match vertex.get_shape() {
                 Shape::Entry => "point",
                 Shape::Statement => "box",
+                Shape::Throw => "box",
                 Shape::RootCondition => "diamond",
                 Shape::FunctionCall => "doublecircle",
                 Shape::Require => "doublecircle",
                 Shape::Assert => "doublecircle",
                 Shape::IndexAccess => "doublecircle",
+                Shape::Suicide => "doublecircle",
+                Shape::Selfdestruct => "doublecircle",
+                Shape::Revert => "doublecircle",
+                Shape::Transfer => "doublecircle",
                 Shape::ConditionAndFunctionCall=> "doublecircle",
                 Shape::ConditionAndIndexAccess => "doublecircle",
             };

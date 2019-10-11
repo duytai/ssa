@@ -216,7 +216,7 @@ impl<'a> ControlFlowGraph<'a> {
                 },
                 SimpleBlockNode::Transfer(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::FunctionCall, level);
+                    let vertice = Vertex::new(id, source, Shape::Transfer, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -228,7 +228,7 @@ impl<'a> ControlFlowGraph<'a> {
                 },
                 SimpleBlockNode::Throw(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::Statement, level);
+                    let vertice = Vertex::new(id, source, Shape::Throw, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
@@ -238,11 +238,33 @@ impl<'a> ControlFlowGraph<'a> {
                     self.edges.insert(edge);
                     predecessors = vec![];
                 },
-                SimpleBlockNode::Revert(walker)
-                    | SimpleBlockNode::Selfdestruct(walker)
-                    | SimpleBlockNode::Suicide(walker) => {
+                SimpleBlockNode::Revert(walker) => {
                     let Node { id, source, .. } = walker.node;
-                    let vertice = Vertex::new(id, source, Shape::FunctionCall, level);
+                    let vertice = Vertex::new(id, source, Shape::Revert, level);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
+                    }
+                    let edge = Edge::new(id, self.stop);
+                    self.edges.insert(edge);
+                    predecessors = vec![];
+                },
+                SimpleBlockNode::Selfdestruct(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::Selfdestruct, level);
+                    self.vertices.insert(vertice);
+                    for predecessor in predecessors.iter() {
+                        let edge = Edge::new(*predecessor, id);
+                        self.edges.insert(edge);
+                    }
+                    let edge = Edge::new(id, self.stop);
+                    self.edges.insert(edge);
+                    predecessors = vec![];
+                },
+                SimpleBlockNode::Suicide(walker) => {
+                    let Node { id, source, .. } = walker.node;
+                    let vertice = Vertex::new(id, source, Shape::Suicide, level);
                     self.vertices.insert(vertice);
                     for predecessor in predecessors.iter() {
                         let edge = Edge::new(*predecessor, id);
