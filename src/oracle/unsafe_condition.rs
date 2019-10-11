@@ -1,9 +1,10 @@
 use crate::dfg::Network;
 use crate::core::Action;
 use crate::core::Member;
-use crate::core::Shape;
+use crate::core::Variable;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::iter::FromIterator;
 
 /// How to check:
 /// execution_path contains send/transfer/delegatecall/call/callcode/selfdestruct/suicide
@@ -13,15 +14,11 @@ use std::collections::HashSet;
 /// block.numer is saved to variable
 /// invoke function call
 pub struct UnsafeSendingCondition {
-    block_timestamps: HashSet<(u32, u32)>,
-    block_numbers: HashSet<(u32, u32)>,
 }
 
 impl UnsafeSendingCondition {
     pub fn new(network: &Network) -> Self {
         let mut unsafe_sending_condition = UnsafeSendingCondition {
-            block_timestamps: HashSet::new(),
-            block_numbers: HashSet::new(),
         };
         unsafe_sending_condition.update(network);
         unsafe_sending_condition
@@ -39,6 +36,7 @@ impl UnsafeSendingCondition {
         ];
         let all_actions = network.get_all_actions();
         let all_vertices = network.get_all_vertices();
+        let mut all_control_dependency: HashMap<Variable, HashSet<u32>> = HashMap::new();
         let mut all_state_variables = HashMap::new();
         for variable in network.get_all_states() {
             all_state_variables.insert(variable, variable);
@@ -46,48 +44,76 @@ impl UnsafeSendingCondition {
         for (_, dfg) in network.get_dfgs() {
             let cfg = dfg.get_cfg();
             let execution_paths = cfg.get_execution_paths();
-            let mut cfg_depend_tups: HashSet<(u32, u32)> = HashSet::new();
             for execution_path in execution_paths {
-                let mut path_state_variables = all_state_variables.clone();
-                let mut state_related_vertices: HashSet<u32> = HashSet::new();
+                let mut state_variables = all_state_variables.clone();
+                let mut control_dependency: HashMap<Variable, Vec<u32>> = HashMap::new();
                 for vertex_id in execution_path.iter().rev() {
                     // Control flow dependency
-                    if !state_related_vertices.is_empty() {
+                    if !control_dependency.is_empty() {
                         let vertice = all_vertices.get(vertex_id).unwrap();
                         if vertice.is_condition() {
-                            for id in state_related_vertices.iter() {
-                                cfg_depend_tups.insert((*vertex_id, id.clone()));
+                            for (state_variable, condition_ids) in control_dependency.clone() {
+                                let state_kill_at = condition_ids.first().unwrap();
+                                if cfg.is_control_dependency(*vertex_id, *state_kill_at, vec![]) {
+                                    if let Some(condition_ids) = control_dependency.get_mut(&state_variable) {
+                                        condition_ids.push(*vertex_id);
+                                    }
+                                }
                             }
                         }
                     }
-                    // State variables are killed 
+                    // State variables are killed
                     if let Some(actions) = all_actions.get(vertex_id) {
                         for action in actions {
-                            if let Action::Kill(variable, _) = action {
-                                if path_state_variables.contains_key(variable) {
-                                    path_state_variables.remove(variable);
-                                    state_related_vertices.insert(*vertex_id);
+                            if let Action::Kill(state_variable, _) = action {
+                                if state_variables.contains_key(state_variable) {
+                                    state_variables.remove(state_variable);
+                                    control_dependency.insert(state_variable.clone(), vec![*vertex_id]);
                                 }
                             }
                         }
                     }
                 }
-            }
-            for (from, to) in cfg_depend_tups {
-                println!("{} - {}", from, to);
-                if cfg.is_control_dependency(from, to, vec![]) {
-                    println!("OK: {} - {}", from, to);
+                // Store control_dependency
+                for (state_variable, condition_ids) in control_dependency {
+                    if let Some(all_control_ids) = all_control_dependency.get_mut(&state_variable) {
+                        all_control_ids.extend(condition_ids);
+                    } else {
+                        let all_control_ids: HashSet<u32> = HashSet::from_iter(condition_ids.into_iter());
+                        all_control_dependency.insert(state_variable, all_control_ids);
+                    }
                 }
             }
         }
-    }
-
-    pub fn get_block_numbers(&self) -> &HashSet<(u32, u32)> {
-        &self.block_numbers
-    }
-
-    pub fn get_block_timestamps(&self) -> &HashSet<(u32, u32)> {
-        &self.block_timestamps
+        let mut all_state_dependency = HashMap::new(); 
+        // Find dependency in condition node 
+        for (state_variable, condition_ids) in all_control_dependency {
+            let mut is_timestamp = false;
+            let mut is_blocknumber = false;
+            let mut root_variables = HashSet::new();
+            for condition_id in condition_ids {
+                for variable in network.get_variables(&condition_id) {
+                    for depend_path in network.traverse((variable, condition_id)) {
+                        if depend_path.len() > 1 {
+                            let (root_variable, _) = depend_path.last().unwrap();
+                            let root_source = root_variable.get_source();
+                            is_timestamp = is_timestamp || root_source.starts_with("block.timestamp") || root_source.starts_with("now");
+                            is_blocknumber = is_blocknumber || root_source.starts_with("block.number");
+                            if all_state_variables.contains_key(root_variable) {
+                                root_variables.insert(root_variable.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            all_state_dependency.insert(state_variable, (root_variables, is_timestamp, is_blocknumber));
+        }
+        println!("----all-state-dependency----");
+        for (k, v) in all_state_dependency {
+            println!("-----");
+            println!("k: {:?}", k);
+            println!("v: {:?}", v);
+        } 
     }
 }
                 // for variable in network.get_variables(vertex_id) {

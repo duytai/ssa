@@ -25,27 +25,7 @@ impl<'a> Oracle<'a> {
                 vec![]
             },
             OracleAction::UnsafeSendingCondition => {
-                let unsafe_condition = UnsafeSendingCondition::new(&self.network);
-                let block_numbers = unsafe_condition.get_block_numbers();
-                let block_timestamps = unsafe_condition.get_block_timestamps();
-                for (send_at, depend_at) in block_numbers {
-                    let send_walker = dict.walker_at(*send_at).unwrap();
-                    let depend_walker = dict.walker_at(*depend_at).unwrap();
-                    println!(
-                        "[WARNING] block_number_dependency\n\t{}\n\t{}",
-                        depend_walker.node.source,
-                        send_walker.node.source,
-                    );
-                }
-                for (send_at, depend_at) in block_timestamps {
-                    let send_walker = dict.walker_at(*send_at).unwrap();
-                    let depend_walker = dict.walker_at(*depend_at).unwrap();
-                    println!(
-                        "[WARNING] block_timestamp_dependency\n\t{}\n\t{}",
-                        depend_walker.node.source,
-                        send_walker.node.source,
-                    );
-                }
+                UnsafeSendingCondition::new(&self.network);
                 vec![]
             }, 
         } 
